@@ -26,6 +26,7 @@ type ServiceId =
 
 type Booking = {
   id: string;
+  owner_id: string;
   service_type: ServiceId;
   start_date: string;
   end_date: string;
@@ -33,7 +34,7 @@ type Booking = {
   provider_payout: number;
   status: BookingStatus;
   created_at: string;
-  users: { name: string } | { name: string }[] | null;
+  users: { name: string; location: string | null } | { name: string; location: string | null }[] | null;
   dogs: { name: string; breed: string | null; size: string | null }
       | { name: string; breed: string | null; size: string | null }[]
       | null;
@@ -145,8 +146,9 @@ export default function ProviderDashboard() {
   const router = useRouter();
 
   const { openChat } = useChat();
-  const [providerName, setProviderName] = useState("");
-  const [providerId,   setProviderId]   = useState("");
+  const [providerName,   setProviderName]   = useState("");
+  const [providerId,     setProviderId]     = useState("");
+  const [providerAvatar, setProviderAvatar] = useState<string | null>(null);
   const [providerActive, setProviderActive] = useState(true);
   const [bookings,     setBookings]     = useState<Booking[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -162,7 +164,7 @@ export default function ProviderDashboard() {
 
       const { data: p } = await sb
         .from("providers")
-        .select("id, active, users!user_id(name)")
+        .select("id, active, avatar_url, users!user_id(name)")
         .eq("user_id", user.id)
         .single();
 
@@ -173,14 +175,15 @@ export default function ProviderDashboard() {
       const pUser = resolveArr(pAny.users as { name: string } | { name: string }[] | null);
       setProviderName(pUser?.name ?? "Provider");
       setProviderId(pAny.id as string);
+      setProviderAvatar((pAny.avatar_url as string | null) ?? null);
       setProviderActive(pAny.active as boolean);
 
       const { data: bks } = await sb
         .from("bookings")
         .select(`
-          id, service_type, start_date, end_date,
+          id, owner_id, service_type, start_date, end_date,
           gross_amount, provider_payout, status, created_at,
-          users!owner_id(name),
+          users!owner_id(name, location),
           dogs!dog_id(name, breed, size)
         `)
         .eq("provider_id", pAny.id as string)
@@ -260,21 +263,18 @@ export default function ProviderDashboard() {
           Dog<span style={{ color: "#00b096" }}>Care</span>GH
         </Link>
         <div className="flex items-center gap-3">
-          {providerId && (
-            <Link
-              href={`/provider/${providerId}`}
-              className="hidden text-xs font-medium text-white/50 transition hover:text-white sm:block"
-            >
-              My Profile
-            </Link>
-          )}
-          <Link
-            href="/dashboard/provider/edit"
-            className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10"
-          >
-            Edit Profile
+          <Link href="/dashboard/provider/profile" className="flex items-center transition hover:opacity-80" title="My Profile">
+            {providerAvatar ? (
+              <img src={providerAvatar} alt={providerName.split(" ")[0]} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/25" />
+            ) : (
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white ring-2 ring-white/25"
+                style={{ backgroundColor: providerId ? avatarBg(providerId) : "#00b096" }}
+              >
+                {ini(providerName)}
+              </div>
+            )}
           </Link>
-          <span className="hidden text-sm text-white/60 sm:block">{providerName.split(" ")[0]}</span>
           <button
             onClick={async () => { await createClient().auth.signOut(); router.push("/"); }}
             className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
@@ -290,17 +290,9 @@ export default function ProviderDashboard() {
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>
             Provider Dashboard
           </p>
-          <div className="mt-1 flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-extrabold text-white md:text-3xl">
-              Welcome back, {providerName.split(" ")[0]}
-            </h1>
-            <Link
-              href="/dashboard/provider/edit"
-              className="shrink-0 rounded-xl border border-white/20 px-4 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
-            >
-              Edit Profile
-            </Link>
-          </div>
+          <h1 className="mt-1 text-2xl font-extrabold text-white md:text-3xl">
+            Welcome back, {providerName.split(" ")[0]}
+          </h1>
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[
@@ -387,26 +379,23 @@ export default function ProviderDashboard() {
 
                     {/* Owner + status */}
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
+                      <Link href={`/owner-profile/${b.owner_id}`} className="flex items-center gap-3 transition hover:opacity-80">
                         <div
                           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white"
-                          style={{ backgroundColor: avatarBg(b.id) }}
+                          style={{ backgroundColor: avatarBg(b.owner_id) }}
                         >
                           {ini(ownerFullName)}
                         </div>
                         <div>
                           <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>{ownerName}</p>
-                          {dog ? (
-                            <p className="text-xs text-gray-400">
-                              🐕 {dog.name}
-                              {(dog.breed || dog.size) &&
-                                ` · ${[dog.breed, dog.size].filter(Boolean).join(", ")}`}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-gray-400">No dog info</p>
-                          )}
+                          <p className="text-xs text-gray-400">
+                            {dog
+                              ? `🐕 ${dog.name}${dog.breed || dog.size ? ` · ${[dog.breed, dog.size].filter(Boolean).join(", ")}` : ""}`
+                              : "No dog info"}
+                            {owner?.location ? ` · 📍 ${owner.location}` : ""}
+                          </p>
                         </div>
-                      </div>
+                      </Link>
                       <span
                         className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
                         style={{ backgroundColor: st.bg, color: st.color }}

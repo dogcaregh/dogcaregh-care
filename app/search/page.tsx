@@ -81,7 +81,7 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-function ProviderCard({ p, highlight }: { p: Provider; highlight: ServiceId | "" }) {
+function ProviderCard({ p, highlight, locationQuery }: { p: Provider; highlight: ServiceId | ""; locationQuery: string }) {
   const usersRow = Array.isArray(p.users) ? p.users[0] : p.users;
   const name  = usersRow?.name ?? "DogCare Provider";
   const price = minRate(p.rates);
@@ -105,9 +105,12 @@ function ProviderCard({ p, highlight }: { p: Provider; highlight: ServiceId | ""
 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <p className="truncate text-sm font-bold" style={{ color: "#0a2e30" }}>
-                {name}
-              </p>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold" style={{ color: "#0a2e30" }}>
+                  {name}
+                </p>
+                <p className="text-[11px] italic text-gray-400">DogCare Provider</p>
+              </div>
               {/* Availability badge */}
               <span
                 className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
@@ -132,9 +135,18 @@ function ProviderCard({ p, highlight }: { p: Provider; highlight: ServiceId | ""
               )}
             </div>
 
-            {/* Location */}
+            {/* Location — highlighted when it matches the search query */}
             {p.neighbourhood && (
-              <p className="mt-0.5 text-xs text-gray-400">📍 {p.neighbourhood}</p>
+              <p
+                className="mt-0.5 text-xs font-medium"
+                style={
+                  locScore(p.neighbourhood, locationQuery) > 0
+                    ? { color: "#00b096" }
+                    : { color: "#9ca3af" }
+                }
+              >
+                📍 {p.neighbourhood}
+              </p>
             )}
           </div>
         </div>
@@ -209,6 +221,16 @@ function SkeletonCard() {
   );
 }
 
+// 2 = exact match, 1 = partial match, 0 = no match
+function locScore(neighbourhood: string | null, query: string): number {
+  if (!query) return 0;
+  const n = (neighbourhood ?? "").toLowerCase();
+  const q = query.toLowerCase();
+  if (n === q) return 2;
+  if (n.includes(q) || q.includes(n)) return 1;
+  return 0;
+}
+
 // ── Main search UI ─────────────────────────────────────────────────────────
 
 function SearchResults() {
@@ -262,18 +284,23 @@ function SearchResults() {
     return () => { cancelled = true; };
   }, [service]);
 
-  // Client-side price + availability + location filtering
   const visible = useMemo(() => {
-    const range = PRICE_RANGES[priceIdx];
-    const locQuery = location.trim().toLowerCase();
-    return providers.filter(p => {
-      if (avail === "available" && !p.active) return false;
-      const price = minRate(p.rates);
-      if (price !== null && range.max < Infinity && price > range.max) return false;
-      if (price !== null && price < range.min) return false;
-      if (locQuery && !(p.neighbourhood ?? "").toLowerCase().includes(locQuery)) return false;
-      return true;
-    });
+    const range    = PRICE_RANGES[priceIdx];
+    const locQuery = location.trim();
+
+    return providers
+      .filter(p => {
+        if (avail === "available" && !p.active) return false;
+        const price = minRate(p.rates);
+        if (price !== null && range.max < Infinity && price > range.max) return false;
+        if (price !== null && price < range.min) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const scoreDiff = locScore(b.neighbourhood, locQuery) - locScore(a.neighbourhood, locQuery);
+        if (scoreDiff !== 0) return scoreDiff;
+        return b.rating_avg - a.rating_avg;
+      });
   }, [providers, priceIdx, avail, location]);
 
   const heading = [
@@ -322,7 +349,13 @@ function SearchResults() {
       </nav>
 
       {/* ── Hero band ── */}
-      <div className="px-6 pb-8 pt-7 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
+      <div className="relative overflow-hidden px-6 pb-8 pt-7 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
+        <div className="pointer-events-none absolute inset-0 select-none" aria-hidden="true">
+          <svg style={{position:"absolute",width:110,top:"-12px",right:"6%",opacity:0.055,color:"#00b096",transform:"rotate(18deg)"}} viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="63" rx="24" ry="20"/><ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)"/><ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)"/><ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)"/><ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)"/></svg>
+          <svg style={{position:"absolute",width:78,bottom:"-8px",left:"3%",opacity:0.05,color:"white",transform:"rotate(-14deg)"}} viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="63" rx="24" ry="20"/><ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)"/><ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)"/><ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)"/><ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)"/></svg>
+          <svg style={{position:"absolute",width:54,top:"6px",left:"36%",opacity:0.04,color:"#00b096",transform:"rotate(28deg)"}} viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="63" rx="24" ry="20"/><ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)"/><ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)"/><ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)"/><ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)"/></svg>
+          <svg style={{position:"absolute",width:82,top:"15%",right:"22%",opacity:0.035,color:"white",transform:"rotate(-6deg)"}} viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="63" rx="24" ry="20"/><ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)"/><ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)"/><ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)"/><ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)"/></svg>
+        </div>
         <p
           className="text-xs font-semibold uppercase tracking-widest"
           style={{ color: "#00b096" }}
@@ -333,7 +366,7 @@ function SearchResults() {
         <p className="mt-1 text-sm text-white/50">
           {loading
             ? "Searching…"
-            : `${visible.length} provider${visible.length !== 1 ? "s" : ""} found`}
+            : `${visible.length} provider${visible.length !== 1 ? "s" : ""} found${location.trim() ? " · sorted nearest first" : ""}`}
         </p>
       </div>
 
@@ -450,7 +483,7 @@ function SearchResults() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {visible.map(p => (
-              <ProviderCard key={p.id} p={p} highlight={service} />
+              <ProviderCard key={p.id} p={p} highlight={service} locationQuery={location.trim()} />
             ))}
           </div>
         )}

@@ -348,25 +348,18 @@ export default function OwnerDashboard() {
           <Link href="/search" className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 sm:block">
             Find Providers
           </Link>
-          <Link
-            href="/dashboard/owner/edit"
-            className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10"
-          >
-            Edit Profile
-          </Link>
-          <div className="hidden items-center gap-2 sm:flex">
+          <Link href="/dashboard/owner/profile" className="flex items-center transition hover:opacity-80" title="My Profile">
             {ownerAvatar ? (
-              <img src={ownerAvatar} alt={firstName} className="h-7 w-7 rounded-full object-cover" />
+              <img src={ownerAvatar} alt={firstName} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/25" />
             ) : (
               <div
-                className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white ring-2 ring-white/25"
                 style={{ backgroundColor: ownerId ? avatarBg(ownerId) : "#00b096" }}
               >
                 {ini(firstName)}
               </div>
             )}
-            <span className="text-sm text-white/60">{firstName}</span>
-          </div>
+          </Link>
           <button
             onClick={async () => { await createClient().auth.signOut(); router.push("/"); }}
             className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
@@ -380,17 +373,9 @@ export default function OwnerDashboard() {
       <div className="px-6 pb-10 pt-8 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
         <div className="mx-auto max-w-5xl">
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>My Dashboard</p>
-          <div className="mt-1 flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-extrabold text-white md:text-3xl">
-              {firstName ? `Welcome back, ${firstName}` : "Your Dashboard"}
-            </h1>
-            <Link
-              href="/dashboard/owner/edit"
-              className="shrink-0 rounded-xl border border-white/20 px-4 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
-            >
-              Edit Profile
-            </Link>
-          </div>
+          <h1 className="mt-1 text-2xl font-extrabold text-white md:text-3xl">
+            {firstName ? `Welcome back, ${firstName}` : "Your Dashboard"}
+          </h1>
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[

@@ -1,0 +1,209 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
+
+const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
+const avatarBg = (s: string) => PALETTE[s.charCodeAt(0) % PALETTE.length];
+function ini(name?: string | null) {
+  if (!name) return "?";
+  return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+type ServiceId =
+  | "pet_sitting" | "doggy_daycare" | "dog_boarding"
+  | "mobile_grooming" | "dog_walking";
+
+const SERVICES: Record<ServiceId, { label: string; emoji: string }> = {
+  pet_sitting:     { label: "Pet Sitting",     emoji: "🐾" },
+  doggy_daycare:   { label: "Doggy Daycare",   emoji: "🏡" },
+  dog_boarding:    { label: "Dog Boarding",    emoji: "🛏️" },
+  mobile_grooming: { label: "Mobile Grooming", emoji: "✂️" },
+  dog_walking:     { label: "Dog Walking",     emoji: "🦮" },
+};
+
+export default function ProviderProfilePage() {
+  const router = useRouter();
+
+  const [userId,       setUserId]       = useState("");
+  const [providerId,   setProviderId]   = useState("");
+  const [name,         setName]         = useState("");
+  const [phone,        setPhone]        = useState<string | null>(null);
+  const [neighbourhood, setNeighbourhood] = useState<string | null>(null);
+  const [bio,          setBio]          = useState<string | null>(null);
+  const [services,     setServices]     = useState<ServiceId[]>([]);
+  const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null);
+  const [active,       setActive]       = useState(true);
+  const [loading,      setLoading]      = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const sb = createClient();
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) { router.replace("/login?redirect=/dashboard/provider/profile"); return; }
+
+      const [{ data: u }, { data: p }] = await Promise.all([
+        sb.from("users").select("name, phone").eq("id", user.id).single(),
+        sb.from("providers").select("id, active, bio, neighbourhood, services, avatar_url").eq("user_id", user.id).single(),
+      ]);
+
+      if (cancelled) return;
+      const uRow = u as { name: string; phone: string | null } | null;
+      const pRow = p as { id: string; active: boolean; bio: string | null; neighbourhood: string | null; services: ServiceId[]; avatar_url: string | null } | null;
+
+      setUserId(user.id);
+      setName(uRow?.name ?? "");
+      setPhone(uRow?.phone ?? null);
+      setProviderId(pRow?.id ?? "");
+      setActive(pRow?.active ?? true);
+      setBio(pRow?.bio ?? null);
+      setNeighbourhood(pRow?.neighbourhood ?? null);
+      setServices(pRow?.services ?? []);
+      setAvatarUrl(pRow?.avatar_url ?? null);
+      setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [router]);
+
+  if (loading) return (
+    <div className="flex min-h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
+      <p className="text-2xl font-bold text-white">Dog<span style={{ color: "#00b096" }}>Care</span>GH</p>
+      <p className="mt-3 animate-pulse text-sm text-white/50">Loading profile…</p>
+    </div>
+  );
+
+  const firstName = name.split(" ")[0];
+
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
+
+      {/* Nav */}
+      <nav
+        className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 px-6 py-4 md:px-12"
+        style={{ backgroundColor: "#0a2e30" }}
+      >
+        <Link href="/" className="text-2xl font-bold tracking-tight text-white">
+          Dog<span style={{ color: "#00b096" }}>Care</span>GH
+        </Link>
+        <div className="flex items-center gap-3">
+          {providerId && (
+            <Link
+              href={`/provider/${providerId}`}
+              className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10 sm:block"
+            >
+              Public Profile
+            </Link>
+          )}
+          <Link
+            href="/dashboard/provider"
+            className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10"
+          >
+            ← Dashboard
+          </Link>
+        </div>
+      </nav>
+
+      <div className="mx-auto max-w-2xl px-4 py-10 md:px-6">
+
+        {/* Profile card */}
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="h-2" style={{ backgroundColor: "#00b096" }} />
+          <div className="p-6">
+
+            {/* Avatar + name */}
+            <div className="flex items-center gap-5">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={firstName} className="h-20 w-20 rounded-2xl object-cover shadow" />
+              ) : (
+                <div
+                  className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl text-2xl font-bold text-white shadow"
+                  style={{ backgroundColor: userId ? avatarBg(userId) : "#00b096" }}
+                >
+                  {ini(name)}
+                </div>
+              )}
+              <div>
+                <p className="text-xl font-extrabold" style={{ color: "#0a2e30" }}>{name || "—"}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-xs font-medium" style={{ color: "#00b096" }}>Pet Care Provider</p>
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                    style={
+                      active
+                        ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
+                        : { background: "rgba(239,68,68,.1)", color: "#dc2626" }
+                    }
+                  >
+                    {active ? "Available" : "Unavailable"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Details */}
+            <div className="mt-6 space-y-3">
+              {neighbourhood && (
+                <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+                  <span className="text-base">📍</span>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Location</p>
+                    <p className="text-sm font-medium text-gray-700">{neighbourhood}</p>
+                  </div>
+                </div>
+              )}
+              {phone && (
+                <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+                  <span className="text-base">📞</span>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Phone</p>
+                    <p className="text-sm font-medium text-gray-700">{phone}</p>
+                  </div>
+                </div>
+              )}
+              {bio && (
+                <div className="rounded-xl bg-gray-50 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">About</p>
+                  <p className="mt-1 text-sm leading-relaxed text-gray-700">{bio}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Services */}
+            {services.length > 0 && (
+              <div className="mt-5">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Services</p>
+                <div className="flex flex-wrap gap-2">
+                  {services.map(s => (
+                    <span
+                      key={s}
+                      className="rounded-full px-3 py-1 text-xs font-medium"
+                      style={{ background: "rgba(0,176,150,.12)", color: "#00b096" }}
+                    >
+                      {SERVICES[s]?.emoji} {SERVICES[s]?.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Edit button */}
+            <div className="mt-6">
+              <Link
+                href="/dashboard/provider/edit"
+                className="inline-block rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+                style={{ backgroundColor: "#00b096" }}
+              >
+                Edit Profile
+              </Link>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
