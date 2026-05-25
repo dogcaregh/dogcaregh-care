@@ -356,7 +356,7 @@ export default function BookPage() {
                   Add a dog to your profile to continue
                 </p>
                 <Link
-                  href="/register/owner"
+                  href="/dashboard/owner"
                   className="rounded-full px-5 py-2 text-xs font-semibold text-white transition hover:opacity-90"
                   style={{ backgroundColor: "#00b096" }}
                 >

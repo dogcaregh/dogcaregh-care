@@ -218,11 +218,24 @@ function SearchResults() {
 
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading,   setLoading]   = useState(true);
+  const [authUser,  setAuthUser]  = useState<{ name: string; isProvider: boolean } | null>(null);
 
   // Filters
   const [service,   setService]   = useState<ServiceId | "">(initService);
   const [priceIdx,  setPriceIdx]  = useState(0);
   const [avail,     setAvail]     = useState<"all" | "available">("available");
+
+  useEffect(() => {
+    async function checkAuth() {
+      const sb = createClient();
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      const { data: p } = await sb.from("providers").select("id").eq("user_id", user.id).maybeSingle();
+      const { data: u } = await sb.from("users").select("name").eq("id", user.id).single();
+      setAuthUser({ name: (u as { name: string } | null)?.name ?? "", isProvider: !!p });
+    }
+    checkAuth();
+  }, []);
 
   // Fetch from Supabase whenever service filter changes
   useEffect(() => {
@@ -277,19 +290,31 @@ function SearchResults() {
           Dog<span style={{ color: "#00b096" }}>Care</span>GH
         </Link>
         <div className="flex gap-2">
-          <Link
-            href="/register/owner"
-            className="rounded-full border border-white/30 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-white/10"
-          >
-            Sign Up
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-full px-4 py-1.5 text-sm font-semibold transition hover:opacity-90"
-            style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
-          >
-            Log In
-          </Link>
+          {authUser ? (
+            <Link
+              href={authUser.isProvider ? "/dashboard/provider" : "/dashboard/owner"}
+              className="rounded-full px-4 py-1.5 text-sm font-semibold transition hover:opacity-90"
+              style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
+            >
+              My Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/register/owner"
+                className="rounded-full border border-white/30 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                Sign Up
+              </Link>
+              <Link
+                href="/login"
+                className="rounded-full px-4 py-1.5 text-sm font-semibold transition hover:opacity-90"
+                style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
+              >
+                Log In
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
