@@ -1,67 +1,108 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
+
 const services = [
-  {
-    emoji: "🐾",
-    name: "Pet Sitting",
-    description: "A trusted sitter cares for your pet in their own home while you're away.",
-  },
-  {
-    emoji: "🏡",
-    name: "Doggy Daycare",
-    description: "Socialisation and supervised play for your dog during the day.",
-  },
-  {
-    emoji: "🛏️",
-    name: "Dog Boarding",
-    description: "Overnight stays in a comfortable home — no kennels, ever.",
-  },
-  {
-    emoji: "✂️",
-    name: "Mobile Grooming",
-    description: "Professional grooming that comes straight to your door.",
-  },
-  {
-    emoji: "🦮",
-    name: "Dog Walking",
-    description: "Daily walks to keep your dog happy, healthy, and well-exercised.",
-  },
+  { emoji: "🐾", name: "Pet Sitting",     id: "pet_sitting",     description: "A trusted sitter cares for your pet in their own home while you're away."          },
+  { emoji: "🏡", name: "Doggy Daycare",   id: "doggy_daycare",   description: "Socialisation and supervised play for your dog during the day."                    },
+  { emoji: "🛏️", name: "Dog Boarding",    id: "dog_boarding",    description: "Overnight stays in a comfortable home — no kennels, ever."                        },
+  { emoji: "✂️", name: "Mobile Grooming", id: "mobile_grooming", description: "Professional grooming that comes straight to your door."                           },
+  { emoji: "🦮", name: "Dog Walking",     id: "dog_walking",     description: "Daily walks to keep your dog happy, healthy, and well-exercised."                  },
 ];
 
+type AuthUser = { name: string; isProvider: boolean } | null;
+
 export default function HomePage() {
+  const router = useRouter();
+  const [location, setLocation] = useState("");
+  const [authUser, setAuthUser] = useState<AuthUser>(undefined as unknown as AuthUser);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function loadAuth() {
+      const sb = createClient();
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) { setAuthUser(null); return; }
+
+      const [{ data: u }, { data: p }] = await Promise.all([
+        sb.from("users").select("name").eq("id", user.id).single(),
+        sb.from("providers").select("id").eq("user_id", user.id).maybeSingle(),
+      ]);
+      setAuthUser({ name: (u as { name: string } | null)?.name ?? "", isProvider: !!p });
+    }
+    loadAuth();
+  }, []);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (location.trim()) params.set("location", location.trim());
+    router.push(`/search?${params.toString()}`);
+  }
+
+  function handleServiceClick(serviceId: string) {
+    router.push(`/search?service=${serviceId}`);
+  }
+
+  async function handleSignOut() {
+    await createClient().auth.signOut();
+    setAuthUser(null);
+  }
+
+  const authLoaded = authUser !== (undefined as unknown as AuthUser);
+
   return (
     <main className="font-sans">
       {/* ── Hero ── */}
-      <section
-        className="relative min-h-screen flex flex-col"
-        style={{ backgroundColor: "#0a2e30" }}
-      >
-        {/* Subtle radial glow */}
+      <section className="relative flex min-h-screen flex-col" style={{ backgroundColor: "#0a2e30" }}>
         <div
           className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 60% at 50% 30%, rgba(0,176,150,0.18) 0%, transparent 70%)",
-          }}
+          style={{ background: "radial-gradient(ellipse 70% 60% at 50% 30%, rgba(0,176,150,0.18) 0%, transparent 70%)" }}
         />
 
-        {/* Nav */}
+        {/* ── Nav ── */}
         <nav className="relative z-10 flex items-center justify-between px-6 py-5 md:px-12">
           <span className="text-2xl font-bold tracking-tight text-white">
             Dog<span style={{ color: "#00b096" }}>Care</span>GH
           </span>
-          <div className="flex gap-3">
-            <a
-              href="#services"
-              className="rounded-full border border-white/30 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-            >
-              Browse Services
-            </a>
-            <a
-              href="#become-provider"
-              className="rounded-full px-5 py-2 text-sm font-semibold transition hover:opacity-90"
-              style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
-            >
-              Become a Provider
-            </a>
+
+          <div className="flex items-center gap-3">
+            {!authLoaded ? null : authUser ? (
+              <>
+                <Link
+                  href={authUser.isProvider ? "/dashboard/provider" : "/dashboard/owner"}
+                  className="rounded-full border border-white/30 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                >
+                  My Dashboard
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="rounded-full px-4 py-2 text-sm font-semibold transition hover:opacity-90"
+                  style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-full border border-white/30 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                >
+                  Log In
+                </Link>
+                <Link
+                  href="/register/owner"
+                  className="rounded-full px-5 py-2 text-sm font-semibold transition hover:opacity-90"
+                  style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </nav>
 
@@ -80,28 +121,31 @@ export default function HomePage() {
           </h1>
 
           <p className="mt-5 max-w-xl text-lg text-white/70">
-            Connect with vetted, passionate pet caregivers across Accra, Kumasi,
-            and beyond.
+            Connect with vetted, passionate pet caregivers across Accra, Kumasi, and beyond.
           </p>
 
-          {/* Location search */}
-          <div className="mt-10 flex w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl shadow-black/30">
+          {/* Search */}
+          <form onSubmit={handleSearch} className="mt-10 flex w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl shadow-black/30">
             <span className="flex items-center pl-5 text-xl">📍</span>
             <input
+              ref={inputRef}
               type="text"
+              value={location}
+              onChange={e => setLocation(e.target.value)}
               placeholder="Enter your neighbourhood or city…"
               className="flex-1 bg-transparent px-4 py-4 text-sm placeholder-gray-400 outline-none"
               style={{ color: "#0a2e30" }}
             />
             <button
+              type="submit"
               className="m-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
               style={{ backgroundColor: "#00b096" }}
             >
               Search
             </button>
-          </div>
+          </form>
 
-          {/* CTA pair */}
+          {/* CTAs */}
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <a
               href="#services"
@@ -118,16 +162,8 @@ export default function HomePage() {
             </a>
           </div>
 
-          {/* Scroll hint */}
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce text-white/40">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -137,67 +173,49 @@ export default function HomePage() {
       {/* ── Services ── */}
       <section id="services" className="bg-white px-6 py-20 md:px-12">
         <div className="mx-auto max-w-6xl">
-          <p
-            className="mb-3 text-center text-xs font-semibold uppercase tracking-widest"
-            style={{ color: "#00b096" }}
-          >
+          <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>
             What we offer
           </p>
-          <h2
-            className="mb-4 text-center text-3xl font-extrabold md:text-4xl"
-            style={{ color: "#0a2e30" }}
-          >
+          <h2 className="mb-4 text-center text-3xl font-extrabold md:text-4xl" style={{ color: "#0a2e30" }}>
             Services for every pet &amp; lifestyle
           </h2>
           <p className="mx-auto mb-14 max-w-xl text-center text-gray-500">
-            Whether you need someone for a few hours or a few weeks, we have a
-            service that fits.
+            Whether you need someone for a few hours or a few weeks, we have a service that fits.
           </p>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
             {services.map((svc) => (
-              <div
+              <button
                 key={svc.name}
+                onClick={() => handleServiceClick(svc.id)}
                 className="group flex cursor-pointer flex-col items-center rounded-2xl border border-gray-100 p-6 text-center shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md"
                 style={{ borderTopColor: "#00b096", borderTopWidth: 3 }}
               >
                 <span className="mb-4 text-4xl">{svc.emoji}</span>
-                <h3
-                  className="mb-2 text-base font-bold"
-                  style={{ color: "#0a2e30" }}
-                >
-                  {svc.name}
-                </h3>
-                <p className="text-sm leading-relaxed text-gray-500">
-                  {svc.description}
-                </p>
-              </div>
+                <h3 className="mb-2 text-base font-bold" style={{ color: "#0a2e30" }}>{svc.name}</h3>
+                <p className="text-sm leading-relaxed text-gray-500">{svc.description}</p>
+              </button>
             ))}
           </div>
         </div>
       </section>
 
       {/* ── Become a Provider CTA ── */}
-      <section
-        id="become-provider"
-        className="px-6 py-20 md:px-12"
-        style={{ backgroundColor: "#0a2e30" }}
-      >
+      <section id="become-provider" className="px-6 py-20 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="mb-4 text-3xl font-extrabold text-white md:text-4xl">
             Love animals? Earn doing what you love.
           </h2>
           <p className="mb-8 text-white/70">
-            Join hundreds of pet care providers across Ghana and start earning on
-            your own schedule.
+            Join hundreds of pet care providers across Ghana and start earning on your own schedule.
           </p>
-          <a
-            href="#"
+          <Link
+            href="/register/provider"
             className="inline-block rounded-full px-10 py-4 text-sm font-semibold transition hover:opacity-90"
             style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
           >
             Become a Provider
-          </a>
+          </Link>
         </div>
       </section>
 
