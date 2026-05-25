@@ -157,6 +157,7 @@ export default function OwnerProfilePage() {
           </h2>
           {dogs.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-10 text-center text-sm text-gray-400">
+              <img src="/puppies.png" alt="" className="mx-auto mb-3 h-24 w-auto opacity-80" />
               No dogs added yet. Add your dog from the dashboard.
             </div>
           ) : (

@@ -71,26 +71,15 @@ export default function HomePage() {
           <svg style={{position:"absolute",width:48,top:"14px",left:"23%",opacity:0.04,color:"white",transform:"rotate(-6deg)"}} viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="63" rx="24" ry="20"/><ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)"/><ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)"/><ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)"/><ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)"/></svg>
           <svg style={{position:"absolute",width:56,bottom:"55px",left:"43%",opacity:0.04,color:"#00b096",transform:"rotate(-42deg)"}} viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="63" rx="24" ry="20"/><ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)"/><ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)"/><ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)"/><ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)"/></svg>
           <svg style={{position:"absolute",width:80,top:"25%",right:"15%",opacity:0.035,color:"white",transform:"rotate(10deg)"}} viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="63" rx="24" ry="20"/><ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)"/><ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)"/><ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)"/><ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)"/></svg>
-          {/* Person walking dog silhouette */}
-          <svg className="hidden md:block" style={{position:"absolute",bottom:0,right:0,height:"66%",width:"auto",opacity:0.05,color:"white"}} viewBox="0 0 180 240" fill="currentColor">
-            <circle cx="140" cy="28" r="18"/>
-            <path d="M126 46 C121 76 119 102 117 118 L130 118 L134 88 L138 118 L152 118 C150 102 147 76 154 46 Z"/>
-            <path d="M126 62 L96 76" stroke="currentColor" strokeWidth="10" fill="none" strokeLinecap="round"/>
-            <rect x="119" y="118" width="14" height="50" rx="7"/>
-            <rect x="137" y="118" width="14" height="50" rx="7"/>
-            <path d="M96 76 Q72 84 50 80" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round"/>
-            <ellipse cx="28" cy="98" rx="26" ry="17"/>
-            <circle cx="54" cy="87" r="14"/>
-            <ellipse cx="60" cy="76" rx="8" ry="13" transform="rotate(18 60 76)"/>
-            <ellipse cx="66" cy="90" rx="9" ry="7"/>
-            <circle cx="74" cy="88" r="3"/>
-            <path d="M4 92 Q-10 72 5 60 Q14 52 18 63" stroke="currentColor" strokeWidth="9" fill="none" strokeLinecap="round"/>
-            <rect x="44" y="112" width="9" height="20" rx="4"/>
-            <rect x="33" y="114" width="9" height="18" rx="4"/>
-            <rect x="14" y="112" width="9" height="20" rx="4"/>
-            <rect x="3" y="114" width="9" height="18" rx="4"/>
-          </svg>
         </div>
+        {/* Puppies — hero accent */}
+        <img
+          src="/puppies.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-0 right-4 hidden w-56 select-none md:block lg:w-72"
+          style={{ filter: "drop-shadow(0 0 28px rgba(0,176,150,0.22)) drop-shadow(0 16px 40px rgba(0,0,0,0.4))" }}
+        />
 
         {/* ── Nav ── */}
         <nav className="relative z-10 flex items-center justify-between px-6 py-5 md:px-12">

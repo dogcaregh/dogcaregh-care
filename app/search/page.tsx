@@ -462,8 +462,13 @@ function SearchResults() {
           </div>
         ) : visible.length === 0 ? (
           /* Empty state */
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-8 py-24 text-center">
-            <span className="mb-4 text-6xl">🐾</span>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-8 py-16 text-center">
+            <img
+              src="/puppies.png"
+              alt=""
+              className="mb-4 h-36 w-auto"
+              style={{ filter: "drop-shadow(0 4px 16px rgba(0,176,150,0.15))" }}
+            />
             <h2 className="mb-2 text-xl font-extrabold" style={{ color: "#0a2e30" }}>
               No providers found
             </h2>
