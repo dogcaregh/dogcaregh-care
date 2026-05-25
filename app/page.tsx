@@ -130,12 +130,19 @@ export default function HomePage() {
             <input
               ref={inputRef}
               type="text"
+              list="home-accra-areas"
               value={location}
               onChange={e => setLocation(e.target.value)}
               placeholder="Enter your neighbourhood or city…"
               className="flex-1 bg-transparent px-4 py-4 text-sm placeholder-gray-400 outline-none"
               style={{ color: "#0a2e30" }}
+              autoComplete="off"
             />
+            <datalist id="home-accra-areas">
+              {["Achimota","Adenta","Airport Residential","Cantonments","Dansoman","Dome","Dzorwulu","East Legon","Haatso","Kasoa","Kotobabi","Labone","Lapaz","Legon","Madina","Nima","North Kaneshie","Osu","Roman Ridge","Sakumono","Spintex","Tema","Tesano","Teshie","Trasacco Valley"].map(a => (
+                <option key={a} value={a} />
+              ))}
+            </datalist>
             <button
               type="submit"
               className="m-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"

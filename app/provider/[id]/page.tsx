@@ -234,20 +234,6 @@ export default function ProviderPage() {
               {provider.neighbourhood && (
                 <p className="mt-1.5 text-sm text-white/60">📍 {provider.neighbourhood}</p>
               )}
-              {provider.neighbourhood && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-                <div className="mt-3 overflow-hidden rounded-xl shadow-md" style={{ maxWidth: 340 }}>
-                  <iframe
-                    src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${encodeURIComponent(provider.neighbourhood + ", Accra, Ghana")}&zoom=14`}
-                    width="100%"
-                    height="160"
-                    style={{ border: 0, display: "block" }}
-                    allowFullScreen={false}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title="Provider location"
-                  />
-                </div>
-              )}
 
               <div className="mt-3 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
                 <Stars v={avgRating} lg />

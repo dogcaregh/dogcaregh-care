@@ -222,6 +222,7 @@ function SearchResults() {
 
   // Filters
   const [service,   setService]   = useState<ServiceId | "">(initService);
+  const [location,  setLocation]  = useState(initLocation);
   const [priceIdx,  setPriceIdx]  = useState(0);
   const [avail,     setAvail]     = useState<"all" | "available">("available");
 
@@ -261,21 +262,23 @@ function SearchResults() {
     return () => { cancelled = true; };
   }, [service]);
 
-  // Client-side price + availability filtering
+  // Client-side price + availability + location filtering
   const visible = useMemo(() => {
     const range = PRICE_RANGES[priceIdx];
+    const locQuery = location.trim().toLowerCase();
     return providers.filter(p => {
       if (avail === "available" && !p.active) return false;
       const price = minRate(p.rates);
       if (price !== null && range.max < Infinity && price > range.max) return false;
       if (price !== null && price < range.min) return false;
+      if (locQuery && !(p.neighbourhood ?? "").toLowerCase().includes(locQuery)) return false;
       return true;
     });
-  }, [providers, priceIdx, avail]);
+  }, [providers, priceIdx, avail, location]);
 
   const heading = [
     service ? SERVICES[service]?.label : "All services",
-    initLocation ? `near ${initLocation}` : "",
+    location.trim() ? `near ${location.trim()}` : "",
   ].filter(Boolean).join(" ");
 
   return (
@@ -338,6 +341,27 @@ function SearchResults() {
 
         {/* ── Filter bar ── */}
         <div className="mb-6 flex flex-wrap gap-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+
+          {/* Location */}
+          <div className="min-w-[180px] flex-1">
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              Neighbourhood
+            </p>
+            <input
+              type="text"
+              list="search-accra-areas"
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="Any area"
+              autoComplete="off"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400"
+            />
+            <datalist id="search-accra-areas">
+              {["Achimota","Adenta","Airport Residential","Cantonments","Dansoman","Dome","Dzorwulu","East Legon","Haatso","Kasoa","Kotobabi","Labone","Lapaz","Legon","Madina","Nima","North Kaneshie","Osu","Roman Ridge","Sakumono","Spintex","Tema","Tesano","Teshie","Trasacco Valley"].map(a => (
+                <option key={a} value={a} />
+              ))}
+            </datalist>
+          </div>
 
           {/* Service */}
           <div className="min-w-[180px] flex-1">
