@@ -623,7 +623,9 @@ export default function OwnerDashboard() {
                       {/* Progress track */}
                       <div className="mt-3 flex items-center justify-between">
                         <StatusTrack status={b.status} />
-                        <span className="font-mono text-[10px] text-gray-300">#{shortRef(b.id)}</span>
+                        <Link href={`/booking/${b.id}`} className="font-mono text-[10px] text-gray-400 transition hover:text-[#00b096]" title="View booking details">
+                          #{shortRef(b.id)} →
+                        </Link>
                       </div>
 
                       {/* Message thread */}

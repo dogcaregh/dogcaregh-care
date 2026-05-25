@@ -427,17 +427,17 @@ export default function ProviderDashboard() {
                           GHS {Number(b.provider_payout).toFixed(2)}
                         </p>
                       </div>
-                      <span className="hidden font-mono text-[10px] text-gray-300 sm:block">
-                        #{shortRef(b.id)}
-                      </span>
+                      <Link href={`/booking/${b.id}`} className="hidden font-mono text-[10px] text-gray-400 transition hover:text-[#00b096] sm:block" title="View booking details">
+                        #{shortRef(b.id)} →
+                      </Link>
                     </div>
 
                     {/* Progress track */}
                     <div className="mt-3 flex items-center justify-between">
                       <StatusTrack status={b.status} />
-                      <span className="font-mono text-[10px] text-gray-300 sm:hidden">
-                        #{shortRef(b.id)}
-                      </span>
+                      <Link href={`/booking/${b.id}`} className="font-mono text-[10px] text-gray-400 transition hover:text-[#00b096] sm:hidden" title="View booking details">
+                        #{shortRef(b.id)} →
+                      </Link>
                     </div>
 
                     {/* Message thread */}

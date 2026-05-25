@@ -7,6 +7,10 @@ import { createClient } from "@/lib/supabase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type BookingStatus =
+  | "pending" | "confirmed" | "paid" | "in_progress"
+  | "completed_pending" | "closed" | "cancelled";
+
 type ProviderRow = {
   id: string;
   user_id: string;
@@ -15,18 +19,33 @@ type ProviderRow = {
   users: { name: string } | { name: string }[] | null;
 };
 
+type DogRow = {
+  name: string;
+  breed: string | null;
+  size: string | null;
+  age: number | null;
+  vaccination_status: boolean;
+};
+
+type OwnerRow = {
+  name: string;
+  avatar_url: string | null;
+  location: string | null;
+};
+
 type BookingDetail = {
   id: string;
   service_type: string;
   start_date: string;
   end_date: string;
   gross_amount: number;
-  status: string;
+  provider_payout: number;
+  status: BookingStatus;
   owner_id: string;
   created_at: string;
   providers: ProviderRow | ProviderRow[] | null;
-  dogs: { name: string; breed: string | null } | { name: string; breed: string | null }[] | null;
-  users: { name: string } | { name: string }[] | null;
+  dogs: DogRow | DogRow[] | null;
+  users: OwnerRow | OwnerRow[] | null;
 };
 
 type Message = {
@@ -55,26 +74,22 @@ const SERVICES: Record<string, { label: string; emoji: string }> = {
   dog_walking:     { label: "Dog Walking",     emoji: "🦮" },
 };
 
-const STATUS_STEPS = ["pending", "confirmed", "paid", "in_progress", "completed_pending", "closed"];
-
-const STATUS_LABELS: Record<string, string> = {
-  pending:           "Pending",
-  confirmed:         "Confirmed",
-  paid:              "Paid",
-  in_progress:       "In Progress",
-  completed_pending: "Completing",
-  closed:            "Closed",
-  cancelled:         "Cancelled",
+const STATUS_META: Record<BookingStatus, { label: string; color: string; bg: string; desc: string }> = {
+  pending:           { label: "Pending",              color: "#d97706", bg: "rgba(251,191,36,.12)", desc: "Waiting for provider to respond"         },
+  confirmed:         { label: "Payment Due",          color: "#0891b2", bg: "rgba(8,145,178,.10)",  desc: "Provider accepted — pay now to confirm"  },
+  paid:              { label: "Paid",                 color: "#059669", bg: "rgba(5,150,105,.10)",  desc: "Payment received, service upcoming"       },
+  in_progress:       { label: "In Progress",          color: "#6366f1", bg: "rgba(99,102,241,.10)", desc: "Service is currently underway"            },
+  completed_pending: { label: "Awaiting Confirmation",color: "#8b5cf6", bg: "rgba(139,92,246,.10)", desc: "Provider marked done — confirm to close"  },
+  closed:            { label: "Closed",               color: "#10b981", bg: "rgba(16,185,129,.10)", desc: "Service complete — all done!"             },
+  cancelled:         { label: "Cancelled",            color: "#dc2626", bg: "rgba(220,38,38,.08)",  desc: "This booking was cancelled"               },
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  pending:           "bg-amber-50 text-amber-700",
-  confirmed:         "bg-blue-50 text-blue-700",
-  paid:              "bg-purple-50 text-purple-700",
-  in_progress:       "bg-teal-50 text-teal-700",
-  completed_pending: "bg-orange-50 text-orange-700",
-  closed:            "bg-green-50 text-green-700",
-  cancelled:         "bg-red-50 text-red-700",
+const STATUS_STEPS: BookingStatus[] = [
+  "pending", "confirmed", "paid", "in_progress", "completed_pending", "closed",
+];
+
+const SIZE_LABEL: Record<string, string> = {
+  small: "Small", medium: "Medium", large: "Large", xlarge: "XL",
 };
 
 const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
@@ -102,8 +117,7 @@ function fmtDate(iso: string) {
 }
 
 function fmtTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
 function shortRef(id: string) {
@@ -117,40 +131,32 @@ function groupByDay(messages: Message[]) {
     const day = new Date(msg.created_at).toLocaleDateString("en-GB", {
       weekday: "long", day: "numeric", month: "long",
     });
-    if (day !== lastDay) {
-      groups.push({ label: day, msgs: [] });
-      lastDay = day;
-    }
+    if (day !== lastDay) { groups.push({ label: day, msgs: [] }); lastDay = day; }
     groups[groups.length - 1].msgs.push(msg);
   }
   return groups;
 }
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Avatar({
-  name, avatarUrl, userId, size = "sm",
-}: {
-  name: string; avatarUrl: string | null; userId: string; size?: "sm" | "md";
+function Avatar({ name, avatarUrl, userId, size = "md" }: {
+  name: string; avatarUrl: string | null; userId: string; size?: "sm" | "md" | "lg";
 }) {
-  const cls = size === "sm"
-    ? "h-8 w-8 text-xs rounded-full"
-    : "h-10 w-10 text-sm rounded-full";
-
-  if (avatarUrl) {
-    return <img src={avatarUrl} alt={name} className={`${cls} shrink-0 object-cover`} />;
-  }
+  const cls: Record<string, string> = {
+    sm: "h-8 w-8 text-xs rounded-full",
+    md: "h-10 w-10 text-sm rounded-full",
+    lg: "h-16 w-16 text-lg rounded-2xl",
+  };
+  if (avatarUrl) return <img src={avatarUrl} alt={name} className={`${cls[size]} shrink-0 object-cover`} />;
   return (
     <div
-      className={`${cls} shrink-0 flex items-center justify-center font-bold text-white`}
+      className={`${cls[size]} shrink-0 flex items-center justify-center font-bold text-white`}
       style={{ backgroundColor: avatarBg(userId) }}
     >
       {ini(name)}
     </div>
   );
 }
-
-// ─── StatusTrack ─────────────────────────────────────────────────────────────
 
 function StatusTrack({ status }: { status: string }) {
   if (status === "cancelled") {
@@ -161,7 +167,7 @@ function StatusTrack({ status }: { status: string }) {
       </div>
     );
   }
-  const idx = STATUS_STEPS.indexOf(status);
+  const idx = STATUS_STEPS.indexOf(status as BookingStatus);
   return (
     <div className="flex items-center gap-0.5">
       {STATUS_STEPS.map((s, i) => (
@@ -169,13 +175,10 @@ function StatusTrack({ status }: { status: string }) {
           <div
             className="h-2 w-2 rounded-full transition-all"
             style={{ backgroundColor: i <= idx ? "#00b096" : "#d1d5db" }}
-            title={STATUS_LABELS[s]}
+            title={s.replace(/_/g, " ")}
           />
           {i < STATUS_STEPS.length - 1 && (
-            <div
-              className="h-px w-3 transition-all"
-              style={{ backgroundColor: i < idx ? "#00b096" : "#e5e7eb" }}
-            />
+            <div className="h-px w-4 transition-all" style={{ backgroundColor: i < idx ? "#00b096" : "#e5e7eb" }} />
           )}
         </div>
       ))}
@@ -189,37 +192,37 @@ export default function BookingPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
 
-  const [booking, setBooking]           = useState<BookingDetail | null>(null);
-  const [messages, setMessages]         = useState<Message[]>([]);
-  const [me, setMe]                     = useState<Party | null>(null);
-  const [other, setOther]               = useState<Party | null>(null);
-  const [loading, setLoading]           = useState(true);
-  const [text, setText]                 = useState("");
-  const [sending, setSending]           = useState(false);
-  const [uploading, setUploading]       = useState(false);
-  const [lightbox, setLightbox]         = useState<string | null>(null);
+  const [tab,      setTab]      = useState<"details" | "messages">("details");
+  const [booking,  setBooking]  = useState<BookingDetail | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [me,       setMe]       = useState<Party | null>(null);
+  const [other,    setOther]    = useState<Party | null>(null);
+  const [loading,  setLoading]  = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [text,     setText]     = useState("");
+  const [sending,  setSending]  = useState(false);
+  const [uploading,setUploading]= useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
 
-  // ── Load booking + parties + history ──────────────────────────────────────
+  // ── Load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
       const sb = createClient();
       const { data: { user } } = await sb.auth.getUser();
-      if (!user) {
-        router.push(`/login?redirect=/booking/${bookingId}`);
-        return;
-      }
+      if (!user) { router.push(`/login?redirect=/booking/${bookingId}`); return; }
 
-      const [bkRes, msgsRes, meRes] = await Promise.all([
+      const [bkRes, msgsRes] = await Promise.all([
         sb
           .from("bookings")
           .select(`
-            id, service_type, start_date, end_date, gross_amount, status, owner_id, created_at,
+            id, service_type, start_date, end_date, gross_amount, provider_payout,
+            status, owner_id, created_at,
             providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
-            dogs!dog_id(name, breed),
-            users!owner_id(name)
+            dogs!dog_id(name, breed, size, age, vaccination_status),
+            users!owner_id(name, avatar_url, location)
           `)
           .eq("id", bookingId)
           .single(),
@@ -228,7 +231,6 @@ export default function BookingPage() {
           .select("*")
           .eq("booking_id", bookingId)
           .order("created_at", { ascending: true }),
-        sb.from("users").select("name").eq("id", user.id).single(),
       ]);
 
       const bk = bkRes.data as unknown as BookingDetail;
@@ -236,34 +238,23 @@ export default function BookingPage() {
 
       const provider     = resolve(bk.providers as ProviderRow | ProviderRow[] | null);
       const providerUser = resolve(provider?.users ?? null);
+      const ownerRow     = resolve(bk.users as OwnerRow | OwnerRow[] | null);
       const isOwner      = user.id === bk.owner_id;
       const isProvider   = !!provider && provider.user_id === user.id;
 
       if (!isOwner && !isProvider) { router.push("/"); return; }
 
-      const ownerRow = resolve(bk.users as { name: string } | { name: string }[] | null);
-
       setMe({
         userId:    user.id,
-        name:      meRes.data?.name ?? "You",
-        avatarUrl: isProvider ? (provider?.avatar_url ?? null) : null,
+        name:      isOwner ? (ownerRow?.name ?? "You") : (providerUser?.name ?? "You"),
+        avatarUrl: isProvider ? (provider?.avatar_url ?? null) : (ownerRow?.avatar_url ?? null),
         role:      isOwner ? "owner" : "provider",
       });
 
       setOther(
         isOwner
-          ? {
-              userId:    provider?.user_id ?? "",
-              name:      providerUser?.name ?? "Provider",
-              avatarUrl: provider?.avatar_url ?? null,
-              role:      "provider",
-            }
-          : {
-              userId:    bk.owner_id,
-              name:      ownerRow?.name ?? "Owner",
-              avatarUrl: null,
-              role:      "owner",
-            }
+          ? { userId: provider?.user_id ?? "", name: providerUser?.name ?? "Provider", avatarUrl: provider?.avatar_url ?? null, role: "provider" }
+          : { userId: bk.owner_id, name: ownerRow?.name ?? "Owner", avatarUrl: ownerRow?.avatar_url ?? null, role: "owner" }
       );
 
       setBooking(bk);
@@ -273,161 +264,111 @@ export default function BookingPage() {
     load();
   }, [bookingId, router]);
 
-  // ── Realtime subscription ─────────────────────────────────────────────────
+  // ── Realtime ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const sb = createClient();
-    const channel = sb
+    const ch = sb
       .channel(`booking-msgs:${bookingId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `booking_id=eq.${bookingId}`,
-        },
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `booking_id=eq.${bookingId}` },
         (payload) => {
           const msg = payload.new as Message;
-          setMessages(prev =>
-            prev.some(m => m.id === msg.id) ? prev : [...prev, msg]
-          );
+          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         }
       )
       .subscribe();
-
-    return () => { sb.removeChannel(channel); };
+    return () => { sb.removeChannel(ch); };
   }, [bookingId]);
 
-  // ── Auto-scroll to bottom ─────────────────────────────────────────────────
+  // ── Auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (tab === "messages") messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, tab]);
 
-  // ── Send text message ─────────────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────────────────────────
+  async function updateStatus(status: BookingStatus) {
+    if (!booking || updating) return;
+    setUpdating(true);
+    const sb = createClient();
+    const { error } = await sb.from("bookings").update({ status }).eq("id", booking.id);
+    if (!error) setBooking(prev => prev ? { ...prev, status } : prev);
+    setUpdating(false);
+  }
+
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim() || !me || sending) return;
-
     const body  = text.trim();
     const tmpId = crypto.randomUUID();
-    const optimistic: Message = {
-      id: tmpId, booking_id: bookingId, sender_id: me.userId,
-      content: body, photo_url: null, created_at: new Date().toISOString(),
-    };
-
+    const optimistic: Message = { id: tmpId, booking_id: bookingId, sender_id: me.userId, content: body, photo_url: null, created_at: new Date().toISOString() };
     setMessages(prev => [...prev, optimistic]);
     setText("");
     setSending(true);
-
     const sb = createClient();
-    const { data, error } = await sb
-      .from("messages")
-      .insert({ booking_id: bookingId, sender_id: me.userId, content: body })
-      .select()
-      .single();
-
-    if (!error && data) {
-      setMessages(prev => prev.map(m => m.id === tmpId ? (data as Message) : m));
-    } else {
-      setMessages(prev => prev.filter(m => m.id !== tmpId));
-    }
+    const { data, error } = await sb.from("messages").insert({ booking_id: bookingId, sender_id: me.userId, content: body }).select().single();
+    if (!error && data) setMessages(prev => prev.map(m => m.id === tmpId ? (data as Message) : m));
+    else setMessages(prev => prev.filter(m => m.id !== tmpId));
     setSending(false);
   }
 
-  // ── Upload photo (providers only) ─────────────────────────────────────────
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !me) return;
-
     setUploading(true);
     const sb  = createClient();
     const ext  = file.name.split(".").pop() ?? "jpg";
     const path = `${bookingId}/${me.userId}/${Date.now()}.${ext}`;
-
-    const { error: upErr } = await sb.storage
-      .from("booking-updates")
-      .upload(path, file, { upsert: false });
-
-    if (upErr) {
-      console.error("Upload failed:", upErr.message);
-      setUploading(false);
-      return;
-    }
-
-    const { data: { publicUrl } } = sb.storage
-      .from("booking-updates")
-      .getPublicUrl(path);
-
-    await sb.from("messages").insert({
-      booking_id: bookingId,
-      sender_id:  me.userId,
-      photo_url:  publicUrl,
-    });
-
+    const { error: upErr } = await sb.storage.from("booking-updates").upload(path, file, { upsert: false });
+    if (upErr) { setUploading(false); return; }
+    const { data: { publicUrl } } = sb.storage.from("booking-updates").getPublicUrl(path);
+    await sb.from("messages").insert({ booking_id: bookingId, sender_id: me.userId, photo_url: publicUrl });
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  // ── Loading / error states ────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
-        <p className="text-2xl font-bold text-white">
-          Dog<span style={{ color: "#00b096" }}>Care</span>GH
-        </p>
-        <p className="mt-3 animate-pulse text-sm text-white/50">Loading…</p>
-      </div>
-    );
-  }
+  // ── Loading / not found ───────────────────────────────────────────────────
+  if (loading) return (
+    <div className="flex h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
+      <p className="text-2xl font-bold text-white">Dog<span style={{ color: "#00b096" }}>Care</span>GH</p>
+      <p className="mt-3 animate-pulse text-sm text-white/50">Loading…</p>
+    </div>
+  );
 
-  if (!booking || !me) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-gray-50">
-        <span className="text-6xl">🐾</span>
-        <p className="font-bold" style={{ color: "#0a2e30" }}>Booking not found</p>
-        <Link href="/" className="text-sm font-semibold hover:underline" style={{ color: "#00b096" }}>
-          Go home
-        </Link>
-      </div>
-    );
-  }
+  if (!booking || !me) return (
+    <div className="flex h-screen flex-col items-center justify-center gap-3 bg-gray-50">
+      <span className="text-6xl">🐾</span>
+      <p className="font-bold" style={{ color: "#0a2e30" }}>Booking not found</p>
+      <Link href="/" className="text-sm font-semibold hover:underline" style={{ color: "#00b096" }}>Go home</Link>
+    </div>
+  );
 
-  const dog       = resolve(booking.dogs as { name: string; breed: string | null } | { name: string; breed: string | null }[] | null);
-  const svc       = SERVICES[booking.service_type];
-  const sameDay   = booking.start_date === booking.end_date;
-  const statusCls = STATUS_COLORS[booking.status] ?? STATUS_COLORS.pending;
-  const dayGroups = groupByDay(messages);
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const provider      = resolve(booking.providers as ProviderRow | ProviderRow[] | null);
+  const providerUser  = resolve(provider?.users ?? null);
+  const ownerRow      = resolve(booking.users as OwnerRow | OwnerRow[] | null);
+  const dog           = resolve(booking.dogs as DogRow | DogRow[] | null);
+  const svc           = SERVICES[booking.service_type];
+  const statusMeta    = STATUS_META[booking.status] ?? STATUS_META.pending;
+  const sameDay       = booking.start_date === booking.end_date;
+  const isOwner       = me.role === "owner";
+  const isProvider    = me.role === "provider";
+  const providerFullName = providerUser?.name ?? "DogCare Provider";
+  const ownerFullName    = ownerRow?.name ?? "Pet Owner";
+  const dayGroups     = groupByDay(messages);
 
   return (
     <>
-      {/* ── Lightbox ── */}
+      {/* Lightbox */}
       {lightbox && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
-          onClick={() => setLightbox(null)}
-        >
-          <img
-            src={lightbox}
-            alt="Photo update"
-            className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl"
-          />
-          <button
-            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
-            onClick={() => setLightbox(null)}
-          >
-            ✕
-          </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={() => setLightbox(null)}>
+          <img src={lightbox} alt="Photo update" className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl" />
+          <button className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20" onClick={() => setLightbox(null)}>✕</button>
         </div>
       )}
 
-      {/* ── Full-height flex shell ── */}
-      <div className="flex flex-col bg-gray-50" style={{ height: "100dvh" }}>
+      <div className="flex flex-col" style={{ height: "100dvh", backgroundColor: "#f8fafb" }}>
 
-        {/* ── Nav ── */}
-        <nav
-          className="shrink-0 flex items-center justify-between border-b border-white/10 px-5 py-3 md:px-8"
-          style={{ backgroundColor: "#0a2e30" }}
-        >
+        {/* Nav */}
+        <nav className="shrink-0 flex items-center justify-between border-b border-white/10 px-5 py-3 md:px-8" style={{ backgroundColor: "#0a2e30" }}>
           <Link href="/" className="text-xl font-bold tracking-tight text-white">
             Dog<span style={{ color: "#00b096" }}>Care</span>GH
           </Link>
@@ -439,226 +380,437 @@ export default function BookingPage() {
           </Link>
         </nav>
 
-        {/* ── Booking summary strip ── */}
-        <div className="shrink-0 border-b border-gray-100 bg-white px-5 py-4 md:px-8">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            {/* Left: ref, status, service, dates, progress */}
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-sm font-bold" style={{ color: "#0a2e30" }}>
-                  #{shortRef(booking.id)}
-                </span>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusCls}`}>
-                  {STATUS_LABELS[booking.status] ?? booking.status}
-                </span>
-              </div>
-              <p className="mt-0.5 truncate text-sm text-gray-500">
-                {svc?.emoji} {svc?.label}
-                {dog ? ` · ${dog.name}` : ""}
-                {" · "}
-                {sameDay
-                  ? fmtDate(booking.start_date)
-                  : `${fmtDate(booking.start_date)} → ${fmtDate(booking.end_date)}`}
-              </p>
-              <div className="mt-2">
-                <StatusTrack status={booking.status} />
-              </div>
-            </div>
-
-            {/* Right: other party */}
-            {other && (
-              <div className="flex items-center gap-2.5">
-                <Avatar
-                  name={other.name}
-                  avatarUrl={other.avatarUrl}
-                  userId={other.userId}
-                  size="md"
-                />
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-gray-400">
-                    {other.role === "provider" ? "Your provider" : "Owner"}
-                  </p>
-                  <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>
-                    {other.name.split(" ")[0]}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Tab bar */}
+        <div className="shrink-0 flex border-b border-gray-100 bg-white shadow-sm">
+          {(["details", "messages"] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className="flex-1 py-3.5 text-sm font-semibold transition"
+              style={
+                tab === t
+                  ? { borderBottom: "2px solid #00b096", color: "#0a2e30" }
+                  : { borderBottom: "2px solid transparent", color: "#9ca3af" }
+              }
+            >
+              {t === "details" ? "Booking Details" : `Messages${messages.length > 0 ? ` (${messages.length})` : ""}`}
+            </button>
+          ))}
         </div>
 
-        {/* ── Messages ── */}
-        <div className="flex-1 overflow-y-auto px-4 py-5 md:px-8">
-          {messages.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-gray-400">
-              <span className="text-5xl">💬</span>
-              <p className="text-sm font-semibold text-gray-500">No messages yet</p>
-              <p className="max-w-xs text-xs text-gray-400">
-                {me.role === "provider"
-                  ? "Send the owner a welcome message or share a photo update during the service."
-                  : "Tell your provider about your dog and what you need — it helps them decide if they're the right fit."}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {dayGroups.map(group => (
-                <div key={group.label}>
-                  {/* Day separator */}
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="flex-1 border-t border-gray-200" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                      {group.label}
+        {/* ── Details tab ── */}
+        {tab === "details" && (
+          <div className="flex-1 overflow-y-auto px-4 py-5 md:px-6">
+            <div className="mx-auto max-w-2xl space-y-4 pb-8">
+
+              {/* Booking ref card */}
+              <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                <div className="h-1.5" style={{ backgroundColor: statusMeta.color }} />
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Booking Reference</p>
+                      <p className="mt-0.5 font-mono text-2xl font-extrabold" style={{ color: "#0a2e30" }}>#{shortRef(booking.id)}</p>
+                    </div>
+                    <span
+                      className="mt-1 shrink-0 rounded-full px-3 py-1 text-xs font-bold"
+                      style={{ backgroundColor: statusMeta.bg, color: statusMeta.color }}
+                    >
+                      {statusMeta.label}
                     </span>
-                    <div className="flex-1 border-t border-gray-200" />
                   </div>
-
-                  {/* Messages for this day */}
-                  <div className="space-y-3">
-                    {group.msgs.map((msg) => {
-                      const isFromMe = msg.sender_id === me.userId;
-                      const sender   = isFromMe ? me : other;
-
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`flex items-end gap-2 ${isFromMe ? "flex-row-reverse" : "flex-row"}`}
-                        >
-                          {/* Avatar (other party only) */}
-                          {!isFromMe && sender && (
-                            <Avatar
-                              name={sender.name}
-                              avatarUrl={sender.avatarUrl}
-                              userId={sender.userId}
-                              size="sm"
-                            />
-                          )}
-
-                          <div
-                            className={`flex max-w-[72%] flex-col gap-1 ${
-                              isFromMe ? "items-end" : "items-start"
-                            }`}
-                          >
-                            {/* Photo message */}
-                            {msg.photo_url && (
-                              <button
-                                type="button"
-                                onClick={() => setLightbox(msg.photo_url!)}
-                                className="overflow-hidden rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#00b096]/50"
-                              >
-                                <img
-                                  src={msg.photo_url}
-                                  alt="Photo update"
-                                  className="block max-w-[240px] rounded-2xl object-cover transition hover:opacity-95 md:max-w-[320px]"
-                                  style={{ maxHeight: 260 }}
-                                />
-                              </button>
-                            )}
-
-                            {/* Text message */}
-                            {msg.content && (
-                              <div
-                                className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                                  isFromMe
-                                    ? "rounded-br-sm text-white"
-                                    : "rounded-bl-sm border border-gray-100 bg-white text-gray-800 shadow-sm"
-                                }`}
-                                style={isFromMe ? { backgroundColor: "#00b096" } : {}}
-                              >
-                                {msg.content}
-                              </div>
-                            )}
-
-                            <span className="px-1 text-[10px] text-gray-400">
-                              {fmtTime(msg.created_at)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <p className="mt-1 text-xs text-gray-500">{statusMeta.desc}</p>
+                  <div className="mt-3">
+                    <StatusTrack status={booking.status} />
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Service</p>
+                      <p className="mt-0.5 text-gray-700">{svc?.emoji} {svc?.label}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{sameDay ? "Date" : "Dates"}</p>
+                      <p className="mt-0.5 text-gray-700">
+                        {sameDay ? fmtDate(booking.start_date) : `${fmtDate(booking.start_date)} → ${fmtDate(booking.end_date)}`}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Booked On</p>
+                      <p className="mt-0.5 text-gray-700">{fmtDate(booking.created_at.split("T")[0])}</p>
+                    </div>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {/* People grid */}
+              <div className="grid gap-3 sm:grid-cols-2">
+
+                {/* Provider card */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Provider</p>
+                  <div className="flex items-center gap-3">
+                    <Avatar name={providerFullName} avatarUrl={provider?.avatar_url ?? null} userId={provider?.user_id ?? "p"} size="lg" />
+                    <div className="min-w-0">
+                      <p className="truncate font-bold" style={{ color: "#0a2e30" }}>{providerFullName}</p>
+                      <p className="text-xs italic text-gray-400">DogCare Provider</p>
+                      {provider?.neighbourhood && <p className="mt-0.5 text-xs text-gray-500">📍 {provider.neighbourhood}</p>}
+                    </div>
+                  </div>
+                  {isOwner && provider && (
+                    <Link
+                      href={`/provider/${provider.id}`}
+                      className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+                    >
+                      View Profile →
+                    </Link>
+                  )}
+                </div>
+
+                {/* Owner card */}
+                <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Pet Owner</p>
+                  <div className="flex items-center gap-3">
+                    <Avatar name={ownerFullName} avatarUrl={ownerRow?.avatar_url ?? null} userId={booking.owner_id} size="lg" />
+                    <div className="min-w-0">
+                      <p className="truncate font-bold" style={{ color: "#0a2e30" }}>{ownerFullName}</p>
+                      <p className="text-xs italic text-gray-400">Pet Owner</p>
+                      {ownerRow?.location && <p className="mt-0.5 text-xs text-gray-500">📍 {ownerRow.location}</p>}
+                    </div>
+                  </div>
+                  {isProvider && (
+                    <Link
+                      href={`/owner-profile/${booking.owner_id}`}
+                      className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+                    >
+                      View Profile →
+                    </Link>
+                  )}
+                </div>
+              </div>
+
+              {/* Dog card */}
+              {dog && (
+                <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Dog</p>
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl"
+                      style={{ backgroundColor: "rgba(0,176,150,.1)" }}
+                    >
+                      🐕
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-base font-bold" style={{ color: "#0a2e30" }}>{dog.name}</p>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        {[dog.breed, dog.size ? (SIZE_LABEL[dog.size] ?? dog.size) : null, dog.age ? `${dog.age}y` : null]
+                          .filter(Boolean).join(" · ") || "No details"}
+                      </p>
+                    </div>
+                    <span
+                      className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                      style={
+                        dog.vaccination_status
+                          ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
+                          : { background: "rgba(239,68,68,.1)", color: "#dc2626" }
+                      }
+                    >
+                      {dog.vaccination_status ? "Vaccinated" : "Unvaccinated"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Payment card */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Payment</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500">Total Amount</p>
+                    <p className="text-xl font-extrabold" style={{ color: "#0a2e30" }}>
+                      GHS {Number(booking.gross_amount).toFixed(2)}
+                    </p>
+                  </div>
+                  {isProvider && (
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500">Your Payout</p>
+                      <p className="text-xl font-extrabold" style={{ color: "#00b096" }}>
+                        GHS {Number(booking.provider_payout).toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-2.5">
+
+                {/* Message button */}
+                <button
+                  onClick={() => setTab("messages")}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-semibold text-gray-600 shadow-sm transition hover:bg-gray-50"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  Message {isOwner ? "Provider" : "Owner"}
+                </button>
+
+                {/* Review (closed, owner only) */}
+                {booking.status === "closed" && isOwner && provider && (
+                  <Link
+                    href={`/provider/${provider.id}`}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90"
+                    style={{ backgroundColor: "#00b096" }}
+                  >
+                    ⭐ Leave a Review
+                  </Link>
+                )}
+
+                {/* Owner: Pay now */}
+                {isOwner && booking.status === "confirmed" && (
+                  <>
+                    <button
+                      disabled={updating}
+                      onClick={() => updateStatus("paid")}
+                      className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                      style={{ backgroundColor: "#00b096" }}
+                    >
+                      {updating ? "Processing…" : `💳 Pay Now — GHS ${Number(booking.gross_amount).toFixed(2)}`}
+                    </button>
+                    <p className="text-center text-xs text-gray-400">Paystack integration coming soon — payment is simulated.</p>
+                  </>
+                )}
+
+                {/* Owner: Confirm complete */}
+                {isOwner && booking.status === "completed_pending" && (
+                  <>
+                    <button
+                      disabled={updating}
+                      onClick={() => updateStatus("closed")}
+                      className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                      style={{ backgroundColor: "#00b096" }}
+                    >
+                      {updating ? "Confirming…" : "✓ Confirm Service Complete"}
+                    </button>
+                    <p className="text-center text-xs text-gray-400">Confirming releases payment to the provider.</p>
+                  </>
+                )}
+
+                {/* Owner: Cancel */}
+                {isOwner && (booking.status === "pending" || booking.status === "confirmed") && (
+                  <button
+                    disabled={updating}
+                    onClick={() => updateStatus("cancelled")}
+                    className="w-full rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-400 transition hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {updating ? "Cancelling…" : "Cancel Booking"}
+                  </button>
+                )}
+
+                {/* Provider: Accept / Decline */}
+                {isProvider && booking.status === "pending" && (
+                  <div className="flex gap-2">
+                    <button
+                      disabled={updating}
+                      onClick={() => updateStatus("confirmed")}
+                      className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                      style={{ backgroundColor: "#00b096" }}
+                    >
+                      {updating ? "…" : "✓ Accept Booking"}
+                    </button>
+                    <button
+                      disabled={updating}
+                      onClick={() => updateStatus("cancelled")}
+                      className="flex-1 rounded-xl border border-red-200 py-3 text-sm font-bold text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {updating ? "…" : "Decline"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Provider: Start service */}
+                {isProvider && booking.status === "paid" && (
+                  <button
+                    disabled={updating}
+                    onClick={() => updateStatus("in_progress")}
+                    className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                    style={{ backgroundColor: "#6366f1" }}
+                  >
+                    {updating ? "Updating…" : "▶ Start Service"}
+                  </button>
+                )}
+
+                {/* Provider: Mark complete */}
+                {isProvider && booking.status === "in_progress" && (
+                  <button
+                    disabled={updating}
+                    onClick={() => updateStatus("completed_pending")}
+                    className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                    style={{ backgroundColor: "#8b5cf6" }}
+                  >
+                    {updating ? "Updating…" : "✓ Mark Service as Complete"}
+                  </button>
+                )}
+
+                {/* Provider: Info banners */}
+                {isProvider && booking.status === "confirmed" && (
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-600">
+                    ⏳ Waiting for the owner to complete payment.
+                  </div>
+                )}
+                {isProvider && booking.status === "completed_pending" && (
+                  <div className="rounded-xl border border-purple-100 bg-purple-50 px-4 py-3 text-xs text-purple-600">
+                    ⏳ Waiting for the owner to confirm the service is complete.
+                  </div>
+                )}
+                {isProvider && booking.status === "closed" && (
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                    <span className="text-base">✅</span>
+                    <p className="text-xs font-medium text-emerald-700">
+                      Service confirmed. Payout of{" "}
+                      <strong>GHS {Number(booking.provider_payout).toFixed(2)}</strong> triggered.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          </div>
+        )}
 
-          <div ref={messagesEndRef} />
-        </div>
+        {/* ── Messages tab ── */}
+        {tab === "messages" && (
+          <>
+            <div className="flex-1 overflow-y-auto px-4 py-5 md:px-8">
+              {messages.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-gray-400">
+                  <span className="text-5xl">💬</span>
+                  <p className="text-sm font-semibold text-gray-500">No messages yet</p>
+                  <p className="max-w-xs text-xs text-gray-400">
+                    {me.role === "provider"
+                      ? "Send the owner a welcome message or share a photo update during the service."
+                      : "Tell your provider about your dog and what you need."}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {dayGroups.map(group => (
+                    <div key={group.label}>
+                      <div className="mb-4 flex items-center gap-3">
+                        <div className="flex-1 border-t border-gray-200" />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{group.label}</span>
+                        <div className="flex-1 border-t border-gray-200" />
+                      </div>
+                      <div className="space-y-3">
+                        {group.msgs.map(msg => {
+                          const isFromMe = msg.sender_id === me.userId;
+                          const sender   = isFromMe ? me : other;
+                          return (
+                            <div key={msg.id} className={`flex items-end gap-2 ${isFromMe ? "flex-row-reverse" : "flex-row"}`}>
+                              {!isFromMe && sender && (
+                                <Avatar name={sender.name} avatarUrl={sender.avatarUrl} userId={sender.userId} size="sm" />
+                              )}
+                              <div className={`flex max-w-[72%] flex-col gap-1 ${isFromMe ? "items-end" : "items-start"}`}>
+                                {msg.photo_url && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setLightbox(msg.photo_url!)}
+                                    className="overflow-hidden rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#00b096]/50"
+                                  >
+                                    <img
+                                      src={msg.photo_url}
+                                      alt="Photo update"
+                                      className="block max-w-[240px] rounded-2xl object-cover transition hover:opacity-95 md:max-w-[320px]"
+                                      style={{ maxHeight: 260 }}
+                                    />
+                                  </button>
+                                )}
+                                {msg.content && (
+                                  <div
+                                    className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                                      isFromMe ? "rounded-br-sm text-white" : "rounded-bl-sm border border-gray-100 bg-white text-gray-800 shadow-sm"
+                                    }`}
+                                    style={isFromMe ? { backgroundColor: "#00b096" } : {}}
+                                  >
+                                    {msg.content}
+                                  </div>
+                                )}
+                                <span className="px-1 text-[10px] text-gray-400">{fmtTime(msg.created_at)}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
 
-        {/* ── Input bar ── */}
-        <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3 md:px-8">
-          {booking.status === "cancelled" || booking.status === "closed" ? (
-            <p className="text-center text-xs text-gray-400">
-              This booking is {booking.status}. Messaging is disabled.
-            </p>
-          ) : (
-            <form onSubmit={sendMessage} className="flex items-center gap-2">
-              {/* Photo upload — providers only */}
-              {me.role === "provider" && (
-                <>
+            {/* Input bar */}
+            <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3 md:px-8">
+              {booking.status === "cancelled" || booking.status === "closed" ? (
+                <p className="text-center text-xs text-gray-400">
+                  This booking is {booking.status}. Messaging is disabled.
+                </p>
+              ) : (
+                <form onSubmit={sendMessage} className="flex items-center gap-2">
+                  {me.role === "provider" && (
+                    <>
+                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                      <button
+                        type="button"
+                        disabled={uploading}
+                        onClick={() => fileInputRef.current?.click()}
+                        title="Send a photo update"
+                        className="flex shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        {uploading ? (
+                          <svg className="h-4 w-4 animate-spin text-[#00b096]" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+                            <path d="M22 12a10 10 0 01-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                          </svg>
+                        ) : (
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        )}
+                        <span className="hidden sm:inline">Photo</span>
+                      </button>
+                    </>
+                  )}
                   <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handlePhotoUpload}
+                    type="text"
+                    value={text}
+                    onChange={e => setText(e.target.value)}
+                    placeholder={me.role === "provider" ? "Message owner…" : "Message provider…"}
+                    className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400"
+                    disabled={sending}
+                    autoComplete="off"
                   />
                   <button
-                    type="button"
-                    disabled={uploading}
-                    onClick={() => fileInputRef.current?.click()}
-                    title="Send a photo update"
-                    className="flex shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+                    type="submit"
+                    disabled={!text.trim() || sending}
+                    className="shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+                    style={{ backgroundColor: "#00b096" }}
                   >
-                    {uploading ? (
-                      <svg className="h-4 w-4 animate-spin text-[#00b096]" viewBox="0 0 24 24" fill="none">
+                    {sending ? (
+                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
                         <path d="M22 12a10 10 0 01-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                       </svg>
                     ) : (
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                       </svg>
                     )}
-                    <span className="hidden sm:inline">Photo</span>
                   </button>
-                </>
+                </form>
               )}
-
-              <input
-                type="text"
-                value={text}
-                onChange={e => setText(e.target.value)}
-                placeholder={
-                  me.role === "provider"
-                    ? "Message owner…"
-                    : "Message provider…"
-                }
-                className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400"
-                disabled={sending}
-                autoComplete="off"
-              />
-
-              <button
-                type="submit"
-                disabled={!text.trim() || sending}
-                className="shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
-                style={{ backgroundColor: "#00b096" }}
-              >
-                {sending ? (
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
-                    <path d="M22 12a10 10 0 01-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                  </svg>
-                ) : (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                  </svg>
-                )}
-              </button>
-            </form>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </>
   );
