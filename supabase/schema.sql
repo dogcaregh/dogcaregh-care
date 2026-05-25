@@ -43,19 +43,22 @@ create table dogs (
 );
 
 create table providers (
-  id            uuid        primary key default uuid_generate_v4(),
-  user_id       uuid        not null unique references users(id) on delete cascade,
-  bio           text,
-  services      service_type[] not null default '{}',
-  rates         jsonb       not null default '{}',
-  availability  jsonb       not null default '{}',
-  rating_avg    numeric(3,2) not null default 0 check (rating_avg between 0 and 5),
-  review_count  int         not null default 0,
-  verified      boolean     not null default false,
-  active        boolean     not null default true,
-  location      text,
-  neighbourhood text,
-  created_at    timestamptz not null default now()
+  id                uuid        primary key default uuid_generate_v4(),
+  user_id           uuid        not null unique references users(id) on delete cascade,
+  bio               text,
+  years_experience  smallint    check (years_experience >= 0),
+  avatar_url        text,
+  gallery_photos    text[]      not null default '{}',
+  services          service_type[] not null default '{}',
+  rates             jsonb       not null default '{}',
+  availability      jsonb       not null default '{}',
+  rating_avg        numeric(3,2) not null default 0 check (rating_avg between 0 and 5),
+  review_count      int         not null default 0,
+  verified          boolean     not null default false,
+  active            boolean     not null default true,
+  location          text,
+  neighbourhood     text,
+  created_at        timestamptz not null default now()
 );
 
 create table bookings (
@@ -196,6 +199,16 @@ create policy "users: public read for active providers"
       select 1 from public.providers
       where providers.user_id = users.id
         and providers.active = true
+    )
+  );
+
+-- Allows the profile page to show reviewer names without authentication
+create policy "users: public read for reviewers"
+  on users for select
+  using (
+    exists (
+      select 1 from public.reviews
+      where reviews.owner_id = users.id
     )
   );
 
@@ -346,4 +359,37 @@ create policy "messages: booking parties insert"
           )
         )
     )
+  );
+
+
+-- ── Storage ──────────────────────────────────────────────────
+
+insert into storage.buckets (id, name, public)
+values ('provider-photos', 'provider-photos', true)
+on conflict (id) do nothing;
+
+create policy "provider-photos: public read"
+  on storage.objects for select
+  using (bucket_id = 'provider-photos');
+
+create policy "provider-photos: provider upload"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'provider-photos'
+    and auth.uid() is not null
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "provider-photos: provider update"
+  on storage.objects for update
+  using (
+    bucket_id = 'provider-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "provider-photos: provider delete"
+  on storage.objects for delete
+  using (
+    bucket_id = 'provider-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
   );
