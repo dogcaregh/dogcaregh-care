@@ -373,13 +373,18 @@ export default function ProviderDashboard() {
               return (
                 <article
                   key={b.id}
-                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md"
+                  className="cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md"
+                  onClick={() => router.push(`/booking/${b.id}`)}
                 >
                   <div className="p-5">
 
                     {/* Owner + status */}
                     <div className="flex items-start justify-between gap-3">
-                      <Link href={`/owner-profile/${b.owner_id}`} className="flex items-center gap-3 transition hover:opacity-80">
+                      <Link
+                        href={`/owner-profile/${b.owner_id}`}
+                        className="flex items-center gap-3 transition hover:opacity-80"
+                        onClick={e => e.stopPropagation()}
+                      >
                         <div
                           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white"
                           style={{ backgroundColor: avatarBg(b.owner_id) }}
@@ -427,101 +432,105 @@ export default function ProviderDashboard() {
                           GHS {Number(b.provider_payout).toFixed(2)}
                         </p>
                       </div>
-                      <Link href={`/booking/${b.id}`} className="hidden font-mono text-[10px] text-gray-400 transition hover:text-[#00b096] sm:block" title="View booking details">
-                        #{shortRef(b.id)} →
-                      </Link>
+                      <span className="hidden font-mono text-[10px] text-gray-300 sm:block">
+                        #{shortRef(b.id)}
+                      </span>
                     </div>
 
                     {/* Progress track */}
                     <div className="mt-3 flex items-center justify-between">
                       <StatusTrack status={b.status} />
-                      <Link href={`/booking/${b.id}`} className="font-mono text-[10px] text-gray-400 transition hover:text-[#00b096] sm:hidden" title="View booking details">
-                        #{shortRef(b.id)} →
-                      </Link>
+                      <span className="font-mono text-[10px] text-gray-300 sm:hidden">
+                        #{shortRef(b.id)}
+                      </span>
                     </div>
 
-                    {/* Message thread */}
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        onClick={() => openChat(b.id)}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-                      >
-                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        Message Owner
-                      </button>
+                    {/* Interactive section — stops card-click propagation */}
+                    <div onClick={e => e.stopPropagation()}>
+
+                      {/* Message thread */}
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => openChat(b.id)}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          Message Owner
+                        </button>
+                      </div>
+
+                      {/* Actions */}
+                      {b.status === "pending" && (
+                        <div className="mt-4 flex gap-2">
+                          <button
+                            disabled={isBusy}
+                            onClick={() => updateStatus(b.id, "confirmed")}
+                            className="flex-1 rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                            style={{ backgroundColor: "#00b096" }}
+                          >
+                            {isBusy ? "Updating…" : "✓  Accept Booking"}
+                          </button>
+                          <button
+                            disabled={isBusy}
+                            onClick={() => updateStatus(b.id, "cancelled")}
+                            className="flex-1 rounded-xl border border-red-200 py-2.5 text-xs font-bold text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+                          >
+                            {isBusy ? "…" : "Decline"}
+                          </button>
+                        </div>
+                      )}
+
+                      {b.status === "confirmed" && (
+                        <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs text-blue-600">
+                          ⏳ Waiting for the owner to complete payment before the booking is confirmed.
+                        </div>
+                      )}
+
+                      {b.status === "paid" && (
+                        <div className="mt-4">
+                          <button
+                            disabled={isBusy}
+                            onClick={() => updateStatus(b.id, "in_progress")}
+                            className="w-full rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                            style={{ backgroundColor: "#6366f1" }}
+                          >
+                            {isBusy ? "Updating…" : "▶  Start Service"}
+                          </button>
+                        </div>
+                      )}
+
+                      {b.status === "in_progress" && (
+                        <div className="mt-4">
+                          <button
+                            disabled={isBusy}
+                            onClick={() => updateStatus(b.id, "completed_pending")}
+                            className="w-full rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                            style={{ backgroundColor: "#8b5cf6" }}
+                          >
+                            {isBusy ? "Updating…" : "✓  Mark Service as Complete"}
+                          </button>
+                        </div>
+                      )}
+
+                      {b.status === "completed_pending" && (
+                        <div className="mt-4 rounded-xl border border-purple-100 bg-purple-50 px-4 py-2.5 text-xs text-purple-600">
+                          ⏳ Waiting for the owner to confirm the service is complete and release payment.
+                        </div>
+                      )}
+
+                      {b.status === "closed" && (
+                        <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2.5">
+                          <span className="text-base">✅</span>
+                          <p className="text-xs font-medium text-emerald-700">
+                            Service confirmed. Payout of{" "}
+                            <strong>GHS {Number(b.provider_payout).toFixed(2)}</strong> triggered.
+                          </p>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Actions */}
-                    {b.status === "pending" && (
-                      <div className="mt-4 flex gap-2">
-                        <button
-                          disabled={isBusy}
-                          onClick={() => updateStatus(b.id, "confirmed")}
-                          className="flex-1 rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                          style={{ backgroundColor: "#00b096" }}
-                        >
-                          {isBusy ? "Updating…" : "✓  Accept Booking"}
-                        </button>
-                        <button
-                          disabled={isBusy}
-                          onClick={() => updateStatus(b.id, "cancelled")}
-                          className="flex-1 rounded-xl border border-red-200 py-2.5 text-xs font-bold text-red-500 transition hover:bg-red-50 disabled:opacity-50"
-                        >
-                          {isBusy ? "…" : "Decline"}
-                        </button>
-                      </div>
-                    )}
-
-                    {b.status === "confirmed" && (
-                      <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs text-blue-600">
-                        ⏳ Waiting for the owner to complete payment before the booking is confirmed.
-                      </div>
-                    )}
-
-                    {b.status === "paid" && (
-                      <div className="mt-4">
-                        <button
-                          disabled={isBusy}
-                          onClick={() => updateStatus(b.id, "in_progress")}
-                          className="w-full rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                          style={{ backgroundColor: "#6366f1" }}
-                        >
-                          {isBusy ? "Updating…" : "▶  Start Service"}
-                        </button>
-                      </div>
-                    )}
-
-                    {b.status === "in_progress" && (
-                      <div className="mt-4">
-                        <button
-                          disabled={isBusy}
-                          onClick={() => updateStatus(b.id, "completed_pending")}
-                          className="w-full rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                          style={{ backgroundColor: "#8b5cf6" }}
-                        >
-                          {isBusy ? "Updating…" : "✓  Mark Service as Complete"}
-                        </button>
-                      </div>
-                    )}
-
-                    {b.status === "completed_pending" && (
-                      <div className="mt-4 rounded-xl border border-purple-100 bg-purple-50 px-4 py-2.5 text-xs text-purple-600">
-                        ⏳ Waiting for the owner to confirm the service is complete and release payment.
-                      </div>
-                    )}
-
-                    {b.status === "closed" && (
-                      <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2.5">
-                        <span className="text-base">✅</span>
-                        <p className="text-xs font-medium text-emerald-700">
-                          Service confirmed. Payout of{" "}
-                          <strong>GHS {Number(b.provider_payout).toFixed(2)}</strong> triggered.
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </article>
               );

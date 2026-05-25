@@ -575,7 +575,11 @@ export default function OwnerDashboard() {
                 const isBusy       = updating === b.id;
 
                 return (
-                  <article key={b.id} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md">
+                  <article
+                    key={b.id}
+                    className="cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md"
+                    onClick={() => router.push(`/booking/${b.id}`)}
+                  >
                     <div className="p-5">
 
                       {/* Provider + status badge */}
@@ -623,89 +627,91 @@ export default function OwnerDashboard() {
                       {/* Progress track */}
                       <div className="mt-3 flex items-center justify-between">
                         <StatusTrack status={b.status} />
-                        <Link href={`/booking/${b.id}`} className="font-mono text-[10px] text-gray-400 transition hover:text-[#00b096]" title="View booking details">
-                          #{shortRef(b.id)} →
-                        </Link>
+                        <span className="font-mono text-[10px] text-gray-300">#{shortRef(b.id)}</span>
                       </div>
 
-                      {/* Message thread */}
-                      <div className="mt-3">
-                        <button
-                          type="button"
-                          onClick={() => openChat(b.id)}
-                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-                        >
-                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                          Message Provider
-                        </button>
-                      </div>
+                      {/* Interactive section — stops card-click propagation */}
+                      <div onClick={e => e.stopPropagation()}>
 
-                      {/* Actions */}
-                      {b.status === "pending" && (
-                        <div className="mt-4">
-                          <button disabled={isBusy} onClick={() => updateStatus(b.id, "cancelled")}
-                            className="w-full rounded-xl border border-gray-200 py-2 text-xs font-medium text-gray-400 transition hover:bg-gray-50 disabled:opacity-50">
-                            {isBusy ? "Cancelling…" : "Cancel Request"}
+                        {/* Message thread */}
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => openChat(b.id)}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            Message Provider
                           </button>
                         </div>
-                      )}
 
-                      {b.status === "confirmed" && (
-                        <div className="mt-4 space-y-2">
-                          <button disabled={isBusy} onClick={() => updateStatus(b.id, "paid")}
-                            className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                            style={{ backgroundColor: "#00b096" }}>
-                            {isBusy ? "Processing…" : `💳  Pay Now — GHS ${Number(b.gross_amount).toFixed(2)}`}
-                          </button>
-                          <p className="text-center text-xs text-gray-400">
-                            Paystack integration coming soon — payment is simulated.
-                          </p>
-                          <button disabled={isBusy} onClick={() => updateStatus(b.id, "cancelled")}
-                            className="w-full rounded-xl border border-gray-200 py-2 text-xs font-medium text-gray-400 transition hover:bg-gray-50 disabled:opacity-50">
-                            Cancel booking
-                          </button>
-                        </div>
-                      )}
-
-                      {b.status === "paid" && provider && (
-                        <div className="mt-4">
-                          <Link href={`/provider/${provider.id}`}
-                            className="flex w-full items-center justify-center rounded-xl border border-gray-200 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50">
-                            View Provider Profile
-                          </Link>
-                        </div>
-                      )}
-
-                      {b.status === "completed_pending" && (
-                        <div className="mt-4 space-y-2">
-                          <button disabled={isBusy} onClick={() => updateStatus(b.id, "closed")}
-                            className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                            style={{ backgroundColor: "#00b096" }}>
-                            {isBusy ? "Confirming…" : "✓  Confirm Service Complete"}
-                          </button>
-                          <p className="text-center text-xs text-gray-400">Confirming releases payment to the provider.</p>
-                          <button disabled className="w-full cursor-not-allowed rounded-xl border border-amber-200 py-2 text-xs font-medium text-amber-500 opacity-50">
-                            Raise a Dispute (coming soon)
-                          </button>
-                        </div>
-                      )}
-
-                      {b.status === "closed" && provider && (
-                        <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                          <span className="text-lg">⭐</span>
-                          <div className="flex-1">
-                            <p className="text-xs font-semibold text-emerald-700">Service complete!</p>
-                            <p className="text-xs text-emerald-600">How was your experience with {providerName}?</p>
+                        {/* Actions */}
+                        {b.status === "pending" && (
+                          <div className="mt-4">
+                            <button disabled={isBusy} onClick={() => updateStatus(b.id, "cancelled")}
+                              className="w-full rounded-xl border border-gray-200 py-2 text-xs font-medium text-gray-400 transition hover:bg-gray-50 disabled:opacity-50">
+                              {isBusy ? "Cancelling…" : "Cancel Request"}
+                            </button>
                           </div>
-                          <Link href={`/provider/${provider.id}`}
-                            className="shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
-                            style={{ backgroundColor: "#00b096" }}>
-                            Review
-                          </Link>
-                        </div>
-                      )}
+                        )}
+
+                        {b.status === "confirmed" && (
+                          <div className="mt-4 space-y-2">
+                            <button disabled={isBusy} onClick={() => updateStatus(b.id, "paid")}
+                              className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                              style={{ backgroundColor: "#00b096" }}>
+                              {isBusy ? "Processing…" : `💳  Pay Now — GHS ${Number(b.gross_amount).toFixed(2)}`}
+                            </button>
+                            <p className="text-center text-xs text-gray-400">
+                              Paystack integration coming soon — payment is simulated.
+                            </p>
+                            <button disabled={isBusy} onClick={() => updateStatus(b.id, "cancelled")}
+                              className="w-full rounded-xl border border-gray-200 py-2 text-xs font-medium text-gray-400 transition hover:bg-gray-50 disabled:opacity-50">
+                              Cancel booking
+                            </button>
+                          </div>
+                        )}
+
+                        {b.status === "paid" && provider && (
+                          <div className="mt-4">
+                            <Link href={`/provider/${provider.id}`}
+                              className="flex w-full items-center justify-center rounded-xl border border-gray-200 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50">
+                              View Provider Profile
+                            </Link>
+                          </div>
+                        )}
+
+                        {b.status === "completed_pending" && (
+                          <div className="mt-4 space-y-2">
+                            <button disabled={isBusy} onClick={() => updateStatus(b.id, "closed")}
+                              className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                              style={{ backgroundColor: "#00b096" }}>
+                              {isBusy ? "Confirming…" : "✓  Confirm Service Complete"}
+                            </button>
+                            <p className="text-center text-xs text-gray-400">Confirming releases payment to the provider.</p>
+                            <button disabled className="w-full cursor-not-allowed rounded-xl border border-amber-200 py-2 text-xs font-medium text-amber-500 opacity-50">
+                              Raise a Dispute (coming soon)
+                            </button>
+                          </div>
+                        )}
+
+                        {b.status === "closed" && provider && (
+                          <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                            <span className="text-lg">⭐</span>
+                            <div className="flex-1">
+                              <p className="text-xs font-semibold text-emerald-700">Service complete!</p>
+                              <p className="text-xs text-emerald-600">How was your experience with {providerName}?</p>
+                            </div>
+                            <Link href={`/provider/${provider.id}`}
+                              className="shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
+                              style={{ backgroundColor: "#00b096" }}>
+                              Review
+                            </Link>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </article>
                 );
