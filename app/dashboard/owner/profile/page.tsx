@@ -163,7 +163,7 @@ export default function OwnerProfilePage() {
           ) : (
             <div className="space-y-3">
               {dogs.map(dog => (
-                <div key={dog.id} className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                <Link key={dog.id} href={`/dashboard/owner/dogs/${dog.id}`} className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md">
                   <div
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg"
                     style={{ backgroundColor: "rgba(0,176,150,0.1)" }}
@@ -187,7 +187,7 @@ export default function OwnerProfilePage() {
                   >
                     {dog.vaccination_status ? "Vaccinated" : "Unvaccinated"}
                   </span>
-                </div>
+                </Link>
               ))}
             </div>
           )}

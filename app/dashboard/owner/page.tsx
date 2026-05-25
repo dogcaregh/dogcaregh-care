@@ -467,9 +467,10 @@ export default function OwnerDashboard() {
             ) : (
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {dogs.map(dog => (
-                  <div
+                  <Link
                     key={dog.id}
-                    className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-3"
+                    href={`/dashboard/owner/dogs/${dog.id}`}
+                    className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-3 transition hover:shadow-sm"
                     style={{ borderLeftWidth: 3, borderLeftColor: avatarBg(dog.id) }}
                   >
                     <div
@@ -489,7 +490,7 @@ export default function OwnerDashboard() {
                         ✓ Vax
                       </span>
                     )}
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
