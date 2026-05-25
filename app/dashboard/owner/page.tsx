@@ -350,7 +350,7 @@ export default function OwnerDashboard() {
           </Link>
           <Link
             href="/dashboard/owner/edit"
-            className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10 sm:block"
+            className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10"
           >
             Edit Profile
           </Link>
@@ -380,9 +380,17 @@ export default function OwnerDashboard() {
       <div className="px-6 pb-10 pt-8 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
         <div className="mx-auto max-w-5xl">
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>My Dashboard</p>
-          <h1 className="mt-1 text-2xl font-extrabold text-white md:text-3xl">
-            {firstName ? `Welcome back, ${firstName}` : "Your Dashboard"}
-          </h1>
+          <div className="mt-1 flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-extrabold text-white md:text-3xl">
+              {firstName ? `Welcome back, ${firstName}` : "Your Dashboard"}
+            </h1>
+            <Link
+              href="/dashboard/owner/edit"
+              className="shrink-0 rounded-xl border border-white/20 px-4 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
+            >
+              Edit Profile
+            </Link>
+          </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[

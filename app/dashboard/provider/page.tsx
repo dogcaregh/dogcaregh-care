@@ -270,7 +270,7 @@ export default function ProviderDashboard() {
           )}
           <Link
             href="/dashboard/provider/edit"
-            className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10 sm:block"
+            className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10"
           >
             Edit Profile
           </Link>
@@ -290,9 +290,17 @@ export default function ProviderDashboard() {
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>
             Provider Dashboard
           </p>
-          <h1 className="mt-1 text-2xl font-extrabold text-white md:text-3xl">
-            Welcome back, {providerName.split(" ")[0]}
-          </h1>
+          <div className="mt-1 flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-extrabold text-white md:text-3xl">
+              Welcome back, {providerName.split(" ")[0]}
+            </h1>
+            <Link
+              href="/dashboard/provider/edit"
+              className="shrink-0 rounded-xl border border-white/20 px-4 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
+            >
+              Edit Profile
+            </Link>
+          </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[
