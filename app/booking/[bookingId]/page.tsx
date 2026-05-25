@@ -392,7 +392,6 @@ export default function BookingPage() {
     );
   }
 
-  const provider  = resolve(booking.providers as ProviderRow | ProviderRow[] | null);
   const dog       = resolve(booking.dogs as { name: string; breed: string | null } | { name: string; breed: string | null }[] | null);
   const svc       = SERVICES[booking.service_type];
   const sameDay   = booking.start_date === booking.end_date;

@@ -183,7 +183,7 @@ function AddDogForm({ ownerId, onAdded, onCancel }: {
       <p className="mb-3 text-sm font-bold" style={{ color: "#0a2e30" }}>Add a dog</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <label className="mb-1 block text-xs font-semibold text-gray-500">Dog's name *</label>
+          <label className="mb-1 block text-xs font-semibold text-gray-500">Dog&apos;s name *</label>
           <input className={INPUT} placeholder="e.g. Brownie" value={name} onChange={e => setName(e.target.value)} required />
         </div>
         <div>
