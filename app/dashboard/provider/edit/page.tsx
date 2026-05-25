@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { LocationPicker } from "@/components/location-picker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,12 +38,6 @@ const DAYS: { id: DayId; short: string; label: string }[] = [
   { id: "sunday",    short: "Sun", label: "Sunday"    },
 ];
 
-const ACCRA_AREAS = [
-  "Achimota","Adenta","Airport Residential","Cantonments","Dansoman","Dome",
-  "Dzorwulu","East Legon","Haatso","Kasoa","Kotobabi","Labone","Lapaz",
-  "Legon","Madina","Nima","North Kaneshie","Osu","Roman Ridge","Sakumono",
-  "Spintex","Tema","Tesano","Teshie","Trasacco Valley",
-];
 
 const MAX_GALLERY = 6;
 
@@ -468,7 +463,14 @@ export default function EditProfilePage() {
           <Section title="Personal Details" subtitle="Your name is public. Your phone number is private and only used for support.">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className={LABEL}>Display Name</label>
+                <label className={LABEL}>
+                  Full Name
+                  {name && (
+                    <span className="ml-2 font-normal text-gray-400">
+                      — shown as <strong className="text-gray-600">{name.split(" ")[0]}</strong>
+                    </span>
+                  )}
+                </label>
                 <input
                   className={INPUT}
                   type="text"
@@ -493,17 +495,12 @@ export default function EditProfilePage() {
               </div>
               <div>
                 <label className={LABEL}>Neighbourhood / Area</label>
-                <input
-                  className={INPUT}
-                  type="text"
-                  placeholder="e.g. East Legon"
-                  list="edit-accra-areas"
+                <LocationPicker
                   value={neighbourhood}
-                  onChange={e => setNeighbourhood(e.target.value)}
+                  onChange={setNeighbourhood}
+                  placeholder="e.g. East Legon"
+                  datalistId="provider-location-areas"
                 />
-                <datalist id="edit-accra-areas">
-                  {ACCRA_AREAS.map(a => <option key={a} value={a} />)}
-                </datalist>
               </div>
               <div>
                 <label className={LABEL}>Years of Experience</label>

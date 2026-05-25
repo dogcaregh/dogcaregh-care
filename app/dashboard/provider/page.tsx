@@ -274,7 +274,7 @@ export default function ProviderDashboard() {
           >
             Edit Profile
           </Link>
-          <span className="hidden text-sm text-white/60 sm:block">{providerName}</span>
+          <span className="hidden text-sm text-white/60 sm:block">{providerName.split(" ")[0]}</span>
           <button
             onClick={async () => { await createClient().auth.signOut(); router.push("/"); }}
             className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
@@ -363,7 +363,8 @@ export default function ProviderDashboard() {
             {visible.map(b => {
               const owner   = resolveArr(b.users);
               const dog     = resolveArr(b.dogs);
-              const ownerName = owner?.name ?? "Dog Owner";
+              const ownerFullName = owner?.name ?? "Dog Owner";
+              const ownerName = ownerFullName.split(" ")[0];
               const svc     = SERVICES[b.service_type];
               const st      = STATUS_META[b.status];
               const sameDay = b.start_date === b.end_date;
@@ -383,7 +384,7 @@ export default function ProviderDashboard() {
                           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white"
                           style={{ backgroundColor: avatarBg(b.id) }}
                         >
-                          {ini(ownerName)}
+                          {ini(ownerFullName)}
                         </div>
                         <div>
                           <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>{ownerName}</p>

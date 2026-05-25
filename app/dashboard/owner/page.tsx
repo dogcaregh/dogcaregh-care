@@ -228,8 +228,9 @@ export default function OwnerDashboard() {
   const router = useRouter();
   const { openChat } = useChat();
 
-  const [ownerName,  setOwnerName]  = useState("");
-  const [ownerId,    setOwnerId]    = useState("");
+  const [ownerName,   setOwnerName]   = useState("");
+  const [ownerAvatar, setOwnerAvatar] = useState<string | null>(null);
+  const [ownerId,     setOwnerId]     = useState("");
   const [dogs,       setDogs]       = useState<Dog[]>([]);
   const [bookings,   setBookings]   = useState<Booking[]>([]);
   const [notifs,     setNotifs]     = useState<Notification[]>([]);
@@ -246,7 +247,7 @@ export default function OwnerDashboard() {
       if (!user) { router.replace("/login?redirect=/dashboard/owner"); return; }
 
       const [{ data: u }, { data: dgs }, { data: bks }, { data: nf }] = await Promise.all([
-        sb.from("users").select("name").eq("id", user.id).single(),
+        sb.from("users").select("name, avatar_url").eq("id", user.id).single(),
         sb.from("dogs").select("id, name, breed, age, size, vaccination_status").eq("owner_id", user.id).order("created_at"),
         sb.from("bookings")
           .select(`id, service_type, start_date, end_date, gross_amount, status, created_at,
@@ -262,7 +263,9 @@ export default function OwnerDashboard() {
       ]);
 
       if (cancelled) return;
-      setOwnerName((u as { name: string } | null)?.name ?? "");
+      const uRow = u as { name: string; avatar_url: string | null } | null;
+      setOwnerName(uRow?.name ?? "");
+      setOwnerAvatar(uRow?.avatar_url ?? null);
       setOwnerId(user.id);
       setDogs((dgs ?? []) as Dog[]);
       setBookings((bks ?? []) as unknown as Booking[]);
@@ -345,7 +348,25 @@ export default function OwnerDashboard() {
           <Link href="/search" className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 sm:block">
             Find Providers
           </Link>
-          <span className="hidden text-sm text-white/60 sm:block">{ownerName}</span>
+          <Link
+            href="/dashboard/owner/edit"
+            className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10 sm:block"
+          >
+            Edit Profile
+          </Link>
+          <div className="hidden items-center gap-2 sm:flex">
+            {ownerAvatar ? (
+              <img src={ownerAvatar} alt={firstName} className="h-7 w-7 rounded-full object-cover" />
+            ) : (
+              <div
+                className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                style={{ backgroundColor: ownerId ? avatarBg(ownerId) : "#00b096" }}
+              >
+                {ini(firstName)}
+              </div>
+            )}
+            <span className="text-sm text-white/60">{firstName}</span>
+          </div>
           <button
             onClick={async () => { await createClient().auth.signOut(); router.push("/"); }}
             className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
@@ -552,7 +573,8 @@ export default function OwnerDashboard() {
               {visible.map(b => {
                 const provider     = resolve(b.providers);
                 const providerUser = resolve(provider?.users);
-                const providerName = providerUser?.name ?? "DogCare Provider";
+                const providerFullName = providerUser?.name ?? "DogCare Provider";
+                const providerName = providerFullName.split(" ")[0];
                 const dogRow       = resolve(b.dogs);
                 const svc          = SERVICES[b.service_type];
                 const st           = STATUS_META[b.status];
@@ -567,13 +589,13 @@ export default function OwnerDashboard() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           {provider?.avatar_url ? (
-                            <img src={provider.avatar_url} alt={providerName} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+                            <img src={provider.avatar_url} alt={providerFullName} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
                           ) : (
                             <div
                               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white"
                               style={{ backgroundColor: avatarBg(provider?.user_id ?? b.id) }}
                             >
-                              {ini(providerName)}
+                              {ini(providerFullName)}
                             </div>
                           )}
                           <div>
