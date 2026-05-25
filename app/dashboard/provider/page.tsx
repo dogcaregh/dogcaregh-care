@@ -268,6 +268,12 @@ export default function ProviderDashboard() {
               My Profile
             </Link>
           )}
+          <Link
+            href="/dashboard/provider/edit"
+            className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10 sm:block"
+          >
+            Edit Profile
+          </Link>
           <span className="hidden text-sm text-white/60 sm:block">{providerName}</span>
           <button
             onClick={async () => { await createClient().auth.signOut(); router.push("/"); }}
