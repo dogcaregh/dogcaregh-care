@@ -138,6 +138,17 @@ export function ChatPopup() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
+  const meRef          = useRef<Party | null>(null);
+
+  // Keep meRef current so Realtime callbacks can read it without stale closure
+  useEffect(() => { meRef.current = me; }, [me]);
+
+  // Request notification permission lazily when a chat is first opened
+  useEffect(() => {
+    if (openBookingId && typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, [openBookingId]);
 
   // ── Load booking + auth + history ─────────────────────────────────────────
   useEffect(() => {
@@ -223,6 +234,19 @@ export function ChatPopup() {
           const msg = payload.new as Message;
           setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
           if (isMinimized) setUnread(n => n + 1);
+          // Show browser notification when the message is from the other party
+          // and the user is not actively viewing the chat
+          if (
+            msg.sender_id !== meRef.current?.userId &&
+            (document.hidden || isMinimized) &&
+            typeof Notification !== "undefined" &&
+            Notification.permission === "granted"
+          ) {
+            new Notification("New message — DogCareGH", {
+              body: msg.content ?? "You received a photo.",
+              icon: "/favicon.ico",
+            });
+          }
         }
       )
       .subscribe();
@@ -444,10 +468,10 @@ export function ChatPopup() {
             <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
               <span className="text-3xl">💬</span>
               <p className="text-xs font-semibold text-gray-500">No messages yet</p>
-              <p className="max-w-[200px] text-[11px] text-gray-400">
+              <p className="max-w-[220px] text-[11px] text-gray-400">
                 {me?.role === "provider"
                   ? "Send the owner a welcome message or photo update."
-                  : "Message your provider with any questions."}
+                  : "Tell your provider about your dog and what you need — it helps them decide if they're the right fit."}
               </p>
             </div>
           ) : (

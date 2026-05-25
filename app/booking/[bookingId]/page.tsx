@@ -496,7 +496,7 @@ export default function BookingPage() {
               <p className="max-w-xs text-xs text-gray-400">
                 {me.role === "provider"
                   ? "Send the owner a welcome message or share a photo update during the service."
-                  : "Message your provider with any questions or special instructions."}
+                  : "Tell your provider about your dog and what you need — it helps them decide if they're the right fit."}
               </p>
             </div>
           ) : (
