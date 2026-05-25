@@ -169,26 +169,34 @@ export default function DogProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!dogId) return;
     async function load() {
-      const sb = createClient();
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user) { router.replace("/login"); return; }
+      try {
+        const sb = createClient();
+        const { data: authData } = await sb.auth.getUser();
+        const user = authData?.user;
+        if (!user) { router.replace("/login"); return; }
 
-      const { data, error: err } = await sb
-        .from("dogs")
-        .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, avatar_url, temperament, allergies, diet_preference, bio")
-        .eq("id", dogId)
-        .single();
+        const { data, error: err } = await sb
+          .from("dogs")
+          .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, avatar_url, temperament, allergies, diet_preference, bio")
+          .eq("id", dogId)
+          .single();
 
-      if (err || !data || data.owner_id !== user.id) {
-        router.replace("/dashboard/owner");
-        return;
+        if (err || !data || data.owner_id !== user.id) {
+          router.replace("/dashboard/owner");
+          return;
+        }
+
+        const d = data as Dog;
+        setDog(d);
+        populateEdit(d);
+        setLoading(false);
+      } catch (e) {
+        console.error("Dog profile load error:", e);
+        setError("Something went wrong loading this profile.");
+        setLoading(false);
       }
-
-      const d = data as Dog;
-      setDog(d);
-      populateEdit(d);
-      setLoading(false);
     }
     load();
   }, [dogId, router]);
@@ -264,6 +272,13 @@ export default function DogProfilePage() {
     <div className="flex min-h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
       <p className="text-2xl font-bold text-white">Dog<span style={{ color: "#00b096" }}>Care</span>GH</p>
       <p className="mt-3 animate-pulse text-sm text-white/50">Loading…</p>
+    </div>
+  );
+  if (error && !dog) return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6" style={{ backgroundColor: "#0a2e30" }}>
+      <p className="text-2xl font-bold text-white">Dog<span style={{ color: "#00b096" }}>Care</span>GH</p>
+      <p className="text-sm text-red-300">{error}</p>
+      <Link href="/dashboard/owner" className="rounded-full border border-white/20 px-5 py-2 text-sm text-white/70 hover:bg-white/10">← Back to dashboard</Link>
     </div>
   );
   if (!dog) return null;
