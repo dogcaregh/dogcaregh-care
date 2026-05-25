@@ -457,8 +457,11 @@ export default function ProviderPage() {
           </div>
           <button
             onClick={() => {
-              if (!authed) router.push(`/login?redirect=/provider/${id}`);
-              // TODO: open booking flow
+              if (!authed) {
+                router.push(`/login?redirect=/provider/${id}`);
+              } else {
+                router.push(`/book/${id}`);
+              }
             }}
             className="shrink-0 rounded-2xl px-8 py-3 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95"
             style={{ backgroundColor: "#00b096" }}
