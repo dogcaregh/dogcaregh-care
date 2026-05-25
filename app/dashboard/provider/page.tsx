@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import { useChat } from "@/lib/chat-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -143,6 +144,7 @@ function StatusTrack({ status }: { status: BookingStatus }) {
 export default function ProviderDashboard() {
   const router = useRouter();
 
+  const { openChat } = useChat();
   const [providerName, setProviderName] = useState("");
   const [providerId,   setProviderId]   = useState("");
   const [providerActive, setProviderActive] = useState(true);
@@ -434,17 +436,18 @@ export default function ProviderDashboard() {
                       </span>
                     </div>
 
-                    {/* Message thread link */}
+                    {/* Message thread */}
                     <div className="mt-3">
-                      <Link
-                        href={`/booking/${b.id}`}
+                      <button
+                        type="button"
+                        onClick={() => openChat(b.id)}
                         className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
                         Message Owner
-                      </Link>
+                      </button>
                     </div>
 
                     {/* Actions */}
