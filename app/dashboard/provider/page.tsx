@@ -7,7 +7,14 @@ import { createClient } from "@/lib/supabase";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
+type BookingStatus =
+  | "pending"
+  | "confirmed"
+  | "paid"
+  | "in_progress"
+  | "completed_pending"
+  | "closed"
+  | "cancelled";
 
 type ServiceId =
   | "pet_sitting"
@@ -26,14 +33,9 @@ type Booking = {
   status: BookingStatus;
   created_at: string;
   users: { name: string } | { name: string }[] | null;
-  dogs: { name: string; breed: string | null; size: string | null } | null;
-};
-
-type ProviderInfo = {
-  id: string;
-  rating_avg: number;
-  review_count: number;
-  active: boolean;
+  dogs: { name: string; breed: string | null; size: string | null }
+      | { name: string; breed: string | null; size: string | null }[]
+      | null;
 };
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -46,19 +48,29 @@ const SERVICES: Record<ServiceId, { label: string; emoji: string }> = {
   dog_walking:     { label: "Dog Walking",     emoji: "🦮" },
 };
 
-const STATUS_META: Record<BookingStatus, { label: string; color: string; bg: string; strip: string }> = {
-  pending:   { label: "Pending",   color: "#d97706", bg: "rgba(251,191,36,.12)", strip: "#f59e0b" },
-  confirmed: { label: "Confirmed", color: "#059669", bg: "rgba(5,150,105,.10)",  strip: "#00b096" },
-  completed: { label: "Completed", color: "#6366f1", bg: "rgba(99,102,241,.10)", strip: "#6366f1" },
-  cancelled: { label: "Cancelled", color: "#dc2626", bg: "rgba(220,38,38,.08)",  strip: "#ef4444" },
+const STATUS_META: Record<BookingStatus, { label: string; color: string; bg: string }> = {
+  pending:           { label: "Awaiting Response",    color: "#d97706", bg: "rgba(251,191,36,.12)" },
+  confirmed:         { label: "Awaiting Payment",     color: "#0891b2", bg: "rgba(8,145,178,.10)"  },
+  paid:              { label: "Ready to Start",       color: "#059669", bg: "rgba(5,150,105,.10)"  },
+  in_progress:       { label: "In Progress",          color: "#6366f1", bg: "rgba(99,102,241,.10)" },
+  completed_pending: { label: "Awaiting Confirmation",color: "#8b5cf6", bg: "rgba(139,92,246,.10)" },
+  closed:            { label: "Closed",               color: "#10b981", bg: "rgba(16,185,129,.10)" },
+  cancelled:         { label: "Cancelled",            color: "#dc2626", bg: "rgba(220,38,38,.08)"  },
 };
 
-const TABS: Array<{ key: BookingStatus | "all"; label: string }> = [
-  { key: "all",       label: "All"       },
-  { key: "pending",   label: "Pending"   },
-  { key: "confirmed", label: "Confirmed" },
-  { key: "completed", label: "Completed" },
-  { key: "cancelled", label: "Cancelled" },
+// Progress track (excludes cancelled)
+const TRACK_STEPS: BookingStatus[] = [
+  "pending", "confirmed", "paid", "in_progress", "completed_pending", "closed",
+];
+
+type TabKey = "all" | "requests" | "upcoming" | "active" | "history";
+
+const TABS: Array<{ key: TabKey; label: string; statuses: BookingStatus[] }> = [
+  { key: "all",      label: "All",       statuses: ["pending","confirmed","paid","in_progress","completed_pending","closed","cancelled"] },
+  { key: "requests", label: "Requests",  statuses: ["pending"] },
+  { key: "upcoming", label: "Upcoming",  statuses: ["confirmed", "paid"] },
+  { key: "active",   label: "Active",    statuses: ["in_progress", "completed_pending"] },
+  { key: "history",  label: "History",   statuses: ["closed", "cancelled"] },
 ];
 
 const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
@@ -72,9 +84,9 @@ function ini(name?: string | null) {
   return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
 
-function resolveUser(u: Booking["users"]): { name: string } | null {
-  if (!u) return null;
-  return Array.isArray(u) ? u[0] ?? null : u;
+function resolveArr<T>(v: T | T[] | null): T | null {
+  if (!v) return null;
+  return Array.isArray(v) ? v[0] ?? null : v;
 }
 
 function fmtDate(iso: string) {
@@ -83,15 +95,14 @@ function fmtDate(iso: string) {
   });
 }
 
-function fmtDateShort(iso: string) {
+function fmtShort(iso: string) {
   return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", {
     day: "numeric", month: "short",
   });
 }
 
 function isThisMonth(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
+  const d = new Date(iso), now = new Date();
   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
 }
 
@@ -101,24 +112,28 @@ function shortRef(id: string) {
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function StatCard({
-  label,
-  value,
-  accent,
-  sub,
-}: {
-  label: string;
-  value: string | number;
-  accent: string;
-  sub?: string;
-}) {
+function StatusTrack({ status }: { status: BookingStatus }) {
+  if (status === "cancelled") {
+    return <span className="text-[11px] font-bold" style={{ color: "#dc2626" }}>✕ Cancelled</span>;
+  }
+  const idx = TRACK_STEPS.indexOf(status);
   return (
-    <div className="rounded-2xl p-4 sm:p-5" style={{ backgroundColor: "rgba(255,255,255,.06)" }}>
-      <p className="text-xs font-medium text-white/50">{label}</p>
-      <p className="mt-1 text-xl font-extrabold sm:text-2xl" style={{ color: accent }}>
-        {value}
-      </p>
-      {sub && <p className="mt-0.5 text-xs text-white/30">{sub}</p>}
+    <div className="flex items-center">
+      {TRACK_STEPS.map((s, i) => (
+        <div key={s} className="flex items-center">
+          <div
+            className="h-3 w-3 rounded-full"
+            style={
+              i < idx  ? { backgroundColor: "#00b096" }
+              : i === idx ? { backgroundColor: "#0a2e30", outline: "2px solid #00b096", outlineOffset: "1px" }
+              : { backgroundColor: "#e5e7eb" }
+            }
+          />
+          {i < TRACK_STEPS.length - 1 && (
+            <div className="h-px w-4" style={{ backgroundColor: i < idx ? "#00b096" : "#e5e7eb" }} />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -128,11 +143,12 @@ function StatCard({
 export default function ProviderDashboard() {
   const router = useRouter();
 
-  const [provider,     setProvider]     = useState<ProviderInfo | null>(null);
   const [providerName, setProviderName] = useState("");
+  const [providerId,   setProviderId]   = useState("");
+  const [providerActive, setProviderActive] = useState(true);
   const [bookings,     setBookings]     = useState<Booking[]>([]);
   const [loading,      setLoading]      = useState(true);
-  const [tab,          setTab]          = useState<BookingStatus | "all">("pending");
+  const [tab,          setTab]          = useState<TabKey>("requests");
   const [updating,     setUpdating]     = useState<string | null>(null);
 
   useEffect(() => {
@@ -144,24 +160,18 @@ export default function ProviderDashboard() {
 
       const { data: p } = await sb
         .from("providers")
-        .select("id, rating_avg, review_count, active, users!user_id(name)")
+        .select("id, active, users!user_id(name)")
         .eq("user_id", user.id)
         .single();
 
       if (!p) { router.replace("/register/provider"); return; }
       if (cancelled) return;
 
-      const pAny = p as Record<string, unknown>;
-      setProvider({
-        id:           pAny.id as string,
-        rating_avg:   pAny.rating_avg as number,
-        review_count: pAny.review_count as number,
-        active:       pAny.active as boolean,
-      });
-      const pUser = Array.isArray(pAny.users)
-        ? (pAny.users as Array<{ name: string }>)[0]
-        : (pAny.users as { name: string } | null);
+      const pAny  = p as Record<string, unknown>;
+      const pUser = resolveArr(pAny.users as { name: string } | { name: string }[] | null);
       setProviderName(pUser?.name ?? "Provider");
+      setProviderId(pAny.id as string);
+      setProviderActive(pAny.active as boolean);
 
       const { data: bks } = await sb
         .from("bookings")
@@ -189,40 +199,45 @@ export default function ProviderDashboard() {
       .from("bookings")
       .update({ status })
       .eq("id", bookingId);
-
-    if (!error) {
-      // Optimistic update
-      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
-    }
+    if (!error) setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
     setUpdating(null);
   }
 
-  // ── Derived values ─────────────────────────────────────────────────────
+  // ── Derived ──────────────────────────────────────────────────────────────
 
-  const counts = useMemo(() => ({
-    all:       bookings.length,
-    pending:   bookings.filter(b => b.status === "pending").length,
-    confirmed: bookings.filter(b => b.status === "confirmed").length,
-    completed: bookings.filter(b => b.status === "completed").length,
-    cancelled: bookings.filter(b => b.status === "cancelled").length,
-  }), [bookings]);
-
-  const stats = useMemo(() => {
-    const monthEarnings = bookings
-      .filter(b => b.status === "completed" && isThisMonth(b.created_at))
-      .reduce((sum, b) => sum + Number(b.provider_payout), 0);
-    const totalEarnings = bookings
-      .filter(b => b.status === "completed")
-      .reduce((sum, b) => sum + Number(b.provider_payout), 0);
-    return { monthEarnings, totalEarnings };
+  const counts = useMemo(() => {
+    const map: Record<TabKey, number> = { all: 0, requests: 0, upcoming: 0, active: 0, history: 0 };
+    for (const b of bookings) {
+      map.all++;
+      for (const t of TABS) {
+        if (t.statuses.includes(b.status)) { map[t.key]++; break; }
+      }
+    }
+    return map;
   }, [bookings]);
 
-  const visible = useMemo(
-    () => tab === "all" ? bookings : bookings.filter(b => b.status === tab),
-    [bookings, tab]
-  );
+  const stats = useMemo(() => {
+    const needsAction = bookings.filter(b =>
+      b.status === "pending" || b.status === "paid" || b.status === "in_progress"
+    ).length;
+    const active = bookings.filter(b =>
+      b.status === "confirmed" || b.status === "paid" || b.status === "in_progress" || b.status === "completed_pending"
+    ).length;
+    const monthEarnings = bookings
+      .filter(b => b.status === "closed" && isThisMonth(b.created_at))
+      .reduce((s, b) => s + Number(b.provider_payout), 0);
+    const totalEarnings = bookings
+      .filter(b => b.status === "closed")
+      .reduce((s, b) => s + Number(b.provider_payout), 0);
+    return { needsAction, active, monthEarnings, totalEarnings };
+  }, [bookings]);
 
-  // ── Loading state ────────────────────────────────────────────────────────
+  const visible = useMemo(() => {
+    const allowed = TABS.find(t => t.key === tab)?.statuses ?? [];
+    return bookings.filter(b => allowed.includes(b.status));
+  }, [bookings, tab]);
+
+  // ── Loading ──────────────────────────────────────────────────────────────
 
   if (loading) return (
     <div className="flex min-h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
@@ -243,12 +258,17 @@ export default function ProviderDashboard() {
           Dog<span style={{ color: "#00b096" }}>Care</span>GH
         </Link>
         <div className="flex items-center gap-3">
+          {providerId && (
+            <Link
+              href={`/provider/${providerId}`}
+              className="hidden text-xs font-medium text-white/50 transition hover:text-white sm:block"
+            >
+              My Profile
+            </Link>
+          )}
           <span className="hidden text-sm text-white/60 sm:block">{providerName}</span>
           <button
-            onClick={async () => {
-              await createClient().auth.signOut();
-              router.push("/");
-            }}
+            onClick={async () => { await createClient().auth.signOut(); router.push("/"); }}
             className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
           >
             Sign Out
@@ -259,10 +279,7 @@ export default function ProviderDashboard() {
       {/* ── Hero / stats ── */}
       <div className="px-6 pb-10 pt-8 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
         <div className="mx-auto max-w-5xl">
-          <p
-            className="text-xs font-semibold uppercase tracking-widest"
-            style={{ color: "#00b096" }}
-          >
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>
             Provider Dashboard
           </p>
           <h1 className="mt-1 text-2xl font-extrabold text-white md:text-3xl">
@@ -270,37 +287,26 @@ export default function ProviderDashboard() {
           </h1>
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-            <StatCard
-              label="Pending requests"
-              value={counts.pending}
-              accent="#f59e0b"
-              sub={counts.pending === 1 ? "needs your response" : "need your response"}
-            />
-            <StatCard
-              label="Confirmed"
-              value={counts.confirmed}
-              accent="#00b096"
-              sub="upcoming"
-            />
-            <StatCard
-              label="Earned this month"
-              value={`GHS ${stats.monthEarnings.toFixed(0)}`}
-              accent="#a78bfa"
-            />
-            <StatCard
-              label="Total earned"
-              value={`GHS ${stats.totalEarnings.toFixed(0)}`}
-              accent="#6366f1"
-              sub={`${counts.completed} completed`}
-            />
+            {[
+              { label: "Needs Action",      value: stats.needsAction,                       accent: "#f59e0b" },
+              { label: "Active Bookings",   value: stats.active,                            accent: "#00b096" },
+              { label: "Earned This Month", value: `GHS ${stats.monthEarnings.toFixed(0)}`, accent: "#a78bfa" },
+              { label: "Total Earned",      value: `GHS ${stats.totalEarnings.toFixed(0)}`, accent: "#6366f1" },
+            ].map(s => (
+              <div key={s.label} className="rounded-2xl p-4 sm:p-5" style={{ backgroundColor: "rgba(255,255,255,.06)" }}>
+                <p className="text-xs font-medium text-white/50">{s.label}</p>
+                <p className="mt-1 text-xl font-extrabold sm:text-2xl" style={{ color: s.accent }}>
+                  {s.value}
+                </p>
+              </div>
+            ))}
           </div>
 
-          {/* Active status toggle hint */}
-          {provider && !provider.active && (
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2.5">
-              <span className="text-sm">⚠️</span>
+          {!providerActive && (
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3">
+              <span>⚠️</span>
               <p className="text-sm text-red-300">
-                Your profile is set to <strong>unavailable</strong> — owners can&apos;t find or book you.
+                Your profile is set to <strong>unavailable</strong> — dog owners can&apos;t find or book you on the marketplace.
               </p>
             </div>
           )}
@@ -316,11 +322,7 @@ export default function ProviderDashboard() {
               key={t.key}
               onClick={() => setTab(t.key)}
               className="flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition"
-              style={
-                tab === t.key
-                  ? { backgroundColor: "#0a2e30", color: "#fff" }
-                  : { color: "#9ca3af" }
-              }
+              style={tab === t.key ? { backgroundColor: "#0a2e30", color: "#fff" } : { color: "#9ca3af" }}
             >
               {t.label}
               {counts[t.key] > 0 && (
@@ -343,37 +345,30 @@ export default function ProviderDashboard() {
         {visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-8 py-20 text-center">
             <span className="mb-3 text-5xl">📋</span>
-            <p className="text-base font-bold" style={{ color: "#0a2e30" }}>
-              No {tab === "all" ? "" : tab + " "}bookings yet
-            </p>
+            <p className="text-base font-bold" style={{ color: "#0a2e30" }}>No bookings here yet</p>
             <p className="mt-1 text-sm text-gray-400">
-              {tab === "pending"
-                ? "New booking requests will show up here."
-                : "Nothing to show for this status."}
+              {tab === "requests" ? "New booking requests from dog owners will appear here." : "Nothing to show for this category."}
             </p>
           </div>
         ) : (
           <div className="space-y-3">
             {visible.map(b => {
-              const owner    = resolveUser(b.users);
+              const owner   = resolveArr(b.users);
+              const dog     = resolveArr(b.dogs);
               const ownerName = owner?.name ?? "Dog Owner";
-              const dog      = Array.isArray(b.dogs) ? (b.dogs as Booking["dogs"][])[0] : b.dogs;
-              const svc      = SERVICES[b.service_type];
-              const st       = STATUS_META[b.status];
-              const sameDay  = b.start_date === b.end_date;
-              const isBusy   = updating === b.id;
+              const svc     = SERVICES[b.service_type];
+              const st      = STATUS_META[b.status];
+              const sameDay = b.start_date === b.end_date;
+              const isBusy  = updating === b.id;
 
               return (
                 <article
                   key={b.id}
                   className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md"
                 >
-                  {/* Coloured status strip */}
-                  <div className="h-1" style={{ backgroundColor: st.strip }} />
-
                   <div className="p-5">
 
-                    {/* ── Top row: owner info + status badge ── */}
+                    {/* Owner + status */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <div
@@ -383,24 +378,18 @@ export default function ProviderDashboard() {
                           {ini(ownerName)}
                         </div>
                         <div>
-                          <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>
-                            {ownerName}
-                          </p>
+                          <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>{ownerName}</p>
                           {dog ? (
                             <p className="text-xs text-gray-400">
-                              🐕 {(dog as { name: string; breed: string | null; size: string | null }).name}
-                              {((dog as { name: string; breed: string | null; size: string | null }).breed ||
-                                (dog as { name: string; breed: string | null; size: string | null }).size) &&
-                                ` · ${[(dog as { name: string; breed: string | null; size: string | null }).breed,
-                                       (dog as { name: string; breed: string | null; size: string | null }).size]
-                                  .filter(Boolean).join(", ")}`}
+                              🐕 {dog.name}
+                              {(dog.breed || dog.size) &&
+                                ` · ${[dog.breed, dog.size].filter(Boolean).join(", ")}`}
                             </p>
                           ) : (
                             <p className="text-xs text-gray-400">No dog info</p>
                           )}
                         </div>
                       </div>
-
                       <span
                         className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
                         style={{ backgroundColor: st.bg, color: st.color }}
@@ -409,39 +398,43 @@ export default function ProviderDashboard() {
                       </span>
                     </div>
 
-                    {/* ── Detail chips ── */}
-                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-                      <span className="text-xs text-gray-500">
-                        {svc?.emoji} {svc?.label}
-                      </span>
-                      <span className="text-xs text-gray-500">
+                    {/* Service + dates */}
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                      <span>{svc?.emoji} {svc?.label}</span>
+                      <span>
                         📅{" "}
-                        {sameDay
-                          ? fmtDate(b.start_date)
-                          : `${fmtDateShort(b.start_date)} → ${fmtDate(b.end_date)}`}
+                        {sameDay ? fmtDate(b.start_date) : `${fmtShort(b.start_date)} → ${fmtDate(b.end_date)}`}
                       </span>
                     </div>
 
-                    {/* ── Amount row ── */}
+                    {/* Amount row */}
                     <div className="mt-3 flex items-center justify-between rounded-xl bg-gray-50 px-4 py-2.5">
                       <div>
-                        <p className="text-xs text-gray-400">Booking total</p>
+                        <p className="text-[11px] text-gray-400">Booking total</p>
                         <p className="text-sm font-extrabold" style={{ color: "#0a2e30" }}>
                           GHS {Number(b.gross_amount).toFixed(2)}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-gray-400">Your payout</p>
+                        <p className="text-[11px] text-gray-400">Your payout</p>
                         <p className="text-sm font-extrabold" style={{ color: "#00b096" }}>
                           GHS {Number(b.provider_payout).toFixed(2)}
                         </p>
                       </div>
-                      <p className="hidden text-[10px] font-mono text-gray-300 sm:block">
+                      <span className="hidden font-mono text-[10px] text-gray-300 sm:block">
                         #{shortRef(b.id)}
-                      </p>
+                      </span>
                     </div>
 
-                    {/* ── Actions ── */}
+                    {/* Progress track */}
+                    <div className="mt-3 flex items-center justify-between">
+                      <StatusTrack status={b.status} />
+                      <span className="font-mono text-[10px] text-gray-300 sm:hidden">
+                        #{shortRef(b.id)}
+                      </span>
+                    </div>
+
+                    {/* Actions */}
                     {b.status === "pending" && (
                       <div className="mt-4 flex gap-2">
                         <button
@@ -450,28 +443,63 @@ export default function ProviderDashboard() {
                           className="flex-1 rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
                           style={{ backgroundColor: "#00b096" }}
                         >
-                          {isBusy ? "Updating…" : "✓ Confirm Booking"}
+                          {isBusy ? "Updating…" : "✓  Accept Booking"}
                         </button>
                         <button
                           disabled={isBusy}
                           onClick={() => updateStatus(b.id, "cancelled")}
                           className="flex-1 rounded-xl border border-red-200 py-2.5 text-xs font-bold text-red-500 transition hover:bg-red-50 disabled:opacity-50"
                         >
-                          {isBusy ? "…" : "✕ Decline"}
+                          {isBusy ? "…" : "Decline"}
                         </button>
                       </div>
                     )}
 
                     {b.status === "confirmed" && (
+                      <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs text-blue-600">
+                        ⏳ Waiting for the owner to complete payment before the booking is confirmed.
+                      </div>
+                    )}
+
+                    {b.status === "paid" && (
                       <div className="mt-4">
                         <button
                           disabled={isBusy}
-                          onClick={() => updateStatus(b.id, "completed")}
+                          onClick={() => updateStatus(b.id, "in_progress")}
                           className="w-full rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
                           style={{ backgroundColor: "#6366f1" }}
                         >
-                          {isBusy ? "Updating…" : "Mark as Completed"}
+                          {isBusy ? "Updating…" : "▶  Start Service"}
                         </button>
+                      </div>
+                    )}
+
+                    {b.status === "in_progress" && (
+                      <div className="mt-4">
+                        <button
+                          disabled={isBusy}
+                          onClick={() => updateStatus(b.id, "completed_pending")}
+                          className="w-full rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                          style={{ backgroundColor: "#8b5cf6" }}
+                        >
+                          {isBusy ? "Updating…" : "✓  Mark Service as Complete"}
+                        </button>
+                      </div>
+                    )}
+
+                    {b.status === "completed_pending" && (
+                      <div className="mt-4 rounded-xl border border-purple-100 bg-purple-50 px-4 py-2.5 text-xs text-purple-600">
+                        ⏳ Waiting for the owner to confirm the service is complete and release payment.
+                      </div>
+                    )}
+
+                    {b.status === "closed" && (
+                      <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2.5">
+                        <span className="text-base">✅</span>
+                        <p className="text-xs font-medium text-emerald-700">
+                          Service confirmed. Payout of{" "}
+                          <strong>GHS {Number(b.provider_payout).toFixed(2)}</strong> triggered.
+                        </p>
                       </div>
                     )}
                   </div>
