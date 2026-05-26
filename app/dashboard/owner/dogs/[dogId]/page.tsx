@@ -231,7 +231,7 @@ export default function DogProfilePage() {
         const { data: urlData } = sb.storage.from("dog-photos").getPublicUrl(path);
         setAvatarUrl(urlData.publicUrl);
       }
-    } catch (e) {
+    } catch {
       setError("Photo upload failed. Please try again.");
     } finally {
       setUploading(false);
@@ -273,7 +273,7 @@ export default function DogProfilePage() {
         setDog(d);
         setEditing(false);
       }
-    } catch (e) {
+    } catch {
       setError("Save failed. Please try again.");
     } finally {
       setSaving(false);
