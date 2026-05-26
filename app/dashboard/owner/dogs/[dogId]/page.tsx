@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import ImageCropModal from "@/components/image-crop-modal";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ export default function DogProfilePage() {
   const [saving,    setSaving]    = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error,     setError]     = useState<string | null>(null);
+  const [cropSrc,   setCropSrc]   = useState<string | null>(null);
 
   // Edit fields
   const [name,        setName]        = useState("");
@@ -215,16 +217,23 @@ export default function DogProfilePage() {
     setAvatarUrl(d.avatar_url);
   }
 
-  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setCropSrc(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function uploadCroppedBlob(blob: Blob) {
+    setCropSrc(null);
     setUploading(true);
     setError(null);
     try {
       const sb   = createClient();
-      const ext  = file.name.split(".").pop() ?? "jpg";
-      const path = `${dogId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await sb.storage.from("dog-photos").upload(path, file, { upsert: true });
+      const path = `${dogId}/${Date.now()}.jpg`;
+      const { error: upErr } = await sb.storage.from("dog-photos").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
       if (upErr) {
         setError(`Photo upload failed: ${upErr.message}`);
       } else {
@@ -435,6 +444,14 @@ export default function DogProfilePage() {
               ✏️ Edit Profile
             </button>
           </div>
+        )}
+
+        {cropSrc && (
+          <ImageCropModal
+            src={cropSrc}
+            onDone={uploadCroppedBlob}
+            onCancel={() => setCropSrc(null)}
+          />
         )}
 
         {/* ── EDIT MODE ── */}

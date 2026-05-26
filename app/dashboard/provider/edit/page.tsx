@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { LocationPicker } from "@/components/location-picker";
+import ImageCropModal from "@/components/image-crop-modal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,7 @@ export default function EditProfilePage() {
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [saved,            setSaved]            = useState(false);
   const [error,            setError]            = useState<string | null>(null);
+  const [cropSrc,          setCropSrc]          = useState<string | null>(null);
 
   const avatarInputRef  = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -201,32 +203,28 @@ export default function EditProfilePage() {
     );
   }
 
-  // ── Avatar upload (immediate) ─────────────────────────────────────────────
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  // ── Avatar upload ─────────────────────────────────────────────────────────
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !userId) return;
-
-    // Show local preview immediately
     const reader = new FileReader();
-    reader.onload = ev => setAvatarPreview(ev.target?.result as string);
+    reader.onload = ev => setCropSrc(ev.target?.result as string);
     reader.readAsDataURL(file);
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
+  }
 
+  async function uploadAvatarBlob(blob: Blob) {
+    setCropSrc(null);
     setAvatarUploading(true);
-    const sb  = createClient();
-    const ext  = file.name.split(".").pop() ?? "jpg";
-    const path = `${userId}/avatar_${Date.now()}.${ext}`;
-
-    const { error: upErr } = await sb.storage
-      .from("provider-photos")
-      .upload(path, file, { upsert: true });
-
+    const sb   = createClient();
+    const path = `${userId}/avatar_${Date.now()}.jpg`;
+    const { error: upErr } = await sb.storage.from("provider-photos").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
     if (!upErr) {
       const { data: { publicUrl } } = sb.storage.from("provider-photos").getPublicUrl(path);
       setAvatarUrl(publicUrl);
       setAvatarPreview(null);
     }
     setAvatarUploading(false);
-    if (avatarInputRef.current) avatarInputRef.current.value = "";
   }
 
   // ── Gallery upload ────────────────────────────────────────────────────────
@@ -760,6 +758,14 @@ export default function EditProfilePage() {
           </div>
         </div>
       </form>
+
+      {cropSrc && (
+        <ImageCropModal
+          src={cropSrc}
+          onDone={uploadAvatarBlob}
+          onCancel={() => setCropSrc(null)}
+        />
+      )}
     </div>
   );
 }
