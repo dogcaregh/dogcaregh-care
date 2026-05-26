@@ -219,48 +219,65 @@ export default function DogProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const sb  = createClient();
-    const ext  = file.name.split(".").pop() ?? "jpg";
-    const path = `${dogId}/${Date.now()}.${ext}`;
-    const { error: upErr } = await sb.storage.from("dog-photos").upload(path, file, { upsert: true });
-    if (!upErr) {
-      const { data: { publicUrl } } = sb.storage.from("dog-photos").getPublicUrl(path);
-      setAvatarUrl(publicUrl);
+    setError(null);
+    try {
+      const sb   = createClient();
+      const ext  = file.name.split(".").pop() ?? "jpg";
+      const path = `${dogId}/${Date.now()}.${ext}`;
+      const { error: upErr } = await sb.storage.from("dog-photos").upload(path, file, { upsert: true });
+      if (upErr) {
+        setError(`Photo upload failed: ${upErr.message}`);
+      } else {
+        const { data: urlData } = sb.storage.from("dog-photos").getPublicUrl(path);
+        setAvatarUrl(urlData.publicUrl);
+      }
+    } catch (e) {
+      setError("Photo upload failed. Please try again.");
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
   }
 
   async function handleSave() {
     if (!name.trim()) return;
     setSaving(true);
     setError(null);
-    const sb = createClient();
-    const { data, error: err } = await sb
-      .from("dogs")
-      .update({
-        name:               name.trim(),
-        breed:              breed.trim() || null,
-        age:                age ? parseInt(age) : null,
-        size:               (size as Dog["size"]) || null,
-        vaccination_status: vaccinated,
-        neutered,
-        avatar_url:         avatarUrl,
-        temperament,
-        allergies,
-        diet_preference:    diet || null,
-        bio:                bio.trim() || null,
-      })
-      .eq("id", dogId)
-      .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, avatar_url, temperament, allergies, diet_preference, bio")
-      .single();
+    try {
+      const sb = createClient();
+      const { data, error: err } = await sb
+        .from("dogs")
+        .update({
+          name:               name.trim(),
+          breed:              breed.trim() || null,
+          age:                age ? parseInt(age) : null,
+          size:               (size as Dog["size"]) || null,
+          vaccination_status: vaccinated,
+          neutered,
+          avatar_url:         avatarUrl,
+          temperament,
+          allergies,
+          diet_preference:    diet || null,
+          bio:                bio.trim() || null,
+        })
+        .eq("id", dogId)
+        .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, avatar_url, temperament, allergies, diet_preference, bio")
+        .single();
 
-    if (err) {
-      setError(err.message);
-    } else if (data) {
-      setDog(data as Dog);
-      setEditing(false);
+      if (err) {
+        setError(err.message);
+      } else if (data) {
+        const d = data as Dog;
+        // Ensure array fields are always arrays even if DB returns null
+        d.temperament = Array.isArray(d.temperament) ? d.temperament : [];
+        d.allergies   = Array.isArray(d.allergies)   ? d.allergies   : [];
+        setDog(d);
+        setEditing(false);
+      }
+    } catch (e) {
+      setError("Save failed. Please try again.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   function startEdit() {
@@ -284,7 +301,9 @@ export default function DogProfilePage() {
   if (!dog) return null;
 
   const INPUT = "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-[#00b096] focus:bg-white focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400";
-  const hasProfile = (dog.temperament?.length ?? 0) > 0 || dog.diet_preference || (dog.allergies?.length ?? 0) > 0 || dog.bio;
+  const dogTemperament = Array.isArray(dog.temperament) ? dog.temperament : [];
+  const dogAllergies   = Array.isArray(dog.allergies)   ? dog.allergies   : [];
+  const hasProfile = dogTemperament.length > 0 || dog.diet_preference || dogAllergies.length > 0 || dog.bio;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
@@ -341,11 +360,11 @@ export default function DogProfilePage() {
             </div>
 
             {/* Personality */}
-            {(dog.temperament?.length ?? 0) > 0 && (
+            {dogTemperament.length > 0 && (
               <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                 <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Personality</p>
                 <div className="flex flex-wrap gap-2">
-                  {(dog.temperament ?? []).map(t => {
+                  {dogTemperament.map(t => {
                     const opt = TEMPERAMENT.find(o => o.id === t);
                     return opt ? (
                       <span key={t} className="rounded-full px-3 py-1 text-sm font-medium" style={{ border: "1px solid #00b096", background: "rgba(0,176,150,0.08)", color: "#007a66" }}>
@@ -358,10 +377,10 @@ export default function DogProfilePage() {
             )}
 
             {/* Diet + Allergies */}
-            {(dog.diet_preference || (dog.allergies?.length ?? 0) > 0) && (
+            {(dog.diet_preference || dogAllergies.length > 0) && (
               <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                 {dog.diet_preference && (
-                  <div className={(dog.allergies?.length ?? 0) > 0 ? "mb-4" : ""}>
+                  <div className={dogAllergies.length > 0 ? "mb-4" : ""}>
                     <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Diet</p>
                     {(() => {
                       const opt = DIET.find(o => o.id === dog.diet_preference);
@@ -373,11 +392,11 @@ export default function DogProfilePage() {
                     })()}
                   </div>
                 )}
-                {(dog.allergies?.length ?? 0) > 0 && (
+                {dogAllergies.length > 0 && (
                   <div>
                     <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Allergies</p>
                     <div className="flex flex-wrap gap-2">
-                      {(dog.allergies ?? []).map(a => {
+                      {dogAllergies.map(a => {
                         const opt = ALLERGIES.find(o => o.id === a);
                         return opt ? (
                           <span key={a} className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-sm text-orange-700">
