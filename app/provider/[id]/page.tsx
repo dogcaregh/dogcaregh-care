@@ -35,7 +35,7 @@ type ProviderProfile = {
 type Review = {
   id: string;
   rating: number;
-  text: string | null;
+  body: string | null;
   created_at: string;
   users: { name: string } | { name: string }[] | null;
 };
@@ -121,7 +121,7 @@ export default function ProviderPage() {
     let cancelled = false;
     async function load() {
       const sb = createClient();
-      const [{ data: p }, { data: rv }, { data: { user } }] = await Promise.all([
+      const [{ data: p }, { data: { user } }] = await Promise.all([
         sb.from("providers")
           .select(`id, user_id, bio, services, rates, availability,
                    rating_avg, review_count, verified, active, neighbourhood,
@@ -129,17 +129,22 @@ export default function ProviderPage() {
                    users!user_id(name)`)
           .eq("id", id)
           .single(),
-        sb.from("reviews")
-          .select("id, rating, text, created_at, users!owner_id(name)")
-          .eq("provider_id", id)
-          .order("created_at", { ascending: false }),
         sb.auth.getUser(),
       ]);
       if (cancelled) return;
       if (!p) { setMissing(true); setLoading(false); return; }
       setProvider(p as unknown as ProviderProfile);
-      setReviews((rv ?? []) as unknown as Review[]);
       setAuthed(!!user);
+
+      const { data: rv } = await sb
+        .from("reviews")
+        .select("id, rating, body, created_at, users!from_user_id(name)")
+        .eq("to_user_id", p.user_id)
+        .eq("from_role", "owner")
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+      setReviews((rv ?? []) as unknown as Review[]);
       setLoading(false);
     }
     load();
@@ -429,8 +434,8 @@ export default function ProviderPage() {
                         <div className="mt-0.5">
                           <Stars v={r.rating} />
                         </div>
-                        {r.text && (
-                          <p className="mt-2 text-sm leading-relaxed text-gray-600">{r.text}</p>
+                        {r.body && (
+                          <p className="mt-2 text-sm leading-relaxed text-gray-600">{r.body}</p>
                         )}
                       </div>
                     </div>

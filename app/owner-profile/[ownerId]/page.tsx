@@ -22,6 +22,14 @@ type Dog = {
   avatar_url: string | null;
 };
 
+type OwnerReview = {
+  id: string;
+  rating: number;
+  body: string | null;
+  created_at: string;
+  users: { name: string } | { name: string }[] | null;
+};
+
 const SIZE_LABEL: Record<string, string> = {
   small: "Small", medium: "Medium", large: "Large", xlarge: "XL",
 };
@@ -33,11 +41,12 @@ export default function OwnerProfileForProvider() {
   const params   = useParams();
   const ownerId  = params.ownerId as string;
 
-  const [state,     setState]     = useState<PageState>("loading");
-  const [name,      setName]      = useState("");
-  const [location,  setLocation]  = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [dogs,      setDogs]      = useState<Dog[]>([]);
+  const [state,        setState]        = useState<PageState>("loading");
+  const [name,         setName]         = useState("");
+  const [location,     setLocation]     = useState<string | null>(null);
+  const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null);
+  const [dogs,         setDogs]         = useState<Dog[]>([]);
+  const [ownerReviews, setOwnerReviews] = useState<OwnerReview[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,10 +75,15 @@ export default function OwnerProfileForProvider() {
 
       if (!booking) { if (!cancelled) setState("unauthorized"); return; }
 
-      // Fetch owner data + dogs
-      const [{ data: u }, { data: dgs }] = await Promise.all([
+      // Fetch owner data, dogs, and provider reviews in parallel
+      const [{ data: u }, { data: dgs }, { data: rv }] = await Promise.all([
         sb.from("users").select("name, location, avatar_url").eq("id", ownerId).single(),
         sb.from("dogs").select("id, name, breed, size, age, vaccination_status, avatar_url").eq("owner_id", ownerId).order("created_at"),
+        sb.from("reviews")
+          .select("id, rating, body, created_at, users!from_user_id(name)")
+          .eq("to_user_id", ownerId)
+          .eq("from_role", "provider")
+          .order("created_at", { ascending: false }),
       ]);
 
       if (cancelled) return;
@@ -78,6 +92,7 @@ export default function OwnerProfileForProvider() {
       setLocation(uRow?.location ?? null);
       setAvatarUrl(uRow?.avatar_url ?? null);
       setDogs((dgs ?? []) as Dog[]);
+      setOwnerReviews((rv ?? []) as unknown as OwnerReview[]);
       setState("ready");
     }
     load();
@@ -213,6 +228,37 @@ export default function OwnerProfileForProvider() {
             </div>
           )}
         </div>
+
+        {/* Provider reviews about this owner */}
+        {ownerReviews.length > 0 && (
+          <div className="mt-6">
+            <h2 className="mb-3 text-base font-extrabold" style={{ color: "#0a2e30" }}>
+              Provider Notes
+            </h2>
+            <div className="space-y-3">
+              {ownerReviews.map(r => {
+                const rUser = Array.isArray(r.users) ? r.users[0] : r.users;
+                const rName = rUser?.name ?? "Provider";
+                return (
+                  <div key={r.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{rName}</p>
+                      <span className="text-xs text-gray-400">
+                        {new Date(r.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex gap-px">
+                      {[1,2,3,4,5].map(n => (
+                        <span key={n} className="text-base leading-none" style={{ color: n <= r.rating ? "#f59e0b" : "#e5e7eb" }}>★</span>
+                      ))}
+                    </div>
+                    {r.body && <p className="mt-2 text-sm leading-relaxed text-gray-600">{r.body}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

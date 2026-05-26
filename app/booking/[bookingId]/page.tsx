@@ -186,6 +186,77 @@ function StatusTrack({ status }: { status: string }) {
   );
 }
 
+function ReviewCard({
+  title, prompt, existingReview, starPick, starHover, reviewBody,
+  submitting, error, onStarPick, onStarHover, onBodyChange, onSubmit,
+}: {
+  title: string;
+  prompt: string;
+  existingReview: { rating: number; body: string | null } | null;
+  starPick: number; starHover: number; reviewBody: string;
+  submitting: boolean; error: string | null;
+  onStarPick: (n: number) => void;
+  onStarHover: (n: number) => void;
+  onBodyChange: (s: string) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">{title}</p>
+      {existingReview ? (
+        <div>
+          <div className="mb-2 flex gap-0.5">
+            {[1,2,3,4,5].map(n => (
+              <span key={n} className="text-2xl leading-none" style={{ color: n <= existingReview.rating ? "#f59e0b" : "#e5e7eb" }}>★</span>
+            ))}
+          </div>
+          {existingReview.body && (
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">{existingReview.body}</p>
+          )}
+          <p className="mt-3 text-xs font-semibold" style={{ color: "#00b096" }}>✓ Review submitted</p>
+        </div>
+      ) : (
+        <div>
+          <p className="mb-3 text-sm font-medium text-gray-700">{prompt}</p>
+          <div className="mb-3 flex gap-1">
+            {[1,2,3,4,5].map(n => (
+              <button
+                key={n}
+                type="button"
+                onMouseEnter={() => onStarHover(n)}
+                onMouseLeave={() => onStarHover(0)}
+                onClick={() => onStarPick(n)}
+                className="text-3xl leading-none transition-transform hover:scale-110 active:scale-95"
+                style={{ color: n <= (starHover || starPick) ? "#f59e0b" : "#e5e7eb" }}
+              >★</button>
+            ))}
+          </div>
+          <textarea
+            value={reviewBody}
+            onChange={e => onBodyChange(e.target.value)}
+            placeholder="Share your experience (optional)…"
+            rows={3}
+            maxLength={500}
+            className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-[#00b096] focus:bg-white focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400"
+          />
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-[10px] text-gray-400">{reviewBody.length}/500</span>
+          </div>
+          {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+          <button
+            onClick={onSubmit}
+            disabled={starPick === 0 || submitting}
+            className="mt-3 w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: "#00b096" }}
+          >
+            {submitting ? "Submitting…" : "Submit Review"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BookingPage() {
@@ -204,6 +275,15 @@ export default function BookingPage() {
   const [uploading,setUploading]= useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
+  // Review state
+  const [existingReview,   setExistingReview]   = useState<{ rating: number; body: string | null } | null>(null);
+  const [reviewLoaded,     setReviewLoaded]     = useState(false);
+  const [starPick,         setStarPick]         = useState(0);
+  const [starHover,        setStarHover]        = useState(0);
+  const [reviewBody,       setReviewBody]       = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError,      setReviewError]      = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
 
@@ -214,7 +294,7 @@ export default function BookingPage() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { router.push(`/login?redirect=/booking/${bookingId}`); return; }
 
-      const [bkRes, msgsRes] = await Promise.all([
+      const [bkRes, msgsRes, rvRes] = await Promise.all([
         sb
           .from("bookings")
           .select(`
@@ -231,6 +311,12 @@ export default function BookingPage() {
           .select("*")
           .eq("booking_id", bookingId)
           .order("created_at", { ascending: true }),
+        sb
+          .from("reviews")
+          .select("rating, body")
+          .eq("booking_id", bookingId)
+          .eq("from_user_id", user.id)
+          .maybeSingle(),
       ]);
 
       const bk = bkRes.data as unknown as BookingDetail;
@@ -259,6 +345,8 @@ export default function BookingPage() {
 
       setBooking(bk);
       setMessages((msgsRes.data ?? []) as Message[]);
+      setExistingReview(rvRes.data ? { rating: rvRes.data.rating, body: rvRes.data.body } : null);
+      setReviewLoaded(true);
       setLoading(false);
     }
     load();
@@ -323,6 +411,36 @@ export default function BookingPage() {
     await sb.from("messages").insert({ booking_id: bookingId, sender_id: me.userId, photo_url: publicUrl });
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  // ── Submit review ─────────────────────────────────────────────────────────
+  async function submitReview() {
+    if (starPick === 0 || !booking || !me) return;
+    const prov     = resolve(booking.providers as ProviderRow | ProviderRow[] | null);
+    const toUserId = me.role === "owner" ? (prov?.user_id ?? "") : booking.owner_id;
+    if (!toUserId) return;
+    setSubmittingReview(true);
+    setReviewError(null);
+    try {
+      const sb = createClient();
+      const { error } = await sb.from("reviews").insert({
+        booking_id:   bookingId,
+        from_user_id: me.userId,
+        to_user_id:   toUserId,
+        from_role:    me.role,
+        rating:       starPick,
+        body:         reviewBody.trim() || null,
+      });
+      if (error) {
+        setReviewError(error.message);
+      } else {
+        setExistingReview({ rating: starPick, body: reviewBody.trim() || null });
+      }
+    } catch {
+      setReviewError("Failed to submit. Please try again.");
+    } finally {
+      setSubmittingReview(false);
+    }
   }
 
   // ── Loading / not found ───────────────────────────────────────────────────
@@ -555,15 +673,40 @@ export default function BookingPage() {
                   Message {isOwner ? "Provider" : "Owner"}
                 </button>
 
-                {/* Review (closed, owner only) */}
-                {booking.status === "closed" && isOwner && provider && (
-                  <Link
-                    href={`/provider/${provider.id}`}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90"
-                    style={{ backgroundColor: "#00b096" }}
-                  >
-                    ⭐ Leave a Review
-                  </Link>
+                {/* Review form — owner rates provider */}
+                {booking.status === "closed" && isOwner && reviewLoaded && (
+                  <ReviewCard
+                    title="Rate Your Provider"
+                    prompt={`How was your experience with ${providerFullName.split(" ")[0]}?`}
+                    existingReview={existingReview}
+                    starPick={starPick}
+                    starHover={starHover}
+                    reviewBody={reviewBody}
+                    submitting={submittingReview}
+                    error={reviewError}
+                    onStarPick={setStarPick}
+                    onStarHover={setStarHover}
+                    onBodyChange={setReviewBody}
+                    onSubmit={submitReview}
+                  />
+                )}
+
+                {/* Review form — provider rates owner */}
+                {booking.status === "closed" && isProvider && reviewLoaded && (
+                  <ReviewCard
+                    title="Leave a Note on This Owner"
+                    prompt={`How was working with ${ownerFullName.split(" ")[0]} and their dog?`}
+                    existingReview={existingReview}
+                    starPick={starPick}
+                    starHover={starHover}
+                    reviewBody={reviewBody}
+                    submitting={submittingReview}
+                    error={reviewError}
+                    onStarPick={setStarPick}
+                    onStarHover={setStarHover}
+                    onBodyChange={setReviewBody}
+                    onSubmit={submitReview}
+                  />
                 )}
 
                 {/* Owner: Pay now */}
