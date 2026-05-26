@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import { lookupCoords, haversine, rankScore } from "@/lib/geocode";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -24,8 +25,12 @@ type Provider = {
   active: boolean;
   neighbourhood: string | null;
   avatar_url: string | null;
+  lat: number | null;
+  lng: number | null;
   users: { name: string } | { name: string }[] | null;
 };
+
+type RankedProvider = Provider & { distKm: number | null };
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -82,7 +87,7 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-function ProviderCard({ p, highlight, locationQuery }: { p: Provider; highlight: ServiceId | ""; locationQuery: string }) {
+function ProviderCard({ p, highlight }: { p: RankedProvider; highlight: ServiceId | "" }) {
   const usersRow = Array.isArray(p.users) ? p.users[0] : p.users;
   const name  = usersRow?.name ?? "DogCare Provider";
   const price = minRate(p.rates);
@@ -140,17 +145,18 @@ function ProviderCard({ p, highlight, locationQuery }: { p: Provider; highlight:
               )}
             </div>
 
-            {/* Location — highlighted when it matches the search query */}
+            {/* Location + distance badge */}
             {p.neighbourhood && (
-              <p
-                className="mt-0.5 text-xs font-medium"
-                style={
-                  locScore(p.neighbourhood, locationQuery) > 0
-                    ? { color: "#00b096" }
-                    : { color: "#9ca3af" }
-                }
-              >
-                📍 {p.neighbourhood}
+              <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-gray-400">
+                <span>📍 {p.neighbourhood}</span>
+                {p.distKm !== null && (
+                  <span
+                    className="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                    style={{ background: "rgba(0,176,150,.12)", color: "#00b096" }}
+                  >
+                    {fmtDist(p.distKm)}
+                  </span>
+                )}
               </p>
             )}
           </div>
@@ -226,14 +232,8 @@ function SkeletonCard() {
   );
 }
 
-// 2 = exact match, 1 = partial match, 0 = no match
-function locScore(neighbourhood: string | null, query: string): number {
-  if (!query) return 0;
-  const n = (neighbourhood ?? "").toLowerCase();
-  const q = query.toLowerCase();
-  if (n === q) return 2;
-  if (n.includes(q) || q.includes(n)) return 1;
-  return 0;
+function fmtDist(km: number): string {
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
 }
 
 // ── Main search UI ─────────────────────────────────────────────────────────
@@ -243,9 +243,10 @@ function SearchResults() {
   const initService = (params.get("service") ?? "") as ServiceId | "";
   const initLocation = params.get("location") ?? "";
 
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [authUser,  setAuthUser]  = useState<{ name: string; isProvider: boolean } | null>(null);
+  const [providers,  setProviders]  = useState<Provider[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [authUser,   setAuthUser]   = useState<{ name: string; isProvider: boolean } | null>(null);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Filters
   const [service,   setService]   = useState<ServiceId | "">(initService);
@@ -258,9 +259,15 @@ function SearchResults() {
       const sb = createClient();
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
-      const { data: p } = await sb.from("providers").select("id").eq("user_id", user.id).maybeSingle();
-      const { data: u } = await sb.from("users").select("name").eq("id", user.id).single();
-      setAuthUser({ name: (u as { name: string } | null)?.name ?? "", isProvider: !!p });
+      const [{ data: p }, { data: u }] = await Promise.all([
+        sb.from("providers").select("id").eq("user_id", user.id).maybeSingle(),
+        sb.from("users").select("name, lat, lng").eq("id", user.id).single(),
+      ]);
+      const uRow = u as { name: string; lat: number | null; lng: number | null } | null;
+      setAuthUser({ name: uRow?.name ?? "", isProvider: !!p });
+      if (uRow?.lat != null && uRow?.lng != null) {
+        setUserCoords({ lat: uRow.lat, lng: uRow.lng });
+      }
     }
     checkAuth();
   }, []);
@@ -274,7 +281,7 @@ function SearchResults() {
 
       let q = supabase
         .from("providers")
-        .select("id, user_id, services, rates, rating_avg, review_count, active, neighbourhood, avatar_url, users!user_id(name)")
+        .select("id, user_id, services, rates, rating_avg, review_count, active, neighbourhood, avatar_url, lat, lng, users!user_id(name)")
         .order("rating_avg", { ascending: false });
 
       if (service) q = (q as typeof q).contains("services", [service]);
@@ -289,9 +296,10 @@ function SearchResults() {
     return () => { cancelled = true; };
   }, [service]);
 
-  const visible = useMemo(() => {
-    const range    = PRICE_RANGES[priceIdx];
-    const locQuery = location.trim();
+  const visible = useMemo((): RankedProvider[] => {
+    const range     = PRICE_RANGES[priceIdx];
+    const locQuery  = location.trim();
+    const refCoords = locQuery ? (lookupCoords(locQuery) ?? null) : userCoords;
 
     return providers
       .filter(p => {
@@ -301,12 +309,18 @@ function SearchResults() {
         if (price !== null && price < range.min) return false;
         return true;
       })
-      .sort((a, b) => {
-        const scoreDiff = locScore(b.neighbourhood, locQuery) - locScore(a.neighbourhood, locQuery);
-        if (scoreDiff !== 0) return scoreDiff;
-        return b.rating_avg - a.rating_avg;
-      });
-  }, [providers, priceIdx, avail, location]);
+      .map(p => ({
+        ...p,
+        distKm:
+          refCoords && p.lat != null && p.lng != null
+            ? haversine(refCoords.lat, refCoords.lng, p.lat, p.lng)
+            : null,
+      }))
+      .sort((a, b) =>
+        rankScore(b.distKm, Number(b.rating_avg), b.review_count) -
+        rankScore(a.distKm, Number(a.rating_avg), a.review_count)
+      );
+  }, [providers, priceIdx, avail, location, userCoords]);
 
   const heading = [
     service ? SERVICES[service]?.label : "All services",
@@ -371,7 +385,7 @@ function SearchResults() {
         <p className="mt-1 text-sm text-white/50">
           {loading
             ? "Searching…"
-            : `${visible.length} provider${visible.length !== 1 ? "s" : ""} found${location.trim() ? " · sorted nearest first" : ""}`}
+            : `${visible.length} provider${visible.length !== 1 ? "s" : ""} found${(location.trim() || userCoords) ? " · sorted by proximity & rating" : " · sorted by rating"}`}
         </p>
       </div>
 
@@ -493,7 +507,7 @@ function SearchResults() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {visible.map(p => (
-              <ProviderCard key={p.id} p={p} highlight={service} locationQuery={location.trim()} />
+              <ProviderCard key={p.id} p={p} highlight={service} />
             ))}
           </div>
         )}

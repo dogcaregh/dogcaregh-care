@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { LocationPicker } from "@/components/location-picker";
 import ImageCropModal from "@/components/image-crop-modal";
+import { resolveCoords } from "@/lib/geocode";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -303,6 +304,8 @@ export default function EditProfilePage() {
       }
     }
 
+    const coords = await resolveCoords(neighbourhood.trim());
+
     const [uErr, pErr] = await Promise.all([
       sb.from("users")
         .update({ name: name.trim(), phone: phone.trim() || null })
@@ -320,6 +323,8 @@ export default function EditProfilePage() {
           availability:     availObj,
           avatar_url:       avatarUrl,
           gallery_photos:   gallery,
+          lat:              coords?.lat ?? null,
+          lng:              coords?.lng ?? null,
         })
         .eq("id", providerId)
         .then(r => r.error),

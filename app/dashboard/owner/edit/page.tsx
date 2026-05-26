@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { LocationPicker } from "@/components/location-picker";
 import ImageCropModal from "@/components/image-crop-modal";
+import { resolveCoords } from "@/lib/geocode";
 
 const INPUT =
   "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-[#00b096] focus:bg-white focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400";
@@ -113,6 +114,7 @@ export default function OwnerEditPage() {
     setError(null);
 
     const sb = createClient();
+    const coords = await resolveCoords(location.trim());
     const { error: dbErr } = await sb
       .from("users")
       .update({
@@ -120,6 +122,8 @@ export default function OwnerEditPage() {
         phone:      phone.trim() || null,
         location:   location.trim() || null,
         avatar_url: avatarUrl,
+        lat:        coords?.lat ?? null,
+        lng:        coords?.lng ?? null,
       })
       .eq("id", userId);
 
