@@ -23,6 +23,7 @@ type Provider = {
   review_count: number;
   active: boolean;
   neighbourhood: string | null;
+  avatar_url: string | null;
   users: { name: string } | { name: string }[] | null;
 };
 
@@ -96,12 +97,16 @@ function ProviderCard({ p, highlight, locationQuery }: { p: Provider; highlight:
         {/* Header row */}
         <div className="flex items-start gap-3">
           {/* Avatar */}
-          <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
-            style={{ backgroundColor: avatarBg(p.user_id) }}
-          >
-            {initials(name)}
-          </div>
+          {p.avatar_url ? (
+            <img src={p.avatar_url} alt={name} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+          ) : (
+            <div
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+              style={{ backgroundColor: avatarBg(p.user_id) }}
+            >
+              {initials(name)}
+            </div>
+          )}
 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
@@ -269,7 +274,7 @@ function SearchResults() {
 
       let q = supabase
         .from("providers")
-        .select("id, user_id, services, rates, rating_avg, review_count, active, neighbourhood, users!user_id(name)")
+        .select("id, user_id, services, rates, rating_avg, review_count, active, neighbourhood, avatar_url, users!user_id(name)")
         .order("rating_avg", { ascending: false });
 
       if (service) q = (q as typeof q).contains("services", [service]);

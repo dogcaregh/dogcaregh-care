@@ -34,7 +34,7 @@ type Booking = {
   provider_payout: number;
   status: BookingStatus;
   created_at: string;
-  users: { name: string; location: string | null } | { name: string; location: string | null }[] | null;
+  users: { name: string; location: string | null; avatar_url: string | null } | { name: string; location: string | null; avatar_url: string | null }[] | null;
   dogs: { name: string; breed: string | null; size: string | null }
       | { name: string; breed: string | null; size: string | null }[]
       | null;
@@ -183,7 +183,7 @@ export default function ProviderDashboard() {
         .select(`
           id, owner_id, service_type, start_date, end_date,
           gross_amount, provider_payout, status, created_at,
-          users!owner_id(name, location),
+          users!owner_id(name, location, avatar_url),
           dogs!dog_id(name, breed, size)
         `)
         .eq("provider_id", pAny.id as string)
@@ -385,12 +385,16 @@ export default function ProviderDashboard() {
                         className="flex items-center gap-3 transition hover:opacity-80"
                         onClick={e => e.stopPropagation()}
                       >
-                        <div
-                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white"
-                          style={{ backgroundColor: avatarBg(b.owner_id) }}
-                        >
-                          {ini(ownerFullName)}
-                        </div>
+                        {owner?.avatar_url ? (
+                          <img src={owner.avatar_url} alt={ownerFullName} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+                        ) : (
+                          <div
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-white"
+                            style={{ backgroundColor: avatarBg(b.owner_id) }}
+                          >
+                            {ini(ownerFullName)}
+                          </div>
+                        )}
                         <div>
                           <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>{ownerName}</p>
                           <p className="text-xs text-gray-400">

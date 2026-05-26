@@ -23,6 +23,7 @@ type Dog = {
   size: "small" | "medium" | "large" | "xlarge" | null;
   age: number | null;
   vaccination_status: boolean;
+  avatar_url: string | null;
 };
 
 type Booking = {
@@ -248,7 +249,7 @@ export default function OwnerDashboard() {
 
       const [{ data: u }, { data: dgs }, { data: bks }, { data: nf }] = await Promise.all([
         sb.from("users").select("name, avatar_url").eq("id", user.id).single(),
-        sb.from("dogs").select("id, name, breed, age, size, vaccination_status").eq("owner_id", user.id).order("created_at"),
+        sb.from("dogs").select("id, name, breed, age, size, vaccination_status, avatar_url").eq("owner_id", user.id).order("created_at"),
         sb.from("bookings")
           .select(`id, service_type, start_date, end_date, gross_amount, status, created_at,
             providers!provider_id(id, neighbourhood, avatar_url, user_id, users!user_id(name)),
@@ -473,12 +474,16 @@ export default function OwnerDashboard() {
                     className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-3 transition hover:shadow-sm"
                     style={{ borderLeftWidth: 3, borderLeftColor: avatarBg(dog.id) }}
                   >
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white"
-                      style={{ backgroundColor: avatarBg(dog.id) }}
-                    >
-                      {ini(dog.name)}
-                    </div>
+                    {dog.avatar_url ? (
+                      <img src={dog.avatar_url} alt={dog.name} className="h-10 w-10 shrink-0 rounded-xl object-cover" />
+                    ) : (
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white"
+                        style={{ backgroundColor: avatarBg(dog.id) }}
+                      >
+                        {ini(dog.name)}
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold" style={{ color: "#0a2e30" }}>{dog.name}</p>
                       <p className="text-xs text-gray-400">

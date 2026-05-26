@@ -19,6 +19,7 @@ type Dog = {
   size: "small" | "medium" | "large" | "xlarge" | null;
   age: number | null;
   vaccination_status: boolean;
+  avatar_url: string | null;
 };
 
 const SIZE_LABEL: Record<string, string> = {
@@ -45,7 +46,7 @@ export default function OwnerProfilePage() {
 
       const [{ data: u }, { data: dgs }] = await Promise.all([
         sb.from("users").select("name, phone, location, avatar_url").eq("id", user.id).single(),
-        sb.from("dogs").select("id, name, breed, size, age, vaccination_status").eq("owner_id", user.id).order("created_at"),
+        sb.from("dogs").select("id, name, breed, size, age, vaccination_status, avatar_url").eq("owner_id", user.id).order("created_at"),
       ]);
 
       if (cancelled) return;
@@ -164,12 +165,16 @@ export default function OwnerProfilePage() {
             <div className="space-y-3">
               {dogs.map(dog => (
                 <Link key={dog.id} href={`/dashboard/owner/dogs/${dog.id}`} className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md">
-                  <div
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg"
-                    style={{ backgroundColor: "rgba(0,176,150,0.1)" }}
-                  >
-                    🐕
-                  </div>
+                  {dog.avatar_url ? (
+                    <img src={dog.avatar_url} alt={dog.name} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+                  ) : (
+                    <div
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg"
+                      style={{ backgroundColor: "rgba(0,176,150,0.1)" }}
+                    >
+                      🐕
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="font-bold" style={{ color: "#0a2e30" }}>{dog.name}</p>
                     <p className="text-xs text-gray-500">
