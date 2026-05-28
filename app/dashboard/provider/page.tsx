@@ -8,6 +8,15 @@ import { useChat } from "@/lib/chat-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+type ProviderService = {
+  id: string;
+  rate_small: number | null;
+  rate_medium: number | null;
+  rate_large: number | null;
+  is_active: boolean;
+  service_types: { slug: string; name: string; emoji: string } | null;
+};
+
 type BookingStatus =
   | "pending"
   | "confirmed"
@@ -150,6 +159,7 @@ export default function ProviderDashboard() {
   const [providerId,     setProviderId]     = useState("");
   const [providerAvatar, setProviderAvatar] = useState<string | null>(null);
   const [providerActive, setProviderActive] = useState(true);
+  const [services,     setServices]     = useState<ProviderService[]>([]);
   const [bookings,     setBookings]     = useState<Booking[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [tab,          setTab]          = useState<TabKey>("requests");
@@ -178,19 +188,27 @@ export default function ProviderDashboard() {
       setProviderAvatar((pAny.avatar_url as string | null) ?? null);
       setProviderActive(pAny.active as boolean);
 
-      const { data: bks } = await sb
-        .from("bookings")
-        .select(`
-          id, owner_id, service_type, start_date, end_date,
-          gross_amount, provider_payout, status, created_at,
-          users!owner_id(name, location, avatar_url),
-          dogs!dog_id(name, breed, size)
-        `)
-        .eq("provider_id", pAny.id as string)
-        .order("created_at", { ascending: false });
+      const [{ data: bks }, { data: svcs }] = await Promise.all([
+        sb
+          .from("bookings")
+          .select(`
+            id, owner_id, service_type, start_date, end_date,
+            gross_amount, provider_payout, status, created_at,
+            users!owner_id(name, location, avatar_url),
+            dogs!dog_id(name, breed, size)
+          `)
+          .eq("provider_id", pAny.id as string)
+          .order("created_at", { ascending: false }),
+        sb
+          .from("provider_services")
+          .select("id, rate_small, rate_medium, rate_large, is_active, service_types(slug, name, emoji)")
+          .eq("provider_id", pAny.id as string)
+          .eq("is_active", true),
+      ]);
 
       if (cancelled) return;
       setBookings((bks ?? []) as unknown as Booking[]);
+      setServices((svcs ?? []) as unknown as ProviderService[]);
       setLoading(false);
     }
     load();
@@ -328,6 +346,53 @@ export default function ProviderDashboard() {
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
+
+        {/* ── Services summary ── */}
+        <div className="mb-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="flex items-center justify-between px-5 pt-4 pb-3">
+            <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>My Active Services</p>
+            <Link
+              href="/dashboard/provider/services"
+              className="rounded-full px-3 py-1 text-[11px] font-semibold text-white transition hover:opacity-90"
+              style={{ backgroundColor: "#00b096" }}
+            >
+              Edit Services
+            </Link>
+          </div>
+          {services.length === 0 ? (
+            <div className="flex items-center gap-3 border-t border-gray-50 px-5 py-4">
+              <span className="text-xl">🐾</span>
+              <div>
+                <p className="text-sm font-medium text-gray-500">No services set up yet</p>
+                <p className="text-xs text-gray-400">Add your services so dog owners can find and book you.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2 border-t border-gray-50 px-5 py-4">
+              {services.map(svc => {
+                const st = svc.service_types;
+                if (!st) return null;
+                const rates = [svc.rate_small, svc.rate_medium, svc.rate_large].filter((r): r is number => r !== null);
+                const minRate = rates.length > 0 ? Math.min(...rates) : null;
+                return (
+                  <div
+                    key={svc.id}
+                    className="flex items-center gap-2 rounded-xl px-3 py-2.5"
+                    style={{ backgroundColor: "rgba(0,176,150,.08)" }}
+                  >
+                    <span className="text-base">{st.emoji}</span>
+                    <div>
+                      <p className="text-xs font-semibold" style={{ color: "#0a2e30" }}>{st.name}</p>
+                      {minRate !== null && (
+                        <p className="text-[11px]" style={{ color: "#00b096" }}>From GHS {minRate.toFixed(0)}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* ── Tab bar ── */}
         <div className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm">

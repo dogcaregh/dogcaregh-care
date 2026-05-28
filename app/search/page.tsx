@@ -213,6 +213,11 @@ function ProviderCard({ p, highlightTypeId }: { p: RankedProvider; highlightType
               ) : (
                 <p className="text-xs text-gray-400">Price on request</p>
               )}
+              {activeSvcs.length > 0 && isAvailableToday(activeSvcs) && (
+                <p className="mt-0.5 text-[11px] font-medium" style={{ color: "#00b096" }}>
+                  ✓ Available today
+                </p>
+              )}
             </div>
             <span
               className="rounded-xl px-4 py-2 text-xs font-semibold text-white transition group-hover:opacity-90"
@@ -337,8 +342,6 @@ function SearchResults() {
         if (avail === "available" && !p.active) return false;
 
         const activeSvcs = (p.provider_services ?? []).filter(ps => ps.is_active);
-
-        if (avail === "available" && activeSvcs.length > 0 && !isAvailableToday(activeSvcs)) return false;
 
         if (selectedTypeId && !activeSvcs.some(ps => ps.service_type_id === selectedTypeId)) return false;
 
