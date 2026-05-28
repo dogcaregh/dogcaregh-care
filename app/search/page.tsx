@@ -24,7 +24,6 @@ type ProviderService = {
   rate_large: number | null;
   is_active: boolean;
   availability: Record<string, AvailSlot> | null;
-  service_types: { slug: string; name: string; emoji: string } | null;
 };
 
 type Provider = {
@@ -109,7 +108,7 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-function ProviderCard({ p, highlightTypeId }: { p: RankedProvider; highlightTypeId: string }) {
+function ProviderCard({ p, highlightTypeId, serviceTypes }: { p: RankedProvider; highlightTypeId: string; serviceTypes: ServiceType[] }) {
   const usersRow = Array.isArray(p.users) ? p.users[0] : p.users;
   const name     = usersRow?.name ?? "DogCare Provider";
   const activeSvcs = p.provider_services.filter(ps => ps.is_active);
@@ -181,7 +180,7 @@ function ProviderCard({ p, highlightTypeId }: { p: RankedProvider; highlightType
           {/* Service chips */}
           <div className="mt-3 flex flex-wrap gap-1.5">
             {activeSvcs.map(ps => {
-              const st = ps.service_types;
+              const st = serviceTypes.find(t => t.id === ps.service_type_id);
               if (!st) return null;
               const highlighted = ps.service_type_id === highlightTypeId;
               return (
@@ -301,14 +300,17 @@ function SearchResults() {
       setLoading(true);
       const sb = createClient();
 
-      const [{ data: stData }, { data: pvData }] = await Promise.all([
+      const [{ data: stData, error: stErr }, { data: pvData, error: pvErr }] = await Promise.all([
         sb.from("service_types").select("id, slug, name, emoji").order("name"),
         sb.from("providers")
           .select(`id, user_id, rating_avg, review_count, active, neighbourhood, avatar_url, lat, lng,
                    users!user_id(name),
-                   provider_services(service_type_id, rate_small, rate_medium, rate_large, is_active, availability, service_types(slug, name, emoji))`)
+                   provider_services(service_type_id, rate_small, rate_medium, rate_large, is_active, availability)`)
           .order("rating_avg", { ascending: false }),
       ]);
+
+      if (stErr) console.error("[search] service_types error:", stErr);
+      if (pvErr) console.error("[search] providers error:", pvErr);
 
       if (!cancelled) {
         setServiceTypes((stData ?? []) as ServiceType[]);
@@ -530,7 +532,7 @@ function SearchResults() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {visible.map(p => (
-              <ProviderCard key={p.id} p={p} highlightTypeId={selectedTypeId} />
+              <ProviderCard key={p.id} p={p} highlightTypeId={selectedTypeId} serviceTypes={serviceTypes} />
             ))}
           </div>
         )}
