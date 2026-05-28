@@ -214,9 +214,8 @@ export default function ProviderPage() {
 
       const [{ data: sv }, { data: rv }, { data: stData }] = await Promise.all([
         sb.from("provider_services")
-          .select("id, service_type_id, rate_small, rate_medium, rate_large, availability")
-          .eq("provider_id", p.id)
-          .eq("is_active", true),
+          .select("id, service_type_id, rate_small, rate_medium, rate_large, availability, is_active")
+          .eq("provider_id", p.id),
         sb.from("reviews")
           .select("id, rating, body, created_at, users!from_user_id(name)")
           .eq("to_user_id", p.user_id)
@@ -226,11 +225,13 @@ export default function ProviderPage() {
       ]);
 
       if (cancelled) return;
-      const svMapped = (sv ?? []).map(s => ({
+      const activeSv = (sv ?? []).filter(s => (s as Record<string, unknown>).is_active);
+      const svMapped = activeSv.map(s => ({
         ...s,
         service_types: (stData ?? []).find(st => st.id === (s as Record<string, unknown>).service_type_id)
           ?? { slug: "", name: "Unknown", emoji: "🐾", unit_label: "" },
       }));
+      if (!sv) console.error("[provider] provider_services returned null — check RLS");
       setServices(svMapped as unknown as ProviderService[]);
       setReviews((rv ?? []) as unknown as Review[]);
       setLoading(false);

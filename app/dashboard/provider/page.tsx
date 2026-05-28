@@ -8,12 +8,15 @@ import { useChat } from "@/lib/chat-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+type AvailSlot = { available: boolean; start?: string; end?: string };
+
 type ProviderService = {
   id: string;
   rate_small: number | null;
   rate_medium: number | null;
   rate_large: number | null;
-  is_active: boolean;
+  availability: Record<string, AvailSlot> | null;
+  description: string | null;
   service_types: { slug: string; name: string; emoji: string } | null;
 };
 
@@ -201,18 +204,19 @@ export default function ProviderDashboard() {
           .order("created_at", { ascending: false }),
         sb
           .from("provider_services")
-          .select("id, service_type_id, rate_small, rate_medium, rate_large, is_active")
-          .eq("provider_id", pAny.id as string)
-          .eq("is_active", true),
+          .select("id, service_type_id, rate_small, rate_medium, rate_large, availability, description, is_active")
+          .eq("provider_id", pAny.id as string),
         sb.from("service_types").select("id, slug, name, emoji"),
       ]);
 
       if (cancelled) return;
       setBookings((bks ?? []) as unknown as Booking[]);
-      const svcsMapped = (svcs ?? []).map(s => ({
+      const activeRows = (svcs ?? []).filter(s => (s as Record<string, unknown>).is_active);
+      const svcsMapped = activeRows.map(s => ({
         ...s,
         service_types: (stData ?? []).find(st => st.id === (s as Record<string, unknown>).service_type_id) ?? null,
       }));
+      if (!svcs) console.error("[dashboard] provider_services returned null — check RLS");
       setServices(svcsMapped as unknown as ProviderService[]);
       setLoading(false);
     }
@@ -373,25 +377,45 @@ export default function ProviderDashboard() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2 border-t border-gray-50 px-5 py-4">
+            <div className="grid gap-3 border-t border-gray-50 p-5 sm:grid-cols-2 lg:grid-cols-3">
               {services.map(svc => {
                 const st = svc.service_types;
                 if (!st) return null;
-                const rates = [svc.rate_small, svc.rate_medium, svc.rate_large].filter((r): r is number => r !== null);
-                const minRate = rates.length > 0 ? Math.min(...rates) : null;
+                const DAYS_SHORT: Record<string, string> = {
+                  monday: "Mon", tuesday: "Tue", wednesday: "Wed",
+                  thursday: "Thu", friday: "Fri", saturday: "Sat", sunday: "Sun",
+                };
+                const activeDays = Object.entries(svc.availability ?? {})
+                  .filter(([, slot]) => slot.available)
+                  .map(([d]) => DAYS_SHORT[d] ?? d);
                 return (
                   <div
                     key={svc.id}
-                    className="flex items-center gap-2 rounded-xl px-3 py-2.5"
-                    style={{ backgroundColor: "rgba(0,176,150,.08)" }}
+                    className="rounded-xl border border-gray-100 p-4"
+                    style={{ borderLeftWidth: 3, borderLeftColor: "#00b096" }}
                   >
-                    <span className="text-base">{st.emoji}</span>
-                    <div>
-                      <p className="text-xs font-semibold" style={{ color: "#0a2e30" }}>{st.name}</p>
-                      {minRate !== null && (
-                        <p className="text-[11px]" style={{ color: "#00b096" }}>From GHS {minRate.toFixed(0)}</p>
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="text-xl">{st.emoji}</span>
+                      <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>{st.name}</p>
+                    </div>
+                    <div className="space-y-1">
+                      {svc.rate_small  != null && <div className="flex justify-between text-xs"><span className="text-gray-400">Small dog</span><span className="font-semibold" style={{ color: "#00b096" }}>GHS {Number(svc.rate_small).toFixed(2)}</span></div>}
+                      {svc.rate_medium != null && <div className="flex justify-between text-xs"><span className="text-gray-400">Medium dog</span><span className="font-semibold" style={{ color: "#00b096" }}>GHS {Number(svc.rate_medium).toFixed(2)}</span></div>}
+                      {svc.rate_large  != null && <div className="flex justify-between text-xs"><span className="text-gray-400">Large dog</span><span className="font-semibold" style={{ color: "#00b096" }}>GHS {Number(svc.rate_large).toFixed(2)}</span></div>}
+                      {svc.rate_small == null && svc.rate_medium == null && svc.rate_large == null && (
+                        <p className="text-xs text-gray-400">Rate on request</p>
                       )}
                     </div>
+                    {activeDays.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1 border-t border-gray-50 pt-3">
+                        {activeDays.map(d => (
+                          <span key={d} className="rounded-md px-1.5 py-0.5 text-[10px] font-bold" style={{ backgroundColor: "rgba(0,176,150,.1)", color: "#00b096" }}>{d}</span>
+                        ))}
+                      </div>
+                    )}
+                    {svc.description && (
+                      <p className="mt-2 text-[11px] leading-relaxed text-gray-400">{svc.description}</p>
+                    )}
                   </div>
                 );
               })}
