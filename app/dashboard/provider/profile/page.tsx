@@ -12,18 +12,6 @@ function ini(name?: string | null) {
   return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
 
-type ServiceId =
-  | "pet_sitting" | "doggy_daycare" | "dog_boarding"
-  | "mobile_grooming" | "dog_walking";
-
-const SERVICES: Record<ServiceId, { label: string; emoji: string }> = {
-  pet_sitting:     { label: "Pet Sitting",     emoji: "🐾" },
-  doggy_daycare:   { label: "Doggy Daycare",   emoji: "🏡" },
-  dog_boarding:    { label: "Dog Boarding",    emoji: "🛏️" },
-  mobile_grooming: { label: "Mobile Grooming", emoji: "✂️" },
-  dog_walking:     { label: "Dog Walking",     emoji: "🦮" },
-};
-
 export default function ProviderProfilePage() {
   const router = useRouter();
 
@@ -33,7 +21,6 @@ export default function ProviderProfilePage() {
   const [phone,        setPhone]        = useState<string | null>(null);
   const [neighbourhood, setNeighbourhood] = useState<string | null>(null);
   const [bio,          setBio]          = useState<string | null>(null);
-  const [services,     setServices]     = useState<ServiceId[]>([]);
   const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null);
   const [active,       setActive]       = useState(true);
   const [loading,      setLoading]      = useState(true);
@@ -47,12 +34,12 @@ export default function ProviderProfilePage() {
 
       const [{ data: u }, { data: p }] = await Promise.all([
         sb.from("users").select("name, phone").eq("id", user.id).single(),
-        sb.from("providers").select("id, active, bio, neighbourhood, services, avatar_url").eq("user_id", user.id).single(),
+        sb.from("providers").select("id, active, bio, neighbourhood, avatar_url").eq("user_id", user.id).single(),
       ]);
 
       if (cancelled) return;
       const uRow = u as { name: string; phone: string | null } | null;
-      const pRow = p as { id: string; active: boolean; bio: string | null; neighbourhood: string | null; services: ServiceId[]; avatar_url: string | null } | null;
+      const pRow = p as { id: string; active: boolean; bio: string | null; neighbourhood: string | null; avatar_url: string | null } | null;
 
       setUserId(user.id);
       setName(uRow?.name ?? "");
@@ -61,8 +48,7 @@ export default function ProviderProfilePage() {
       setActive(pRow?.active ?? true);
       setBio(pRow?.bio ?? null);
       setNeighbourhood(pRow?.neighbourhood ?? null);
-      setServices(pRow?.services ?? []);
-      setAvatarUrl(pRow?.avatar_url ?? null);
+setAvatarUrl(pRow?.avatar_url ?? null);
       setLoading(false);
     }
     load();
@@ -171,24 +157,6 @@ export default function ProviderProfilePage() {
                 </div>
               )}
             </div>
-
-            {/* Services */}
-            {services.length > 0 && (
-              <div className="mt-5">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Services</p>
-                <div className="flex flex-wrap gap-2">
-                  {services.map(s => (
-                    <span
-                      key={s}
-                      className="rounded-full px-3 py-1 text-xs font-medium"
-                      style={{ background: "rgba(0,176,150,.12)", color: "#00b096" }}
-                    >
-                      {SERVICES[s]?.emoji} {SERVICES[s]?.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Actions */}
             <div className="mt-6 flex flex-wrap gap-3">

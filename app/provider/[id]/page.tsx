@@ -7,19 +7,19 @@ import { createClient } from "@/lib/supabase";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type ServiceId =
-  | "pet_sitting"
-  | "doggy_daycare"
-  | "dog_boarding"
-  | "mobile_grooming"
-  | "dog_walking";
+type ProviderService = {
+  id: string;
+  price_small: number | null;
+  price_medium: number | null;
+  price_large: number | null;
+  price_flat: number | null;
+  service_types: { slug: string; name: string; emoji: string; unit_label: string };
+};
 
 type ProviderProfile = {
   id: string;
   user_id: string;
   bio: string | null;
-  services: ServiceId[];
-  rates: Record<string, number>;
   availability: Record<string, { available: boolean; start?: string; end?: string }>;
   rating_avg: number;
   review_count: number;
@@ -41,14 +41,6 @@ type Review = {
 };
 
 // ── Constants ──────────────────────────────────────────────────────────────
-
-const SERVICES: Record<ServiceId, { label: string; emoji: string; unit: string }> = {
-  pet_sitting:     { label: "Pet Sitting",     emoji: "🐾", unit: "/ visit"  },
-  doggy_daycare:   { label: "Doggy Daycare",   emoji: "🏡", unit: "/ day"    },
-  dog_boarding:    { label: "Dog Boarding",    emoji: "🛏️", unit: "/ night"  },
-  mobile_grooming: { label: "Mobile Grooming", emoji: "✂️", unit: "/ session"},
-  dog_walking:     { label: "Dog Walking",     emoji: "🦮", unit: "/ walk"   },
-};
 
 const DAYS = [
   "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
@@ -79,9 +71,15 @@ function fmt(iso: string) {
   });
 }
 
-function minRate(rates: Record<string, number>) {
-  const vals = Object.values(rates);
-  return vals.length ? Math.min(...vals) : null;
+function lowestPrice(svcs: ProviderService[]): number | null {
+  const prices: number[] = [];
+  for (const s of svcs) {
+    if (s.price_flat != null) prices.push(s.price_flat);
+    if (s.price_small != null) prices.push(s.price_small);
+    if (s.price_medium != null) prices.push(s.price_medium);
+    if (s.price_large != null) prices.push(s.price_large);
+  }
+  return prices.length ? Math.min(...prices) : null;
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -105,17 +103,77 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
+function ServiceRateCard({ svc }: { svc: ProviderService }) {
+  const { name, emoji, unit_label } = svc.service_types;
+  const hasPerSize = svc.price_small != null || svc.price_medium != null || svc.price_large != null;
+
+  return (
+    <div
+      className="rounded-xl border border-gray-100 bg-gray-50/50 p-4"
+      style={{ borderLeftWidth: 3, borderLeftColor: "#00b096" }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-2xl">{emoji}</span>
+        <div>
+          <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{name}</p>
+          <p className="text-xs text-gray-400">{unit_label}</p>
+        </div>
+      </div>
+
+      {svc.price_flat != null && (
+        <p className="text-base font-extrabold" style={{ color: "#00b096" }}>
+          GHS {Number(svc.price_flat).toFixed(2)}
+        </p>
+      )}
+
+      {hasPerSize && (
+        <div className="space-y-1">
+          {svc.price_small != null && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Small dog</span>
+              <span className="font-semibold" style={{ color: "#00b096" }}>
+                GHS {Number(svc.price_small).toFixed(2)}
+              </span>
+            </div>
+          )}
+          {svc.price_medium != null && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Medium dog</span>
+              <span className="font-semibold" style={{ color: "#00b096" }}>
+                GHS {Number(svc.price_medium).toFixed(2)}
+              </span>
+            </div>
+          )}
+          {svc.price_large != null && (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Large dog</span>
+              <span className="font-semibold" style={{ color: "#00b096" }}>
+                GHS {Number(svc.price_large).toFixed(2)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {svc.price_flat == null && !hasPerSize && (
+        <p className="text-xs text-gray-400">On request</p>
+      )}
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ProviderPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [provider, setProvider] = useState<ProviderProfile | null>(null);
-  const [reviews,  setReviews]  = useState<Review[]>([]);
-  const [authed,   setAuthed]   = useState(false);
-  const [loading,  setLoading]  = useState(true);
-  const [missing,  setMissing]  = useState(false);
+  const [provider,  setProvider]  = useState<ProviderProfile | null>(null);
+  const [services,  setServices]  = useState<ProviderService[]>([]);
+  const [reviews,   setReviews]   = useState<Review[]>([]);
+  const [authed,    setAuthed]    = useState(false);
+  const [loading,   setLoading]   = useState(true);
+  const [missing,   setMissing]   = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,7 +181,7 @@ export default function ProviderPage() {
       const sb = createClient();
       const [{ data: p }, { data: { user } }] = await Promise.all([
         sb.from("providers")
-          .select(`id, user_id, bio, services, rates, availability,
+          .select(`id, user_id, bio, availability,
                    rating_avg, review_count, verified, active, neighbourhood,
                    years_experience, avatar_url, gallery_photos,
                    users!user_id(name)`)
@@ -136,14 +194,20 @@ export default function ProviderPage() {
       setProvider(p as unknown as ProviderProfile);
       setAuthed(!!user);
 
-      const { data: rv } = await sb
-        .from("reviews")
-        .select("id, rating, body, created_at, users!from_user_id(name)")
-        .eq("to_user_id", p.user_id)
-        .eq("from_role", "owner")
-        .order("created_at", { ascending: false });
+      const [{ data: sv }, { data: rv }] = await Promise.all([
+        sb.from("provider_services")
+          .select("id, price_small, price_medium, price_large, price_flat, service_types(slug, name, emoji, unit_label)")
+          .eq("provider_id", p.id)
+          .eq("is_active", true),
+        sb.from("reviews")
+          .select("id, rating, body, created_at, users!from_user_id(name)")
+          .eq("to_user_id", p.user_id)
+          .eq("from_role", "owner")
+          .order("created_at", { ascending: false }),
+      ]);
 
       if (cancelled) return;
+      setServices((sv ?? []) as unknown as ProviderService[]);
       setReviews((rv ?? []) as unknown as Review[]);
       setLoading(false);
     }
@@ -168,11 +232,11 @@ export default function ProviderPage() {
     </div>
   );
 
-  const pUser    = resolveUser(provider.users);
-  const name     = pUser?.name ?? "DogCare Provider";
+  const pUser     = resolveUser(provider.users);
+  const name      = pUser?.name ?? "DogCare Provider";
   const avgRating = Number(provider.rating_avg);
-  const starting  = minRate(provider.rates);
-  const hasAvail  = Object.keys(provider.availability).length > 0;
+  const starting  = lowestPrice(services);
+  const hasAvail  = Object.keys(provider.availability ?? {}).length > 0;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
@@ -211,7 +275,6 @@ export default function ProviderPage() {
                   {ini(name)}
                 </div>
               )}
-              {/* Available dot */}
               {provider.active && (
                 <span
                   className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-[#0a2e30] px-2.5 py-0.5 text-[11px] font-bold text-white"
@@ -259,17 +322,19 @@ export default function ProviderPage() {
               )}
 
               {/* Service pills */}
-              <div className="mt-3 flex flex-wrap justify-center gap-1.5 sm:justify-start">
-                {provider.services.map(s => (
-                  <span
-                    key={s}
-                    className="rounded-full px-2.5 py-1 text-xs font-medium text-white/80"
-                    style={{ backgroundColor: "rgba(255,255,255,.1)" }}
-                  >
-                    {SERVICES[s]?.emoji} {SERVICES[s]?.label}
-                  </span>
-                ))}
-              </div>
+              {services.length > 0 && (
+                <div className="mt-3 flex flex-wrap justify-center gap-1.5 sm:justify-start">
+                  {services.map(s => (
+                    <span
+                      key={s.id}
+                      className="rounded-full px-2.5 py-1 text-xs font-medium text-white/80"
+                      style={{ backgroundColor: "rgba(255,255,255,.1)" }}
+                    >
+                      {s.service_types.emoji} {s.service_types.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -292,36 +357,15 @@ export default function ProviderPage() {
         </SectionCard>
 
         {/* Services & Rates */}
-        <SectionCard title="Services &amp; Rates">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {provider.services.map(svc => {
-              const meta = SERVICES[svc];
-              const rate = provider.rates[svc];
-              return (
-                <div
-                  key={svc}
-                  className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4"
-                  style={{ borderLeftWidth: 3, borderLeftColor: "#00b096" }}
-                >
-                  <span className="text-2xl">{meta?.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>
-                      {meta?.label}
-                    </p>
-                    <p className="text-xs text-gray-400">{meta?.unit}</p>
-                  </div>
-                  {rate !== undefined ? (
-                    <p className="shrink-0 text-base font-extrabold" style={{ color: "#00b096" }}>
-                      GHS {rate}
-                    </p>
-                  ) : (
-                    <p className="shrink-0 text-xs text-gray-400">On request</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
+        {services.length > 0 && (
+          <SectionCard title="Services &amp; Rates">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {services.map(svc => (
+                <ServiceRateCard key={svc.id} svc={svc} />
+              ))}
+            </div>
+          </SectionCard>
+        )}
 
         {/* Gallery */}
         <SectionCard title="Photo Gallery">
@@ -388,7 +432,6 @@ export default function ProviderPage() {
 
         {/* Reviews */}
         <SectionCard title={`Reviews${provider.review_count > 0 ? ` (${provider.review_count})` : ""}`}>
-          {/* Summary bar */}
           {avgRating > 0 && (
             <div
               className="mb-5 flex items-center gap-3 rounded-xl px-4 py-3"
@@ -457,7 +500,7 @@ export default function ProviderPage() {
             <p className="truncate text-sm font-bold text-white">{name}</p>
             <p className="text-xs text-white/50">
               {provider.neighbourhood ?? "Ghana"}
-              {starting !== null && <> · From GHS {starting}</>}
+              {starting !== null && <> · From GHS {starting.toFixed(2)}</>}
             </p>
           </div>
           <button

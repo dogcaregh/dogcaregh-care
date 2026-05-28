@@ -10,10 +10,6 @@ import { resolveCoords } from "@/lib/geocode";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ServiceId =
-  | "pet_sitting" | "doggy_daycare" | "dog_boarding"
-  | "mobile_grooming" | "dog_walking";
-
 type DayId =
   | "monday" | "tuesday" | "wednesday" | "thursday"
   | "friday" | "saturday" | "sunday";
@@ -21,14 +17,6 @@ type DayId =
 type AvailSlot = { available: boolean; start: string; end: string };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const SERVICES: { id: ServiceId; emoji: string; label: string; unit: string }[] = [
-  { id: "pet_sitting",     emoji: "🐾", label: "Pet Sitting",     unit: "/ visit"   },
-  { id: "doggy_daycare",   emoji: "🏡", label: "Doggy Daycare",   unit: "/ day"     },
-  { id: "dog_boarding",    emoji: "🛏️", label: "Dog Boarding",    unit: "/ night"   },
-  { id: "mobile_grooming", emoji: "✂️", label: "Mobile Grooming", unit: "/ session" },
-  { id: "dog_walking",     emoji: "🦮", label: "Dog Walking",     unit: "/ walk"    },
-];
 
 const DAYS: { id: DayId; short: string; label: string }[] = [
   { id: "monday",    short: "Mon", label: "Monday"    },
@@ -113,10 +101,6 @@ export default function EditProfilePage() {
   const [yearsExp,     setYearsExp]     = useState<number | "">("");
   const [active,       setActive]       = useState(true);
 
-  // Services & rates
-  const [services, setServices] = useState<ServiceId[]>([]);
-  const [rates,    setRates]    = useState<Partial<Record<ServiceId, string>>>({});
-
   // Availability
   const [avail, setAvail] = useState<Partial<Record<DayId, AvailSlot>>>({});
 
@@ -147,7 +131,7 @@ export default function EditProfilePage() {
       const [uRes, pRes] = await Promise.all([
         sb.from("users").select("name, phone").eq("id", user.id).single(),
         sb.from("providers")
-          .select("id, bio, years_experience, neighbourhood, active, services, rates, availability, avatar_url, gallery_photos")
+          .select("id, bio, years_experience, neighbourhood, active, availability, avatar_url, gallery_photos")
           .eq("user_id", user.id)
           .single(),
       ]);
@@ -158,7 +142,6 @@ export default function EditProfilePage() {
       const p = pRes.data as {
         id: string; bio: string | null; years_experience: number | null;
         neighbourhood: string | null; active: boolean;
-        services: ServiceId[]; rates: Record<string, number>;
         availability: Record<string, { available?: boolean; start?: string; end?: string }>;
         avatar_url: string | null; gallery_photos: string[];
       };
@@ -171,13 +154,6 @@ export default function EditProfilePage() {
       setNeighbourhood(p.neighbourhood ?? "");
       setYearsExp(p.years_experience ?? "");
       setActive(p.active);
-      setServices(p.services ?? []);
-
-      const rateMap: Partial<Record<ServiceId, string>> = {};
-      for (const [k, v] of Object.entries(p.rates ?? {})) {
-        rateMap[k as ServiceId] = String(v);
-      }
-      setRates(rateMap);
 
       const availMap: Partial<Record<DayId, AvailSlot>> = {};
       for (const day of DAYS) {
@@ -196,13 +172,6 @@ export default function EditProfilePage() {
     }
     load();
   }, [router]);
-
-  // ── Service toggle ────────────────────────────────────────────────────────
-  function toggleService(id: ServiceId) {
-    setServices(prev =>
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
-  }
 
   // ── Avatar upload ─────────────────────────────────────────────────────────
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -275,21 +244,10 @@ export default function EditProfilePage() {
   // ── Save ──────────────────────────────────────────────────────────────────
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (services.length === 0) {
-      setError("Please select at least one service.");
-      return;
-    }
     setSaving(true);
     setError(null);
 
     const sb = createClient();
-
-    // Build rates (only for selected services, numeric)
-    const ratesNum: Record<string, number> = {};
-    for (const svc of services) {
-      const v = rates[svc];
-      if (v && !isNaN(Number(v)) && Number(v) > 0) ratesNum[svc] = Number(v);
-    }
 
     // Build availability
     const availObj: Record<string, { available: boolean; start?: string; end?: string }> = {};
@@ -318,8 +276,6 @@ export default function EditProfilePage() {
           neighbourhood:    neighbourhood.trim() || null,
           location:         neighbourhood.trim() || null,
           active,
-          services,
-          rates:            ratesNum,
           availability:     availObj,
           avatar_url:       avatarUrl,
           gallery_photos:   gallery,
@@ -544,65 +500,7 @@ export default function EditProfilePage() {
             </div>
           </Section>
 
-          {/* ── 3. Services & Rates ── */}
-          <Section title="Services & Rates" subtitle="Select the services you offer and set your GHS rate for each.">
-            <div className="space-y-3">
-              {SERVICES.map(svc => {
-                const on = services.includes(svc.id);
-                return (
-                  <div
-                    key={svc.id}
-                    className="flex flex-wrap items-center gap-4 rounded-xl border p-4 transition"
-                    style={on
-                      ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.04)" }
-                      : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }}
-                  >
-                    {/* Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => toggleService(svc.id)}
-                      className="flex items-center gap-3"
-                    >
-                      <span
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold text-white transition"
-                        style={on
-                          ? { backgroundColor: "#00b096", borderColor: "#00b096" }
-                          : { borderColor: "#d1d5db" }}
-                      >
-                        {on ? "✓" : ""}
-                      </span>
-                      <span className="text-xl">{svc.emoji}</span>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: on ? "#0a2e30" : "#6b7280" }}>
-                          {svc.label}
-                        </p>
-                        <p className="text-xs text-gray-400">{svc.unit}</p>
-                      </div>
-                    </button>
-
-                    {/* Rate input (only when selected) */}
-                    {on && (
-                      <div className="ml-auto flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-500">GHS</span>
-                        <input
-                          type="number"
-                          min={1}
-                          placeholder="0"
-                          value={rates[svc.id] ?? ""}
-                          onChange={e => setRates(prev => ({ ...prev, [svc.id]: e.target.value }))}
-                          className="w-24 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
-                          style={{ color: "#0a2e30" }}
-                        />
-                        <span className="text-xs text-gray-400">{svc.unit}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </Section>
-
-          {/* ── 4. Weekly Availability ── */}
+          {/* ── 3. Weekly Availability ── */}
           <Section title="Weekly Availability" subtitle="Set which days you work and your available hours.">
             <div className="space-y-2">
               {DAYS.map(day => {
@@ -672,7 +570,7 @@ export default function EditProfilePage() {
             </div>
           </Section>
 
-          {/* ── 5. Gallery Photos ── */}
+          {/* ── 4. Gallery Photos ── */}
           <Section
             title="Photo Gallery"
             subtitle={`Show owners your home, yard, or previous happy clients. Up to ${MAX_GALLERY} photos.`}

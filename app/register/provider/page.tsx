@@ -12,14 +12,6 @@ const ACCRA_AREAS = [
   "Teshie", "Trasacco Valley",
 ];
 
-const SERVICES = [
-  { id: "pet_sitting",     emoji: "🐾", label: "Pet Sitting",     desc: "Care for pets in your home" },
-  { id: "doggy_daycare",   emoji: "🏡", label: "Doggy Daycare",   desc: "Daytime supervision & play" },
-  { id: "dog_boarding",    emoji: "🛏️", label: "Dog Boarding",    desc: "Overnight stays at your home" },
-  { id: "mobile_grooming", emoji: "✂️", label: "Mobile Grooming", desc: "Groom pets at their location" },
-  { id: "dog_walking",     emoji: "🦮", label: "Dog Walking",      desc: "Daily walks & exercise" },
-] as const;
-
 type Step = "form" | "email-sent" | "done";
 
 const INPUT =
@@ -37,19 +29,9 @@ export default function ProviderRegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [neighbourhood, setNeighbourhood] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
-
-  const toggle = (id: string) =>
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    );
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (selected.length === 0) {
-      setError("Please select at least one service.");
-      return;
-    }
     setLoading(true);
     setError(null);
     const supabase = createClient();
@@ -85,7 +67,6 @@ export default function ProviderRegisterPage() {
 
     const { error: providerError } = await supabase.from("providers").insert({
       user_id: uid,
-      services: selected,
       neighbourhood,
       location: neighbourhood,
       active: true,
@@ -147,18 +128,18 @@ export default function ProviderRegisterPage() {
             <div className="py-4 text-center">
               <div className="mb-4 text-5xl">🎉</div>
               <h2 className="mb-2 text-xl font-bold" style={{ color: "#0a2e30" }}>
-                Application received!
+                Account created!
               </h2>
               <p className="mb-6 text-sm text-gray-500">
-                Your provider profile has been created. Our team will review and
-                verify you shortly.
+                Your provider profile is ready. Next, add the services you offer
+                and set your rates so pet owners can find you.
               </p>
               <Link
-                href="/"
+                href="/dashboard/provider/services"
                 className="inline-block rounded-xl px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
                 style={{ backgroundColor: "#00b096" }}
               >
-                Back to Home
+                Set Up My Services →
               </Link>
             </div>
           )}
@@ -241,51 +222,6 @@ export default function ProviderRegisterPage() {
                       <option key={a} value={a} />
                     ))}
                   </datalist>
-                </div>
-
-                {/* Services checklist */}
-                <div>
-                  <label className={LABEL}>Services You Offer</label>
-                  <div className="space-y-2">
-                    {SERVICES.map((svc) => {
-                      const on = selected.includes(svc.id);
-                      return (
-                        <button
-                          key={svc.id}
-                          type="button"
-                          onClick={() => toggle(svc.id)}
-                          className="flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition"
-                          style={
-                            on
-                              ? { backgroundColor: "rgba(0,176,150,0.08)", borderColor: "#00b096" }
-                              : { borderColor: "#e5e7eb" }
-                          }
-                        >
-                          {/* Custom checkbox */}
-                          <span
-                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold text-white transition"
-                            style={
-                              on
-                                ? { backgroundColor: "#00b096", borderColor: "#00b096" }
-                                : { borderColor: "#d1d5db", color: "transparent" }
-                            }
-                          >
-                            ✓
-                          </span>
-                          <span className="text-xl">{svc.emoji}</span>
-                          <span className="flex-1">
-                            <span
-                              className="block text-sm font-semibold"
-                              style={{ color: on ? "#0a2e30" : "#374151" }}
-                            >
-                              {svc.label}
-                            </span>
-                            <span className="block text-xs text-gray-400">{svc.desc}</span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
 
                 <button
