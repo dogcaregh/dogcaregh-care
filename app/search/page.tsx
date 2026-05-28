@@ -84,7 +84,11 @@ const TODAY_KEY = ["sunday","monday","tuesday","wednesday","thursday","friday","
 function isAvailableToday(svcs: ProviderService[]): boolean {
   return svcs.some(ps => {
     const a = ps.availability;
-    if (!a || Object.keys(a).length === 0) return true; // no schedule set = always available
+    if (!a) return true;
+    // Only enforce day-of-week when the provider has actually enabled at least one day.
+    // If no days are on (empty object or all false), treat as always open.
+    const anyDayEnabled = Object.values(a).some(slot => slot.available === true);
+    if (!anyDayEnabled) return true;
     return a[TODAY_KEY]?.available === true;
   });
 }
