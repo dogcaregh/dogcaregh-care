@@ -8,6 +8,11 @@ import { useChat } from "@/lib/chat-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+const SLUG_EMOJI: Record<string, string> = {
+  dog_walking: "🦮", dog_sitting: "🐾", dog_daycare: "🏡",
+  dog_boarding: "🛏️", dog_grooming: "✂️",
+};
+
 type AvailSlot = { available: boolean; start?: string; end?: string };
 
 type ProviderService = {
@@ -206,19 +211,20 @@ export default function ProviderDashboard() {
           .from("provider_services")
           .select("id, service_type_id, rate_small, rate_medium, rate_large, availability, description, is_active")
           .eq("provider_id", pAny.id as string),
-        sb.from("service_types").select("id, slug, name, emoji"),
+        sb.from("service_types").select("id, slug, name"),
       ]);
 
       if (cancelled) return;
       setBookings((bks ?? []) as unknown as Booking[]);
-      if (!svcs) console.error("[dashboard] provider_services null — check RLS or column names");
-      if (!stData) console.error("[dashboard] service_types null — check RLS or column names");
-      console.log("[dashboard] svcs:", svcs?.length, "stData:", stData?.length);
       const activeRows = (svcs ?? []).filter(s => (s as Record<string, unknown>).is_active);
       const svcsMapped = activeRows.map(s => {
         const sid = (s as Record<string, unknown>).service_type_id as string;
-        const st = (stData ?? []).find(t => t.id === sid) ?? null;
-        return { ...s, service_types: st };
+        const row = (stData ?? []).find(t => t.id === sid);
+        const slug = row?.slug ?? "";
+        return {
+          ...s,
+          service_types: row ? { slug, name: row.name, emoji: SLUG_EMOJI[slug] ?? "🐾" } : null,
+        };
       });
       setServices(svcsMapped as unknown as ProviderService[]);
       setLoading(false);

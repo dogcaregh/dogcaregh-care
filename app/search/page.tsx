@@ -42,6 +42,11 @@ type Provider = {
 
 type RankedProvider = Provider & { distKm: number | null };
 
+const SLUG_EMOJI: Record<string, string> = {
+  dog_walking: "🦮", dog_sitting: "🐾", dog_daycare: "🏡",
+  dog_boarding: "🛏️", dog_grooming: "✂️",
+};
+
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const PRICE_RANGES = [
@@ -301,7 +306,7 @@ function SearchResults() {
       const sb = createClient();
 
       const [{ data: stData, error: stErr }, { data: pvData, error: pvErr }] = await Promise.all([
-        sb.from("service_types").select("id, slug, name, emoji").order("name"),
+        sb.from("service_types").select("id, slug, name").order("name"),
         sb.from("providers")
           .select(`id, user_id, rating_avg, review_count, active, neighbourhood, avatar_url, lat, lng,
                    users!user_id(name),
@@ -313,7 +318,8 @@ function SearchResults() {
       if (pvErr) console.error("[search] providers error:", pvErr);
 
       if (!cancelled) {
-        setServiceTypes((stData ?? []) as ServiceType[]);
+        const enriched = (stData ?? []).map(st => ({ ...st, emoji: SLUG_EMOJI[st.slug] ?? "🐾" }));
+        setServiceTypes(enriched as ServiceType[]);
         setProviders((pvData ?? []) as unknown as Provider[]);
         setLoading(false);
       }
