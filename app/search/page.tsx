@@ -8,18 +8,25 @@ import { lookupCoords, haversine, rankScore } from "@/lib/geocode";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type ServiceId =
-  | "pet_sitting"
-  | "doggy_daycare"
-  | "dog_boarding"
-  | "mobile_grooming"
-  | "dog_walking";
+type ServiceType = {
+  id: string;
+  slug: string;
+  name: string;
+  emoji: string;
+};
+
+type ProviderService = {
+  service_type_id: string;
+  rate_small: number | null;
+  rate_medium: number | null;
+  rate_large: number | null;
+  is_active: boolean;
+  service_types: { slug: string; name: string; emoji: string } | null;
+};
 
 type Provider = {
   id: string;
   user_id: string;
-  services: ServiceId[];
-  rates: Record<string, number>;
   rating_avg: number;
   review_count: number;
   active: boolean;
@@ -28,21 +35,12 @@ type Provider = {
   lat: number | null;
   lng: number | null;
   users: { name: string } | { name: string }[] | null;
+  provider_services: ProviderService[];
 };
 
 type RankedProvider = Provider & { distKm: number | null };
 
 // ── Constants ──────────────────────────────────────────────────────────────
-
-const SERVICES: Record<ServiceId, { label: string; emoji: string }> = {
-  pet_sitting:     { label: "Pet Sitting",     emoji: "🐾" },
-  doggy_daycare:   { label: "Doggy Daycare",   emoji: "🏡" },
-  dog_boarding:    { label: "Dog Boarding",    emoji: "🛏️" },
-  mobile_grooming: { label: "Mobile Grooming", emoji: "✂️" },
-  dog_walking:     { label: "Dog Walking",     emoji: "🦮" },
-};
-
-const SERVICE_IDS = Object.keys(SERVICES) as ServiceId[];
 
 const PRICE_RANGES = [
   { label: "Any price",     min: 0,   max: Infinity },
@@ -68,9 +66,18 @@ function initials(name: string | null | undefined) {
   return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
 
-function minRate(rates: Record<string, number>) {
-  const vals = Object.values(rates);
-  return vals.length > 0 ? Math.min(...vals) : null;
+function minServicePrice(svcs: ProviderService[]): number | null {
+  const prices: number[] = [];
+  for (const ps of svcs) {
+    if (ps.rate_small  != null) prices.push(ps.rate_small);
+    if (ps.rate_medium != null) prices.push(ps.rate_medium);
+    if (ps.rate_large  != null) prices.push(ps.rate_large);
+  }
+  return prices.length > 0 ? Math.min(...prices) : null;
+}
+
+function fmtDist(km: number): string {
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -79,129 +86,126 @@ function Stars({ value }: { value: number }) {
   return (
     <span className="inline-flex gap-px leading-none">
       {[1, 2, 3, 4, 5].map(n => (
-        <span key={n} style={{ color: n <= Math.round(value) ? "#f59e0b" : "#e5e7eb" }}>
-          ★
-        </span>
+        <span key={n} style={{ color: n <= Math.round(value) ? "#f59e0b" : "#e5e7eb" }}>★</span>
       ))}
     </span>
   );
 }
 
-function ProviderCard({ p, highlight }: { p: RankedProvider; highlight: ServiceId | "" }) {
+function ProviderCard({ p, highlightTypeId }: { p: RankedProvider; highlightTypeId: string }) {
   const usersRow = Array.isArray(p.users) ? p.users[0] : p.users;
-  const name  = usersRow?.name ?? "DogCare Provider";
-  const price = minRate(p.rates);
+  const name     = usersRow?.name ?? "DogCare Provider";
+  const activeSvcs = p.provider_services.filter(ps => ps.is_active);
+  const price    = minServicePrice(activeSvcs);
 
   return (
     <Link href={`/provider/${p.id}`} className="group block">
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md">
-      {/* teal accent strip */}
-      <div className="h-1.5" style={{ backgroundColor: "#00b096" }} />
+      <article className="flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md">
+        <div className="h-1.5" style={{ backgroundColor: "#00b096" }} />
 
-      <div className="flex flex-1 flex-col p-5">
-        {/* Header row */}
-        <div className="flex items-start gap-3">
-          {/* Avatar */}
-          {p.avatar_url ? (
-            <img src={p.avatar_url} alt={name} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
-          ) : (
-            <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
-              style={{ backgroundColor: avatarBg(p.user_id) }}
-            >
-              {initials(name)}
-            </div>
-          )}
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-bold" style={{ color: "#0a2e30" }}>
-                  {name}
-                </p>
-                <p className="text-[11px] italic text-gray-400">DogCare Provider</p>
-              </div>
-              {/* Availability badge */}
-              <span
-                className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                style={
-                  p.active
-                    ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
-                    : { background: "rgba(239,68,68,.1)",   color: "#dc2626" }
-                }
+        <div className="flex flex-1 flex-col p-5">
+          {/* Header row */}
+          <div className="flex items-start gap-3">
+            {p.avatar_url ? (
+              <img src={p.avatar_url} alt={name} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+            ) : (
+              <div
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+                style={{ backgroundColor: avatarBg(p.user_id) }}
               >
-                {p.active ? "Available" : "Unavailable"}
-              </span>
-            </div>
+                {initials(name)}
+              </div>
+            )}
 
-            {/* Stars + count */}
-            <div className="mt-0.5 flex items-center gap-1.5">
-              <Stars value={Number(p.rating_avg)} />
-              <span className="text-xs font-semibold text-gray-700">
-                {Number(p.rating_avg) > 0 ? Number(p.rating_avg).toFixed(1) : "New"}
-              </span>
-              {p.review_count > 0 && (
-                <span className="text-xs text-gray-400">({p.review_count} reviews)</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold" style={{ color: "#0a2e30" }}>{name}</p>
+                  <p className="text-[11px] italic text-gray-400">DogCare Provider</p>
+                </div>
+                <span
+                  className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                  style={
+                    p.active
+                      ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
+                      : { background: "rgba(239,68,68,.1)",   color: "#dc2626" }
+                  }
+                >
+                  {p.active ? "Available" : "Unavailable"}
+                </span>
+              </div>
+
+              <div className="mt-0.5 flex items-center gap-1.5">
+                <Stars value={Number(p.rating_avg)} />
+                <span className="text-xs font-semibold text-gray-700">
+                  {Number(p.rating_avg) > 0 ? Number(p.rating_avg).toFixed(1) : "New"}
+                </span>
+                {p.review_count > 0 && (
+                  <span className="text-xs text-gray-400">({p.review_count} reviews)</span>
+                )}
+              </div>
+
+              {p.neighbourhood && (
+                <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-gray-400">
+                  <span>📍 {p.neighbourhood}</span>
+                  {p.distKm !== null && (
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                      style={{ background: "rgba(0,176,150,.12)", color: "#00b096" }}
+                    >
+                      {fmtDist(p.distKm)}
+                    </span>
+                  )}
+                </p>
               )}
             </div>
-
-            {/* Location + distance badge */}
-            {p.neighbourhood && (
-              <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-gray-400">
-                <span>📍 {p.neighbourhood}</span>
-                {p.distKm !== null && (
-                  <span
-                    className="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-                    style={{ background: "rgba(0,176,150,.12)", color: "#00b096" }}
-                  >
-                    {fmtDist(p.distKm)}
-                  </span>
-                )}
-              </p>
-            )}
           </div>
-        </div>
 
-        {/* Service chips */}
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {p.services.map(s => (
-            <span
-              key={s}
-              className="rounded-full px-2.5 py-1 text-[11px] font-medium"
-              style={
-                s === highlight
-                  ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
-                  : { background: "#f3f4f6",              color: "#6b7280" }
-              }
-            >
-              {SERVICES[s]?.emoji} {SERVICES[s]?.label}
-            </span>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-auto flex items-center justify-between border-t border-gray-50 pt-4 mt-4">
-          <div>
-            {price !== null ? (
-              <p className="text-sm">
-                <span className="font-bold" style={{ color: "#0a2e30" }}>
-                  GHS {price}
+          {/* Service chips */}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {activeSvcs.map(ps => {
+              const st = ps.service_types;
+              if (!st) return null;
+              const highlighted = ps.service_type_id === highlightTypeId;
+              return (
+                <span
+                  key={ps.service_type_id}
+                  className="rounded-full px-2.5 py-1 text-[11px] font-medium"
+                  style={
+                    highlighted
+                      ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
+                      : { background: "#f3f4f6", color: "#6b7280" }
+                  }
+                >
+                  {st.emoji} {st.name}
                 </span>
-                <span className="text-xs text-gray-400"> starting</span>
-              </p>
-            ) : (
-              <p className="text-xs text-gray-400">Price on request</p>
-            )}
+              );
+            })}
           </div>
-          <span
-            className="rounded-xl px-4 py-2 text-xs font-semibold text-white transition group-hover:opacity-90"
-            style={{ backgroundColor: "#00b096" }}
-          >
-            View Profile
-          </span>
+
+          {/* Footer */}
+          <div className="mt-auto flex items-center justify-between border-t border-gray-50 pt-4 mt-4">
+            <div>
+              {price !== null ? (
+                <p className="text-sm">
+                  <span className="font-bold" style={{ color: "#0a2e30" }}>
+                    GHS {price.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-gray-400"> starting</span>
+                </p>
+              ) : (
+                <p className="text-xs text-gray-400">Price on request</p>
+              )}
+            </div>
+            <span
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-white transition group-hover:opacity-90"
+              style={{ backgroundColor: "#00b096" }}
+            >
+              View Profile
+            </span>
+          </div>
         </div>
-      </div>
-    </article>
+      </article>
     </Link>
   );
 }
@@ -232,27 +236,24 @@ function SkeletonCard() {
   );
 }
 
-function fmtDist(km: number): string {
-  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
-}
-
 // ── Main search UI ─────────────────────────────────────────────────────────
 
 function SearchResults() {
-  const params      = useSearchParams();
-  const initService = (params.get("service") ?? "") as ServiceId | "";
+  const params       = useSearchParams();
+  const initSlug     = params.get("service") ?? "";
   const initLocation = params.get("location") ?? "";
 
-  const [providers,  setProviders]  = useState<Provider[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [authUser,   setAuthUser]   = useState<{ name: string; isProvider: boolean } | null>(null);
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [providers,     setProviders]     = useState<Provider[]>([]);
+  const [serviceTypes,  setServiceTypes]  = useState<ServiceType[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [authUser,      setAuthUser]      = useState<{ name: string; isProvider: boolean } | null>(null);
+  const [userCoords,    setUserCoords]    = useState<{ lat: number; lng: number } | null>(null);
 
   // Filters
-  const [service,   setService]   = useState<ServiceId | "">(initService);
-  const [location,  setLocation]  = useState(initLocation);
-  const [priceIdx,  setPriceIdx]  = useState(0);
-  const [avail,     setAvail]     = useState<"all" | "available">("available");
+  const [selectedSlug, setSelectedSlug] = useState(initSlug);
+  const [location,     setLocation]     = useState(initLocation);
+  const [priceIdx,     setPriceIdx]     = useState(0);
+  const [avail,        setAvail]        = useState<"all" | "available">("available");
 
   useEffect(() => {
     async function checkAuth() {
@@ -272,29 +273,35 @@ function SearchResults() {
     checkAuth();
   }, []);
 
-  // Fetch from Supabase whenever service filter changes
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
-      const supabase = createClient();
+      const sb = createClient();
 
-      let q = supabase
-        .from("providers")
-        .select("id, user_id, services, rates, rating_avg, review_count, active, neighbourhood, avatar_url, lat, lng, users!user_id(name)")
-        .order("rating_avg", { ascending: false });
+      const [{ data: stData }, { data: pvData }] = await Promise.all([
+        sb.from("service_types").select("id, slug, name, emoji").order("name"),
+        sb.from("providers")
+          .select(`id, user_id, rating_avg, review_count, active, neighbourhood, avatar_url, lat, lng,
+                   users!user_id(name),
+                   provider_services(service_type_id, rate_small, rate_medium, rate_large, is_active, service_types(slug, name, emoji))`)
+          .order("rating_avg", { ascending: false }),
+      ]);
 
-      if (service) q = (q as typeof q).contains("services", [service]);
-
-      const { data } = await q;
       if (!cancelled) {
-        setProviders((data as Provider[]) ?? []);
+        setServiceTypes((stData ?? []) as ServiceType[]);
+        setProviders((pvData ?? []) as unknown as Provider[]);
         setLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, [service]);
+  }, []);
+
+  const selectedTypeId = useMemo(
+    () => serviceTypes.find(st => st.slug === selectedSlug)?.id ?? "",
+    [serviceTypes, selectedSlug]
+  );
 
   const visible = useMemo((): RankedProvider[] => {
     const range     = PRICE_RANGES[priceIdx];
@@ -302,13 +309,6 @@ function SearchResults() {
     const refCoords = locQuery ? (lookupCoords(locQuery) ?? null) : userCoords;
 
     return providers
-      .filter(p => {
-        if (avail === "available" && !p.active) return false;
-        const price = minRate(p.rates);
-        if (price !== null && range.max < Infinity && price > range.max) return false;
-        if (price !== null && price < range.min) return false;
-        return true;
-      })
       .map(p => ({
         ...p,
         distKm:
@@ -316,14 +316,25 @@ function SearchResults() {
             ? haversine(refCoords.lat, refCoords.lng, p.lat, p.lng)
             : null,
       }))
+      .filter(p => {
+        if (avail === "available" && !p.active) return false;
+        const activeSvcs = (p.provider_services ?? []).filter(ps => ps.is_active);
+        if (activeSvcs.length === 0) return false;
+        if (selectedTypeId && !activeSvcs.some(ps => ps.service_type_id === selectedTypeId)) return false;
+        const price = minServicePrice(activeSvcs);
+        if (price !== null && range.max < Infinity && price > range.max) return false;
+        if (price !== null && price < range.min) return false;
+        return true;
+      })
       .sort((a, b) =>
         rankScore(b.distKm, Number(b.rating_avg), b.review_count) -
         rankScore(a.distKm, Number(a.rating_avg), a.review_count)
       );
-  }, [providers, priceIdx, avail, location, userCoords]);
+  }, [providers, selectedTypeId, priceIdx, avail, location, userCoords]);
 
+  const selectedST  = serviceTypes.find(st => st.slug === selectedSlug);
   const heading = [
-    service ? SERVICES[service]?.label : "All services",
+    selectedST ? `${selectedST.emoji} ${selectedST.name}` : "All services",
     location.trim() ? `near ${location.trim()}` : "",
   ].filter(Boolean).join(" ");
 
@@ -375,10 +386,7 @@ function SearchResults() {
           <svg style={{position:"absolute",width:54,top:"6px",left:"36%",opacity:0.04,color:"#00b096",transform:"rotate(28deg)"}} viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="63" rx="24" ry="20"/><ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)"/><ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)"/><ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)"/><ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)"/></svg>
           <svg style={{position:"absolute",width:82,top:"15%",right:"22%",opacity:0.035,color:"white",transform:"rotate(-6deg)"}} viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="63" rx="24" ry="20"/><ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)"/><ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)"/><ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)"/><ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)"/></svg>
         </div>
-        <p
-          className="text-xs font-semibold uppercase tracking-widest"
-          style={{ color: "#00b096" }}
-        >
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>
           Search results
         </p>
         <h1 className="mt-1 text-2xl font-extrabold text-white md:text-3xl">{heading}</h1>
@@ -396,9 +404,7 @@ function SearchResults() {
 
           {/* Location */}
           <div className="min-w-[180px] flex-1">
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-              Neighbourhood
-            </p>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Neighbourhood</p>
             <input
               type="text"
               list="search-accra-areas"
@@ -417,18 +423,16 @@ function SearchResults() {
 
           {/* Service */}
           <div className="min-w-[180px] flex-1">
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-              Service
-            </p>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Service</p>
             <select
-              value={service}
-              onChange={e => setService(e.target.value as ServiceId | "")}
+              value={selectedSlug}
+              onChange={e => setSelectedSlug(e.target.value)}
               className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
             >
               <option value="">All services</option>
-              {SERVICE_IDS.map(s => (
-                <option key={s} value={s}>
-                  {SERVICES[s].emoji} {SERVICES[s].label}
+              {serviceTypes.map(st => (
+                <option key={st.id} value={st.slug}>
+                  {st.emoji} {st.name}
                 </option>
               ))}
             </select>
@@ -436,9 +440,7 @@ function SearchResults() {
 
           {/* Price range */}
           <div className="min-w-[180px] flex-1">
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-              Price range
-            </p>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Price range</p>
             <select
               value={priceIdx}
               onChange={e => setPriceIdx(Number(e.target.value))}
@@ -452,9 +454,7 @@ function SearchResults() {
 
           {/* Availability toggle */}
           <div className="min-w-[180px] flex-1">
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-              Availability
-            </p>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Availability</p>
             <div className="flex overflow-hidden rounded-xl border border-gray-200 bg-gray-50 text-sm">
               {(["all", "available"] as const).map(v => (
                 <button
@@ -480,7 +480,6 @@ function SearchResults() {
             {Array(6).fill(0).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : visible.length === 0 ? (
-          /* Empty state */
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-8 py-16 text-center">
             <img
               src="/puppies.png"
@@ -507,7 +506,7 @@ function SearchResults() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {visible.map(p => (
-              <ProviderCard key={p.id} p={p} highlight={service} />
+              <ProviderCard key={p.id} p={p} highlightTypeId={selectedTypeId} />
             ))}
           </div>
         )}
@@ -529,9 +528,7 @@ export default function SearchPage() {
           <p className="text-2xl font-bold text-white">
             Dog<span style={{ color: "#00b096" }}>Care</span>GH
           </p>
-          <p className="mt-3 animate-pulse text-sm text-white/50">
-            Loading providers…
-          </p>
+          <p className="mt-3 animate-pulse text-sm text-white/50">Loading providers…</p>
         </div>
       }
     >

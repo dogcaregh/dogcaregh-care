@@ -26,13 +26,7 @@ type ServiceConfig = {
   availability: Partial<Record<DayId, AvailSlot>>;
 };
 
-type SubService = {
-  localId: string;
-  name: string;
-  rateSmall: string;
-  rateMedium: string;
-  rateLarge: string;
-};
+type SubRates = { rateSmall: string; rateMedium: string; rateLarge: string };
 
 type Addon = {
   localId: string;
@@ -70,6 +64,19 @@ const SERVICES: {
   { slug: "dog_grooming", emoji: "✂️", label: "Dog Grooming", unit: "per session" },
 ];
 
+const GROOMING_SUBS = [
+  { slug: "bath_brush",     label: "Bath & Brush"    },
+  { slug: "full_groom",     label: "Full Groom"       },
+  { slug: "nail_trim",      label: "Nail Trim"        },
+  { slug: "ear_cleaning",   label: "Ear Cleaning"     },
+  { slug: "teeth_cleaning", label: "Teeth Cleaning"   },
+  { slug: "deshedding",     label: "De-shedding"      },
+  { slug: "paw_care",       label: "Paw Care"         },
+  { slug: "flea_treatment", label: "Flea Treatment"   },
+] as const;
+
+type GroomingSlug = typeof GROOMING_SUBS[number]["slug"];
+
 const DAYS: { id: DayId; short: string }[] = [
   { id: "monday",    short: "Mon" },
   { id: "tuesday",   short: "Tue" },
@@ -92,9 +99,7 @@ const INPUT =
   "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-[#00b096] focus:bg-white focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400";
 const LABEL = "block text-xs font-semibold text-gray-600 mb-1.5";
 
-function uid() {
-  return Math.random().toString(36).slice(2);
-}
+function uid() { return Math.random().toString(36).slice(2); }
 
 const DEFAULT_CONFIG: ServiceConfig = {
   enabled: false,
@@ -274,7 +279,7 @@ export default function ProviderServicesPage() {
     >
   );
 
-  const [subServices,    setSubServices]    = useState<SubService[]>([]);
+  const [subServices,    setSubServices]    = useState<Partial<Record<GroomingSlug, SubRates>>>({});
   const [addons,         setAddons]         = useState<Addon[]>([]);
   const [discountTiers,  setDiscountTiers]  = useState<DiscountTier[]>([]);
   const [serviceAreas,   setServiceAreas]   = useState<string[]>([]);
@@ -373,15 +378,18 @@ export default function ProviderServicesPage() {
           .eq("provider_service_id", groomingServiceId)
           .eq("is_active", true);
 
-        setSubServices(
-          (ssData ?? []).map((ss) => ({
-            localId:    ss.id,
-            name:       ss.name,
-            rateSmall:  ss.rate_small  != null ? String(ss.rate_small)  : "",
-            rateMedium: ss.rate_medium != null ? String(ss.rate_medium) : "",
-            rateLarge:  ss.rate_large  != null ? String(ss.rate_large)  : "",
-          }))
-        );
+        const subMap: Partial<Record<GroomingSlug, SubRates>> = {};
+        for (const ss of ssData ?? []) {
+          const found = GROOMING_SUBS.find(g => g.label === ss.name || g.slug === ss.name);
+          if (found) {
+            subMap[found.slug] = {
+              rateSmall:  ss.rate_small  != null ? String(ss.rate_small)  : "",
+              rateMedium: ss.rate_medium != null ? String(ss.rate_medium) : "",
+              rateLarge:  ss.rate_large  != null ? String(ss.rate_large)  : "",
+            };
+          }
+        }
+        setSubServices(subMap);
       }
 
       setAddons(
@@ -414,21 +422,19 @@ export default function ProviderServicesPage() {
     setConfigs((prev) => ({ ...prev, [slug]: { ...prev[slug], ...patch } }));
   }
 
-  function addSubService() {
-    setSubServices((prev) => [
-      ...prev,
-      { localId: uid(), name: "", rateSmall: "", rateMedium: "", rateLarge: "" },
-    ]);
+  function toggleSubService(slug: GroomingSlug) {
+    setSubServices(prev => {
+      if (prev[slug]) {
+        const next = { ...prev };
+        delete next[slug];
+        return next;
+      }
+      return { ...prev, [slug]: { rateSmall: "", rateMedium: "", rateLarge: "" } };
+    });
   }
 
-  function updateSubService(localId: string, patch: Partial<SubService>) {
-    setSubServices((prev) =>
-      prev.map((ss) => (ss.localId === localId ? { ...ss, ...patch } : ss))
-    );
-  }
-
-  function removeSubService(localId: string) {
-    setSubServices((prev) => prev.filter((ss) => ss.localId !== localId));
+  function updateSubRate(slug: GroomingSlug, key: keyof SubRates, val: string) {
+    setSubServices(prev => ({ ...prev, [slug]: { ...prev[slug]!, [key]: val } }));
   }
 
   function addAddon() {
@@ -542,17 +548,20 @@ export default function ProviderServicesPage() {
           .delete()
           .eq("provider_service_id", groomingServiceId);
 
-        const valid = subServices.filter((ss) => ss.name.trim());
-        if (valid.length > 0) {
+        const selectedSubs = GROOMING_SUBS.filter(g => subServices[g.slug]);
+        if (selectedSubs.length > 0) {
           const { error: ssErr } = await sb.from("grooming_sub_services").insert(
-            valid.map((ss) => ({
-              provider_service_id: groomingServiceId,
-              name:       ss.name.trim(),
-              rate_small:  ss.rateSmall  ? Number(ss.rateSmall)  : null,
-              rate_medium: ss.rateMedium ? Number(ss.rateMedium) : null,
-              rate_large:  ss.rateLarge  ? Number(ss.rateLarge)  : null,
-              is_active:   true,
-            }))
+            selectedSubs.map(g => {
+              const rates = subServices[g.slug]!;
+              return {
+                provider_service_id: groomingServiceId,
+                name:        g.label,
+                rate_small:  rates.rateSmall  ? Number(rates.rateSmall)  : null,
+                rate_medium: rates.rateMedium ? Number(rates.rateMedium) : null,
+                rate_large:  rates.rateLarge  ? Number(rates.rateLarge)  : null,
+                is_active:   true,
+              };
+            })
           );
           if (ssErr) throw ssErr;
         }
@@ -859,90 +868,69 @@ export default function ProviderServicesPage() {
                         {/* Grooming sub-services (itemised) */}
                         {isGrooming && cfg.groomingMode === "itemised" && (
                           <div className="rounded-xl border border-dashed border-[#00b096]/30 bg-white p-4">
-                            <div className="mb-3 flex items-center justify-between">
-                              <label className="text-xs font-semibold text-gray-600">
-                                Grooming Services
-                              </label>
-                              <button
-                                type="button"
-                                onClick={addSubService}
-                                className="text-xs font-semibold transition hover:opacity-70"
-                                style={{ color: "#00b096" }}
-                              >
-                                + Add service
-                              </button>
-                            </div>
-
-                            {subServices.length === 0 && (
-                              <p className="mb-2 text-xs italic text-gray-400">
-                                No services added yet — e.g. Bath only, Full
-                                groom, Nail trim, Teeth cleaning.
-                              </p>
-                            )}
-
-                            <div className="space-y-3">
-                              {subServices.map((ss) => (
-                                <div
-                                  key={ss.localId}
-                                  className="rounded-xl border border-gray-100 bg-gray-50 p-3"
-                                >
-                                  <div className="mb-2.5 flex items-center gap-2">
-                                    <input
-                                      type="text"
-                                      placeholder="Service name e.g. Full groom"
-                                      value={ss.name}
-                                      onChange={(e) =>
-                                        updateSubService(ss.localId, {
-                                          name: e.target.value,
-                                        })
-                                      }
-                                      className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#00b096]"
-                                    />
+                            <label className="mb-3 block text-xs font-semibold text-gray-600">
+                              Select grooming services you offer
+                            </label>
+                            <div className="space-y-2">
+                              {GROOMING_SUBS.map(g => {
+                                const rates = subServices[g.slug];
+                                const on = !!rates;
+                                return (
+                                  <div
+                                    key={g.slug}
+                                    className="overflow-hidden rounded-xl border transition"
+                                    style={on
+                                      ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.03)" }
+                                      : { borderColor: "#e5e7eb" }}
+                                  >
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        removeSubService(ss.localId)
-                                      }
-                                      className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-300 transition hover:bg-red-50 hover:text-red-400"
+                                      onClick={() => toggleSubService(g.slug)}
+                                      className="flex w-full items-center gap-3 px-4 py-3 text-left"
                                     >
-                                      ✕
+                                      <span
+                                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold text-white transition"
+                                        style={on
+                                          ? { backgroundColor: "#00b096", borderColor: "#00b096" }
+                                          : { borderColor: "#d1d5db" }}
+                                      >
+                                        {on ? "✓" : ""}
+                                      </span>
+                                      <span className="text-sm font-semibold" style={{ color: on ? "#0a2e30" : "#6b7280" }}>
+                                        {g.label}
+                                      </span>
                                     </button>
-                                  </div>
-                                  <div className="grid grid-cols-3 gap-2">
-                                    {(
-                                      [
-                                        { label: "Small",  key: "rateSmall"  },
-                                        { label: "Medium", key: "rateMedium" },
-                                        { label: "Large",  key: "rateLarge"  },
-                                      ] as const
-                                    ).map(({ label, key }) => (
-                                      <div key={key}>
-                                        <p className="mb-1 text-[10px] text-gray-400">
-                                          {label}
-                                        </p>
-                                        <div className="relative">
-                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
-                                            GH₵
-                                          </span>
-                                          <input
-                                            type="number"
-                                            min={0}
-                                            step="0.01"
-                                            placeholder="0.00"
-                                            value={ss[key]}
-                                            onChange={(e) =>
-                                              updateSubService(ss.localId, {
-                                                [key]: e.target.value,
-                                              })
-                                            }
-                                            className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-8 pr-2 text-xs font-semibold outline-none transition focus:border-[#00b096]"
-                                          />
+
+                                    {on && (
+                                      <div className="border-t border-[#00b096]/10 px-4 pb-3 pt-2">
+                                        <div className="grid grid-cols-3 gap-2">
+                                          {([
+                                            { label: "Small",  key: "rateSmall"  },
+                                            { label: "Medium", key: "rateMedium" },
+                                            { label: "Large",  key: "rateLarge"  },
+                                          ] as const).map(({ label, key }) => (
+                                            <div key={key}>
+                                              <p className="mb-1 text-[10px] text-gray-400">{label}</p>
+                                              <div className="relative">
+                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">GH₵</span>
+                                                <input
+                                                  type="number"
+                                                  min={0}
+                                                  step="0.01"
+                                                  placeholder="0.00"
+                                                  value={rates[key]}
+                                                  onChange={e => updateSubRate(g.slug, key, e.target.value)}
+                                                  className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-8 pr-2 text-xs font-semibold outline-none transition focus:border-[#00b096]"
+                                                />
+                                              </div>
+                                            </div>
+                                          ))}
                                         </div>
                                       </div>
-                                    ))}
+                                    )}
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}
