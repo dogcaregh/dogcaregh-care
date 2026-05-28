@@ -10,24 +10,7 @@ import { resolveCoords } from "@/lib/geocode";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type DayId =
-  | "monday" | "tuesday" | "wednesday" | "thursday"
-  | "friday" | "saturday" | "sunday";
-
-type AvailSlot = { available: boolean; start: string; end: string };
-
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const DAYS: { id: DayId; short: string; label: string }[] = [
-  { id: "monday",    short: "Mon", label: "Monday"    },
-  { id: "tuesday",   short: "Tue", label: "Tuesday"   },
-  { id: "wednesday", short: "Wed", label: "Wednesday" },
-  { id: "thursday",  short: "Thu", label: "Thursday"  },
-  { id: "friday",    short: "Fri", label: "Friday"    },
-  { id: "saturday",  short: "Sat", label: "Saturday"  },
-  { id: "sunday",    short: "Sun", label: "Sunday"    },
-];
-
 
 const MAX_GALLERY = 6;
 
@@ -101,9 +84,6 @@ export default function EditProfilePage() {
   const [yearsExp,     setYearsExp]     = useState<number | "">("");
   const [active,       setActive]       = useState(true);
 
-  // Availability
-  const [avail, setAvail] = useState<Partial<Record<DayId, AvailSlot>>>({});
-
   // Photos
   const [avatarUrl,        setAvatarUrl]        = useState<string | null>(null);
   const [avatarPreview,    setAvatarPreview]    = useState<string | null>(null);
@@ -131,7 +111,7 @@ export default function EditProfilePage() {
       const [uRes, pRes] = await Promise.all([
         sb.from("users").select("name, phone").eq("id", user.id).single(),
         sb.from("providers")
-          .select("id, bio, years_experience, neighbourhood, active, availability, avatar_url, gallery_photos")
+          .select("id, bio, years_experience, neighbourhood, active, avatar_url, gallery_photos")
           .eq("user_id", user.id)
           .single(),
       ]);
@@ -142,7 +122,6 @@ export default function EditProfilePage() {
       const p = pRes.data as {
         id: string; bio: string | null; years_experience: number | null;
         neighbourhood: string | null; active: boolean;
-        availability: Record<string, { available?: boolean; start?: string; end?: string }>;
         avatar_url: string | null; gallery_photos: string[];
       };
 
@@ -154,18 +133,6 @@ export default function EditProfilePage() {
       setNeighbourhood(p.neighbourhood ?? "");
       setYearsExp(p.years_experience ?? "");
       setActive(p.active);
-
-      const availMap: Partial<Record<DayId, AvailSlot>> = {};
-      for (const day of DAYS) {
-        const slot = (p.availability ?? {})[day.id];
-        availMap[day.id] = {
-          available: slot?.available !== false,
-          start:     slot?.start ?? "08:00",
-          end:       slot?.end   ?? "18:00",
-        };
-      }
-      setAvail(availMap);
-
       setAvatarUrl(p.avatar_url);
       setGallery(p.gallery_photos ?? []);
       setLoading(false);
@@ -249,19 +216,6 @@ export default function EditProfilePage() {
 
     const sb = createClient();
 
-    // Build availability
-    const availObj: Record<string, { available: boolean; start?: string; end?: string }> = {};
-    for (const day of DAYS) {
-      const slot = avail[day.id];
-      if (slot) {
-        availObj[day.id] = {
-          available: slot.available,
-          ...(slot.available && slot.start ? { start: slot.start } : {}),
-          ...(slot.available && slot.end   ? { end: slot.end }     : {}),
-        };
-      }
-    }
-
     const coords = await resolveCoords(neighbourhood.trim());
 
     const [uErr, pErr] = await Promise.all([
@@ -276,7 +230,6 @@ export default function EditProfilePage() {
           neighbourhood:    neighbourhood.trim() || null,
           location:         neighbourhood.trim() || null,
           active,
-          availability:     availObj,
           avatar_url:       avatarUrl,
           gallery_photos:   gallery,
           lat:              coords?.lat ?? null,
@@ -500,77 +453,7 @@ export default function EditProfilePage() {
             </div>
           </Section>
 
-          {/* ── 3. Weekly Availability ── */}
-          <Section title="Weekly Availability" subtitle="Set which days you work and your available hours.">
-            <div className="space-y-2">
-              {DAYS.map(day => {
-                const slot = avail[day.id] ?? { available: true, start: "08:00", end: "18:00" };
-                return (
-                  <div
-                    key={day.id}
-                    className="flex flex-wrap items-center gap-4 rounded-xl border p-3.5 transition"
-                    style={slot.available
-                      ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.04)" }
-                      : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }}
-                  >
-                    {/* Day toggle */}
-                    <button
-                      type="button"
-                      onClick={() => setAvail(prev => ({
-                        ...prev,
-                        [day.id]: { ...slot, available: !slot.available },
-                      }))}
-                      className="flex items-center gap-3 min-w-[100px]"
-                    >
-                      <div
-                        className="relative h-5 w-9 rounded-full transition-colors duration-200"
-                        style={{ backgroundColor: slot.available ? "#00b096" : "#d1d5db" }}
-                      >
-                        <div
-                          className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
-                          style={{ transform: slot.available ? "translateX(16px)" : "translateX(2px)" }}
-                        />
-                      </div>
-                      <span
-                        className="text-sm font-semibold"
-                        style={{ color: slot.available ? "#0a2e30" : "#9ca3af" }}
-                      >
-                        {day.label}
-                      </span>
-                    </button>
-
-                    {/* Hours (only when available) */}
-                    {slot.available && (
-                      <div className="ml-auto flex items-center gap-2 text-sm">
-                        <span className="text-xs text-gray-400">From</span>
-                        <input
-                          type="time"
-                          value={slot.start}
-                          onChange={e => setAvail(prev => ({
-                            ...prev,
-                            [day.id]: { ...slot, start: e.target.value },
-                          }))}
-                          className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs outline-none transition focus:border-[#00b096]"
-                        />
-                        <span className="text-xs text-gray-400">to</span>
-                        <input
-                          type="time"
-                          value={slot.end}
-                          onChange={e => setAvail(prev => ({
-                            ...prev,
-                            [day.id]: { ...slot, end: e.target.value },
-                          }))}
-                          className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs outline-none transition focus:border-[#00b096]"
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </Section>
-
-          {/* ── 4. Gallery Photos ── */}
+          {/* ── 3. Gallery Photos ── */}
           <Section
             title="Photo Gallery"
             subtitle={`Show owners your home, yard, or previous happy clients. Up to ${MAX_GALLERY} photos.`}

@@ -23,6 +23,7 @@ type ServiceConfig = {
   maxCapacity: string;
   description: string;
   groomingMode: "simple" | "itemised";
+  availability: Partial<Record<DayId, AvailSlot>>;
 };
 
 type SubService = {
@@ -48,6 +49,12 @@ type DiscountTier = {
   percentage: string;
 };
 
+type DayId =
+  | "monday" | "tuesday" | "wednesday" | "thursday"
+  | "friday" | "saturday" | "sunday";
+
+type AvailSlot = { available: boolean; start: string; end: string };
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SERVICES: {
@@ -61,6 +68,16 @@ const SERVICES: {
   { slug: "dog_daycare",  emoji: "🏡", label: "Dog Daycare",  unit: "per day"     },
   { slug: "dog_boarding", emoji: "🛏️", label: "Dog Boarding", unit: "per night"   },
   { slug: "dog_grooming", emoji: "✂️", label: "Dog Grooming", unit: "per session" },
+];
+
+const DAYS: { id: DayId; short: string }[] = [
+  { id: "monday",    short: "Mon" },
+  { id: "tuesday",   short: "Tue" },
+  { id: "wednesday", short: "Wed" },
+  { id: "thursday",  short: "Thu" },
+  { id: "friday",    short: "Fri" },
+  { id: "saturday",  short: "Sat" },
+  { id: "sunday",    short: "Sun" },
 ];
 
 const ACCRA_AREAS = [
@@ -87,6 +104,7 @@ const DEFAULT_CONFIG: ServiceConfig = {
   maxCapacity: "",
   description: "",
   groomingMode: "simple",
+  availability: {},
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -162,6 +180,85 @@ function RateInputs({
   );
 }
 
+// ─── Availability editor (per service) ───────────────────────────────────────
+
+function AvailabilityEditor({
+  availability,
+  onChange,
+}: {
+  availability: Partial<Record<DayId, AvailSlot>>;
+  onChange: (avail: Partial<Record<DayId, AvailSlot>>) => void;
+}) {
+  return (
+    <div>
+      <label className={LABEL}>Weekly Availability</label>
+      <div className="space-y-2">
+        {DAYS.map(({ id, short }) => {
+          const slot = availability[id];
+          const on = slot?.available === true;
+          return (
+            <div
+              key={id}
+              className="flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2.5 transition"
+              style={on
+                ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.04)" }
+                : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }}
+            >
+              <button
+                type="button"
+                onClick={() => onChange({
+                  ...availability,
+                  [id]: { available: !on, start: slot?.start ?? "08:00", end: slot?.end ?? "18:00" },
+                })}
+                className="flex items-center gap-2.5"
+                style={{ minWidth: 68 }}
+              >
+                <div
+                  className="relative h-5 w-9 rounded-full transition-colors duration-200"
+                  style={{ backgroundColor: on ? "#00b096" : "#d1d5db" }}
+                >
+                  <div
+                    className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+                    style={{ transform: on ? "translateX(16px)" : "translateX(2px)" }}
+                  />
+                </div>
+                <span className="text-sm font-semibold" style={{ color: on ? "#0a2e30" : "#9ca3af" }}>
+                  {short}
+                </span>
+              </button>
+
+              {on && (
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-xs text-gray-400">From</span>
+                  <input
+                    type="time"
+                    value={slot?.start ?? "08:00"}
+                    onChange={e => onChange({
+                      ...availability,
+                      [id]: { available: true, start: e.target.value, end: slot?.end ?? "18:00" },
+                    })}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm outline-none focus:border-[#00b096]"
+                  />
+                  <span className="text-xs text-gray-400">to</span>
+                  <input
+                    type="time"
+                    value={slot?.end ?? "18:00"}
+                    onChange={e => onChange({
+                      ...availability,
+                      [id]: { available: true, start: slot?.start ?? "08:00", end: e.target.value },
+                    })}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm outline-none focus:border-[#00b096]"
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProviderServicesPage() {
@@ -225,7 +322,7 @@ export default function ProviderServicesPage() {
         sb
           .from("provider_services")
           .select(
-            "id, service_type_id, rate_small, rate_medium, rate_large, max_capacity, description, grooming_mode, is_active"
+            "id, service_type_id, rate_small, rate_medium, rate_large, max_capacity, description, grooming_mode, is_active, availability"
           )
           .eq("provider_id", pid),
         sb
@@ -261,7 +358,8 @@ export default function ProviderServicesPage() {
           rateLarge:    ps.rate_large  != null ? String(ps.rate_large)  : "",
           maxCapacity:  ps.max_capacity != null ? String(ps.max_capacity) : "",
           description:  ps.description ?? "",
-          groomingMode: (ps.grooming_mode as "simple" | "itemised") ?? "simple",
+          groomingMode:  (ps.grooming_mode as "simple" | "itemised") ?? "simple",
+          availability:  (ps.availability ?? {}) as Partial<Record<DayId, AvailSlot>>,
         };
         if (slug === "dog_grooming") groomingServiceId = ps.id;
       }
@@ -415,6 +513,7 @@ export default function ProviderServicesPage() {
                 max_capacity:    cfg.maxCapacity ? Number(cfg.maxCapacity) : null,
                 description:     cfg.description.trim() || null,
                 grooming_mode:   isGrooming ? cfg.groomingMode : null,
+                availability:    cfg.availability ?? {},
                 is_active:       true,
                 updated_at:      new Date().toISOString(),
               },
@@ -750,6 +849,12 @@ export default function ProviderServicesPage() {
                             />
                           </div>
                         </div>
+
+                        {/* Availability */}
+                        <AvailabilityEditor
+                          availability={cfg.availability}
+                          onChange={avail => updateConfig(svc.slug, { availability: avail })}
+                        />
 
                         {/* Grooming sub-services (itemised) */}
                         {isGrooming && cfg.groomingMode === "itemised" && (

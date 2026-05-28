@@ -7,12 +7,14 @@ import { createClient } from "@/lib/supabase";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+type AvailSlot = { available: boolean; start?: string; end?: string };
+
 type ProviderService = {
   id: string;
-  price_small: number | null;
-  price_medium: number | null;
-  price_large: number | null;
-  price_flat: number | null;
+  rate_small: number | null;
+  rate_medium: number | null;
+  rate_large: number | null;
+  availability: Record<string, AvailSlot>;
   service_types: { slug: string; name: string; emoji: string; unit_label: string };
 };
 
@@ -20,7 +22,6 @@ type ProviderProfile = {
   id: string;
   user_id: string;
   bio: string | null;
-  availability: Record<string, { available: boolean; start?: string; end?: string }>;
   rating_avg: number;
   review_count: number;
   verified: boolean;
@@ -42,9 +43,15 @@ type Review = {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const DAYS = [
-  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
-] as const;
+const DAYS: { id: string; short: string }[] = [
+  { id: "monday",    short: "Mon" },
+  { id: "tuesday",   short: "Tue" },
+  { id: "wednesday", short: "Wed" },
+  { id: "thursday",  short: "Thu" },
+  { id: "friday",    short: "Fri" },
+  { id: "saturday",  short: "Sat" },
+  { id: "sunday",    short: "Sun" },
+];
 
 const PALETTE = [
   "#00b096", "#0a7c6e", "#059669", "#0d9488",
@@ -74,10 +81,9 @@ function fmt(iso: string) {
 function lowestPrice(svcs: ProviderService[]): number | null {
   const prices: number[] = [];
   for (const s of svcs) {
-    if (s.price_flat != null) prices.push(s.price_flat);
-    if (s.price_small != null) prices.push(s.price_small);
-    if (s.price_medium != null) prices.push(s.price_medium);
-    if (s.price_large != null) prices.push(s.price_large);
+    if (s.rate_small  != null) prices.push(s.rate_small);
+    if (s.rate_medium != null) prices.push(s.rate_medium);
+    if (s.rate_large  != null) prices.push(s.rate_large);
   }
   return prices.length ? Math.min(...prices) : null;
 }
@@ -105,7 +111,8 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 function ServiceRateCard({ svc }: { svc: ProviderService }) {
   const { name, emoji, unit_label } = svc.service_types;
-  const hasPerSize = svc.price_small != null || svc.price_medium != null || svc.price_large != null;
+  const hasRates = svc.rate_small != null || svc.rate_medium != null || svc.rate_large != null;
+  const activeDays = DAYS.filter(d => svc.availability?.[d.id]?.available === true);
 
   return (
     <div
@@ -120,43 +127,54 @@ function ServiceRateCard({ svc }: { svc: ProviderService }) {
         </div>
       </div>
 
-      {svc.price_flat != null && (
-        <p className="text-base font-extrabold" style={{ color: "#00b096" }}>
-          GHS {Number(svc.price_flat).toFixed(2)}
-        </p>
-      )}
-
-      {hasPerSize && (
+      {hasRates ? (
         <div className="space-y-1">
-          {svc.price_small != null && (
+          {svc.rate_small != null && (
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-500">Small dog</span>
               <span className="font-semibold" style={{ color: "#00b096" }}>
-                GHS {Number(svc.price_small).toFixed(2)}
+                GHS {Number(svc.rate_small).toFixed(2)}
               </span>
             </div>
           )}
-          {svc.price_medium != null && (
+          {svc.rate_medium != null && (
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-500">Medium dog</span>
               <span className="font-semibold" style={{ color: "#00b096" }}>
-                GHS {Number(svc.price_medium).toFixed(2)}
+                GHS {Number(svc.rate_medium).toFixed(2)}
               </span>
             </div>
           )}
-          {svc.price_large != null && (
+          {svc.rate_large != null && (
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-500">Large dog</span>
               <span className="font-semibold" style={{ color: "#00b096" }}>
-                GHS {Number(svc.price_large).toFixed(2)}
+                GHS {Number(svc.rate_large).toFixed(2)}
               </span>
             </div>
           )}
         </div>
+      ) : (
+        <p className="text-xs text-gray-400">On request</p>
       )}
 
-      {svc.price_flat == null && !hasPerSize && (
-        <p className="text-xs text-gray-400">On request</p>
+      {activeDays.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Schedule</p>
+          <div className="flex flex-wrap gap-1">
+            {activeDays.map(({ id, short }) => {
+              const slot = svc.availability[id];
+              return (
+                <div key={id} className="rounded-lg px-2 py-1 text-center" style={{ backgroundColor: "rgba(0,176,150,.08)" }}>
+                  <p className="text-[11px] font-bold" style={{ color: "#00b096" }}>{short}</p>
+                  {slot?.start && slot?.end && (
+                    <p className="text-[9px] leading-tight text-gray-400">{slot.start}–{slot.end}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -181,7 +199,7 @@ export default function ProviderPage() {
       const sb = createClient();
       const [{ data: p }, { data: { user } }] = await Promise.all([
         sb.from("providers")
-          .select(`id, user_id, bio, availability,
+          .select(`id, user_id, bio,
                    rating_avg, review_count, verified, active, neighbourhood,
                    years_experience, avatar_url, gallery_photos,
                    users!user_id(name)`)
@@ -196,7 +214,7 @@ export default function ProviderPage() {
 
       const [{ data: sv }, { data: rv }] = await Promise.all([
         sb.from("provider_services")
-          .select("id, price_small, price_medium, price_large, price_flat, service_types(slug, name, emoji, unit_label)")
+          .select("id, rate_small, rate_medium, rate_large, availability, service_types(slug, name, emoji, unit_label)")
           .eq("provider_id", p.id)
           .eq("is_active", true),
         sb.from("reviews")
@@ -236,7 +254,6 @@ export default function ProviderPage() {
   const name      = pUser?.name ?? "DogCare Provider";
   const avgRating = Number(provider.rating_avg);
   const starting  = lowestPrice(services);
-  const hasAvail  = Object.keys(provider.availability ?? {}).length > 0;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
@@ -387,44 +404,6 @@ export default function ProviderPage() {
               <p className="text-sm font-medium text-gray-500">No photos yet</p>
               <p className="mt-1 text-xs text-gray-400">
                 This provider hasn&apos;t uploaded photos of their space yet.
-              </p>
-            </div>
-          )}
-        </SectionCard>
-
-        {/* Availability */}
-        <SectionCard title="Weekly Availability">
-          {hasAvail ? (
-            <div className="grid grid-cols-7 gap-1.5">
-              {DAYS.map(day => {
-                const slot = provider.availability[day];
-                const on   = slot == null || slot.available !== false;
-                return (
-                  <div key={day} className="flex flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                      {day.slice(0, 3)}
-                    </span>
-                    <div
-                      className="flex h-11 w-full items-center justify-center rounded-xl text-sm font-bold transition"
-                      style={on
-                        ? { backgroundColor: "rgba(0,176,150,.12)", color: "#00b096" }
-                        : { backgroundColor: "#f3f4f6", color: "#d1d5db" }}
-                    >
-                      {on ? "✓" : "—"}
-                    </div>
-                    {slot?.start && (
-                      <span className="text-[9px] leading-none text-gray-400">{slot.start}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-12 text-center">
-              <span className="mb-2 text-4xl">📅</span>
-              <p className="text-sm font-medium text-gray-600">Contact for availability</p>
-              <p className="mt-1 text-xs text-gray-400">
-                This provider hasn&apos;t set their weekly schedule yet.
               </p>
             </div>
           )}
