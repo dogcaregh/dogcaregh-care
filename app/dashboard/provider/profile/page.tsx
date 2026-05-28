@@ -190,14 +190,20 @@ export default function ProviderProfilePage() {
               </div>
             )}
 
-            {/* Edit button */}
-            <div className="mt-6">
+            {/* Actions */}
+            <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href="/dashboard/provider/edit"
                 className="inline-block rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
                 style={{ backgroundColor: "#00b096" }}
               >
                 Edit Profile
+              </Link>
+              <Link
+                href="/dashboard/provider/services"
+                className="inline-block rounded-xl border border-gray-200 px-6 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+              >
+                My Services
               </Link>
             </div>
           </div>
