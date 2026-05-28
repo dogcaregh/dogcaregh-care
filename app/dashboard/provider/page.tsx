@@ -188,7 +188,7 @@ export default function ProviderDashboard() {
       setProviderAvatar((pAny.avatar_url as string | null) ?? null);
       setProviderActive(pAny.active as boolean);
 
-      const [{ data: bks }, { data: svcs }] = await Promise.all([
+      const [{ data: bks }, { data: svcs }, { data: stData }] = await Promise.all([
         sb
           .from("bookings")
           .select(`
@@ -201,14 +201,19 @@ export default function ProviderDashboard() {
           .order("created_at", { ascending: false }),
         sb
           .from("provider_services")
-          .select("id, rate_small, rate_medium, rate_large, is_active, service_types(slug, name, emoji)")
+          .select("id, service_type_id, rate_small, rate_medium, rate_large, is_active")
           .eq("provider_id", pAny.id as string)
           .eq("is_active", true),
+        sb.from("service_types").select("id, slug, name, emoji"),
       ]);
 
       if (cancelled) return;
       setBookings((bks ?? []) as unknown as Booking[]);
-      setServices((svcs ?? []) as unknown as ProviderService[]);
+      const svcsMapped = (svcs ?? []).map(s => ({
+        ...s,
+        service_types: (stData ?? []).find(st => st.id === (s as Record<string, unknown>).service_type_id) ?? null,
+      }));
+      setServices(svcsMapped as unknown as ProviderService[]);
       setLoading(false);
     }
     load();

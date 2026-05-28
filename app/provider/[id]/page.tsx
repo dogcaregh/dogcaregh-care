@@ -212,9 +212,9 @@ export default function ProviderPage() {
       setProvider(p as unknown as ProviderProfile);
       setAuthed(!!user);
 
-      const [{ data: sv }, { data: rv }] = await Promise.all([
+      const [{ data: sv }, { data: rv }, { data: stData }] = await Promise.all([
         sb.from("provider_services")
-          .select("id, rate_small, rate_medium, rate_large, availability, service_types(slug, name, emoji, unit_label)")
+          .select("id, service_type_id, rate_small, rate_medium, rate_large, availability")
           .eq("provider_id", p.id)
           .eq("is_active", true),
         sb.from("reviews")
@@ -222,10 +222,16 @@ export default function ProviderPage() {
           .eq("to_user_id", p.user_id)
           .eq("from_role", "owner")
           .order("created_at", { ascending: false }),
+        sb.from("service_types").select("id, slug, name, emoji, unit_label"),
       ]);
 
       if (cancelled) return;
-      setServices((sv ?? []) as unknown as ProviderService[]);
+      const svMapped = (sv ?? []).map(s => ({
+        ...s,
+        service_types: (stData ?? []).find(st => st.id === (s as Record<string, unknown>).service_type_id)
+          ?? { slug: "", name: "Unknown", emoji: "🐾", unit_label: "" },
+      }));
+      setServices(svMapped as unknown as ProviderService[]);
       setReviews((rv ?? []) as unknown as Review[]);
       setLoading(false);
     }
