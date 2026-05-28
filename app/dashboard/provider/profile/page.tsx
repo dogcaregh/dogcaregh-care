@@ -189,8 +189,8 @@ setAvatarUrl(pRow?.avatar_url ?? null);
                 aria-label="Toggle availability"
               >
                 <span
-                  className="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
-                  style={{ transform: active ? "translateX(22px)" : "translateX(4px)" }}
+                  className="absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+                  style={{ transform: active ? "translateX(16px)" : "translateX(0)" }}
                 />
               </button>
             </div>

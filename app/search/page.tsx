@@ -330,13 +330,14 @@ function SearchResults() {
             : null,
       }))
       .filter(p => {
+        if (avail === "available" && !p.active) return false;
+
         const activeSvcs = (p.provider_services ?? []).filter(ps => ps.is_active);
-        if (activeSvcs.length === 0) return false;
-        if (avail === "available") {
-          if (!p.active) return false;
-          if (!isAvailableToday(activeSvcs)) return false;
-        }
+
+        if (avail === "available" && activeSvcs.length > 0 && !isAvailableToday(activeSvcs)) return false;
+
         if (selectedTypeId && !activeSvcs.some(ps => ps.service_type_id === selectedTypeId)) return false;
+
         const price = minServicePrice(activeSvcs);
         if (price !== null && range.max < Infinity && price > range.max) return false;
         if (price !== null && price < range.min) return false;
