@@ -23,6 +23,7 @@ export default function ProviderProfilePage() {
   const [bio,          setBio]          = useState<string | null>(null);
   const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null);
   const [active,       setActive]       = useState(true);
+  const [toggling,     setToggling]     = useState(false);
   const [loading,      setLoading]      = useState(true);
 
   useEffect(() => {
@@ -54,6 +55,17 @@ setAvatarUrl(pRow?.avatar_url ?? null);
     load();
     return () => { cancelled = true; };
   }, [router]);
+
+  async function handleToggle() {
+    if (!providerId || toggling) return;
+    setToggling(true);
+    const newActive = !active;
+    setActive(newActive);
+    const sb = createClient();
+    const { error } = await sb.from("providers").update({ active: newActive }).eq("id", providerId);
+    if (error) { setActive(!newActive); }
+    setToggling(false);
+  }
 
   if (loading) return (
     <div className="flex min-h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
@@ -158,8 +170,33 @@ setAvatarUrl(pRow?.avatar_url ?? null);
               )}
             </div>
 
+            {/* Availability toggle */}
+            <div className="mt-6 flex items-center justify-between rounded-xl bg-gray-50 px-4 py-4">
+              <div>
+                <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>Open for bookings</p>
+                <p className="mt-0.5 text-xs text-gray-400">
+                  {active
+                    ? "Visible in search · accepting bookings"
+                    : "Hidden from search · not accepting bookings"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggle}
+                disabled={toggling}
+                className="relative ml-4 h-7 w-12 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-60"
+                style={{ backgroundColor: active ? "#00b096" : "#d1d5db" }}
+                aria-label="Toggle availability"
+              >
+                <span
+                  className="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+                  style={{ transform: active ? "translateX(22px)" : "translateX(4px)" }}
+                />
+              </button>
+            </div>
+
             {/* Actions */}
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap gap-3">
               <Link
                 href="/dashboard/provider/edit"
                 className="inline-block rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"

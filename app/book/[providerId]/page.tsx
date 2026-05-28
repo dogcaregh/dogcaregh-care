@@ -7,21 +7,26 @@ import { createClient } from "@/lib/supabase";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type ServiceId =
-  | "pet_sitting"
-  | "doggy_daycare"
-  | "dog_boarding"
-  | "mobile_grooming"
-  | "dog_walking";
+type AvailSlot = { available: boolean; start?: string; end?: string };
+
+type ProviderService = {
+  id: string;
+  service_type_id: string;
+  rate_small: number | null;
+  rate_medium: number | null;
+  rate_large: number | null;
+  is_active: boolean;
+  availability: Record<string, AvailSlot> | null;
+  service_types: { slug: string; name: string; emoji: string; unit_label: string } | null;
+};
 
 type ProviderInfo = {
   id: string;
   user_id: string;
-  services: ServiceId[];
-  rates: Record<string, number>;
   rating_avg: number;
   neighbourhood: string | null;
   avatar_url: string | null;
+  active: boolean;
   users: { name: string } | { name: string }[] | null;
 };
 
@@ -34,13 +39,17 @@ type Dog = {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const SERVICES: Record<ServiceId, { label: string; emoji: string; unit: string; multiDay: boolean }> = {
-  pet_sitting:     { label: "Pet Sitting",     emoji: "🐾", unit: "/ visit",    multiDay: true  },
-  doggy_daycare:   { label: "Doggy Daycare",   emoji: "🏡", unit: "/ day",      multiDay: true  },
-  dog_boarding:    { label: "Dog Boarding",    emoji: "🛏️", unit: "/ night",    multiDay: true  },
-  mobile_grooming: { label: "Mobile Grooming", emoji: "✂️", unit: "/ session",  multiDay: false },
-  dog_walking:     { label: "Dog Walking",     emoji: "🦮", unit: "/ walk",     multiDay: false },
-};
+const MULTI_DAY_SLUGS = new Set(["dog_daycare", "dog_boarding"]);
+
+const DAYS = [
+  { id: "monday",    short: "Mon" },
+  { id: "tuesday",   short: "Tue" },
+  { id: "wednesday", short: "Wed" },
+  { id: "thursday",  short: "Thu" },
+  { id: "friday",    short: "Fri" },
+  { id: "saturday",  short: "Sat" },
+  { id: "sunday",    short: "Sun" },
+];
 
 const COMMISSION_RATE = 0.10;
 
@@ -67,6 +76,21 @@ function daysBetween(start: string, end: string) {
   return Math.max(diff, 1);
 }
 
+function rateForDog(svc: ProviderService, dogSize: string | null): number | null {
+  const s = (dogSize ?? "").toLowerCase();
+  if (s.includes("small"))  return svc.rate_small;
+  if (s.includes("medium")) return svc.rate_medium;
+  if (s.includes("large"))  return svc.rate_large;
+  // fallback: return smallest available rate
+  return svc.rate_small ?? svc.rate_medium ?? svc.rate_large ?? null;
+}
+
+function svcAvailDays(svc: ProviderService): string[] {
+  const a = svc.availability;
+  if (!a || Object.keys(a).length === 0) return [];
+  return DAYS.filter(d => a[d.id]?.available).map(d => d.short);
+}
+
 const today = new Date().toISOString().split("T")[0];
 
 // ── Page ───────────────────────────────────────────────────────────────────
@@ -75,18 +99,19 @@ export default function BookPage() {
   const { providerId } = useParams<{ providerId: string }>();
   const router = useRouter();
 
-  const [provider, setProvider]   = useState<ProviderInfo | null>(null);
-  const [dogs, setDogs]           = useState<Dog[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [provider, setProvider]     = useState<ProviderInfo | null>(null);
+  const [services, setServices]     = useState<ProviderService[]>([]);
+  const [dogs, setDogs]             = useState<Dog[]>([]);
+  const [loading, setLoading]       = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const [error, setError]           = useState<string | null>(null);
 
   // Form fields
-  const [service,   setService]   = useState<ServiceId | "">("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate,   setEndDate]   = useState("");
-  const [dogId,     setDogId]     = useState("");
-  const [notes,     setNotes]     = useState("");
+  const [selectedSvcId, setSelectedSvcId] = useState("");
+  const [startDate, setStartDate]         = useState("");
+  const [endDate, setEndDate]             = useState("");
+  const [dogId, setDogId]                 = useState("");
+  const [notes, setNotes]                 = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -95,11 +120,15 @@ export default function BookPage() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { router.replace(`/login?redirect=/book/${providerId}`); return; }
 
-      const [{ data: p }, { data: d }] = await Promise.all([
+      const [{ data: p }, { data: svcs }, { data: d }] = await Promise.all([
         sb.from("providers")
-          .select("id, user_id, services, rates, rating_avg, neighbourhood, avatar_url, users!user_id(name)")
+          .select("id, user_id, rating_avg, neighbourhood, avatar_url, active, users!user_id(name)")
           .eq("id", providerId)
           .single(),
+        sb.from("provider_services")
+          .select("id, service_type_id, rate_small, rate_medium, rate_large, is_active, availability, service_types(slug, name, emoji, unit_label)")
+          .eq("provider_id", providerId)
+          .eq("is_active", true),
         sb.from("dogs")
           .select("id, name, breed, size")
           .eq("owner_id", user.id)
@@ -109,36 +138,34 @@ export default function BookPage() {
       if (cancelled) return;
       if (!p) { router.replace("/search"); return; }
 
+      const activeSvcs = (svcs ?? []) as unknown as ProviderService[];
+      if (activeSvcs.length === 1) setSelectedSvcId(activeSvcs[0].id);
+
       setProvider(p as unknown as ProviderInfo);
+      setServices(activeSvcs);
       setDogs((d ?? []) as Dog[]);
-      // Pre-select if only one service offered
-      if ((p as unknown as ProviderInfo).services?.length === 1) {
-        setService((p as unknown as ProviderInfo).services[0]);
-      }
       setLoading(false);
     }
     load();
     return () => { cancelled = true; };
   }, [providerId, router]);
 
-  // Derived price values
-  const svcMeta  = service ? SERVICES[service] : null;
-  const rate     = service ? (provider?.rates[service] ?? null) : null;
-  const multiDay = svcMeta?.multiDay ?? true;
-  const days     = (multiDay && startDate && endDate) ? daysBetween(startDate, endDate) : 1;
-  const gross    = rate !== null ? rate * days : null;
-  const commission = gross !== null ? Math.round(gross * COMMISSION_RATE * 100) / 100 : null;
+  // Derived values
+  const selectedSvc  = services.find(s => s.id === selectedSvcId) ?? null;
+  const selectedDog  = dogs.find(d => d.id === dogId) ?? null;
+  const slug         = selectedSvc?.service_types?.slug ?? "";
+  const multiDay     = MULTI_DAY_SLUGS.has(slug);
+  const rate         = selectedSvc ? rateForDog(selectedSvc, selectedDog?.size ?? null) : null;
+  const days         = multiDay && startDate && endDate ? daysBetween(startDate, endDate) : 1;
+  const gross        = rate !== null ? rate * days : null;
+  const commission   = gross !== null ? Math.round(gross * COMMISSION_RATE * 100) / 100 : null;
+  const availDays    = selectedSvc ? svcAvailDays(selectedSvc) : [];
 
-  const canSubmit =
-    !!service &&
-    !!startDate &&
-    (!multiDay || !!endDate) &&
-    !!dogId &&
-    !submitting;
+  const canSubmit = !!selectedSvcId && !!startDate && (!multiDay || !!endDate) && !!dogId && !submitting;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit || !provider) return;
+    if (!canSubmit || !provider || !selectedSvc) return;
     setSubmitting(true);
     setError(null);
 
@@ -146,9 +173,9 @@ export default function BookPage() {
     const { data: { user } } = await sb.auth.getUser();
     if (!user) { router.replace("/login"); return; }
 
-    const effectiveEnd   = multiDay ? endDate : startDate;
-    const effectiveGross = gross  ?? 0;
-    const effectiveComm  = commission ?? 0;
+    const effectiveEnd    = multiDay ? endDate : startDate;
+    const effectiveGross  = gross ?? 0;
+    const effectiveComm   = commission ?? 0;
     const effectivePayout = Math.round((effectiveGross - effectiveComm) * 100) / 100;
 
     const { data: booking, error: bookingErr } = await sb
@@ -157,7 +184,7 @@ export default function BookPage() {
         owner_id:          user.id,
         provider_id:       provider.id,
         dog_id:            dogId,
-        service_type:      service,
+        service_type:      selectedSvc.service_types?.slug ?? "",
         start_date:        startDate,
         end_date:          effectiveEnd,
         status:            "pending",
@@ -174,7 +201,6 @@ export default function BookPage() {
       return;
     }
 
-    // Attach notes as the first message in the booking thread
     if (notes.trim()) {
       await sb.from("messages").insert({
         booking_id: booking.id,
@@ -232,11 +258,7 @@ export default function BookPage() {
         {/* ── Provider mini-card ── */}
         <div className="mb-6 flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
           {provider.avatar_url ? (
-            <img
-              src={provider.avatar_url}
-              alt={name}
-              className="h-14 w-14 rounded-xl object-cover"
-            />
+            <img src={provider.avatar_url} alt={name} className="h-14 w-14 rounded-xl object-cover" />
           ) : (
             <div
               className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-base font-extrabold text-white"
@@ -245,219 +267,272 @@ export default function BookPage() {
               {ini(name)}
             </div>
           )}
-          <div>
+          <div className="flex-1">
             <p className="font-bold" style={{ color: "#0a2e30" }}>{name}</p>
             {provider.neighbourhood && (
               <p className="text-xs text-gray-400">📍 {provider.neighbourhood}</p>
             )}
-            <div className="mt-0.5 flex items-center gap-1">
+            <div className="mt-0.5 flex items-center gap-2">
               <span style={{ color: "#f59e0b" }}>★</span>
               <span className="text-xs font-semibold text-gray-700">
                 {Number(provider.rating_avg) > 0
                   ? Number(provider.rating_avg).toFixed(1)
                   : "New"}
               </span>
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                style={
+                  provider.active
+                    ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
+                    : { background: "rgba(239,68,68,.1)",  color: "#dc2626" }
+                }
+              >
+                {provider.active ? "Available" : "Unavailable"}
+              </span>
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-
-          {/* ── Service selector ── */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="mb-3 text-sm font-bold" style={{ color: "#0a2e30" }}>
-              Select Service
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {provider.services.map(svc => {
-                const meta = SERVICES[svc];
-                const r    = provider.rates[svc];
-                return (
-                  <button
-                    key={svc}
-                    type="button"
-                    onClick={() => { setService(svc); setEndDate(""); }}
-                    className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
-                    style={
-                      service === svc
-                        ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" }
-                        : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }
-                    }
-                  >
-                    <span className="text-2xl">{meta.emoji}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>
-                        {meta.label}
-                      </p>
-                      <p className="text-xs text-gray-400">{meta.unit}</p>
-                    </div>
-                    {r !== undefined ? (
-                      <span className="shrink-0 text-sm font-extrabold" style={{ color: "#00b096" }}>
-                        GHS {r}
-                      </span>
-                    ) : (
-                      <span className="shrink-0 text-xs text-gray-400">On request</span>
-                    )}
-                    {service === svc && (
-                      <span className="ml-1 shrink-0 text-xs font-bold" style={{ color: "#00b096" }}>✓</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+        {/* ── Unavailability warning ── */}
+        {!provider.active && (
+          <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            This provider is currently not accepting bookings. You can still send a request and they may respond when they reopen.
           </div>
+        )}
 
-          {/* ── Date picker(s) ── */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="mb-3 text-sm font-bold" style={{ color: "#0a2e30" }}>
-              {multiDay ? "Select Dates" : "Select Date"}
-            </p>
-            <div className={`grid gap-4 ${multiDay ? "sm:grid-cols-2" : ""}`}>
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-gray-500">
-                  {multiDay ? "Start date" : "Date"}
-                </label>
-                <input
-                  type="date"
-                  required
-                  min={today}
-                  value={startDate}
-                  onChange={e => {
-                    setStartDate(e.target.value);
-                    if (endDate && e.target.value > endDate) setEndDate(e.target.value);
-                  }}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
-                />
+        {/* ── No services warning ── */}
+        {services.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-10 text-center">
+            <p className="text-2xl mb-2">🐾</p>
+            <p className="font-semibold text-gray-700">No services available</p>
+            <p className="mt-1 text-sm text-gray-400">This provider hasn&apos;t set up any services yet.</p>
+            <Link
+              href="/search"
+              className="mt-4 inline-block rounded-full px-5 py-2 text-xs font-semibold text-white"
+              style={{ backgroundColor: "#00b096" }}
+            >
+              Find another provider
+            </Link>
+          </div>
+        )}
+
+        {services.length > 0 && (
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            {/* ── Service selector ── */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <p className="mb-3 text-sm font-bold" style={{ color: "#0a2e30" }}>Select Service</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {services.map(svc => {
+                  const st       = svc.service_types;
+                  if (!st) return null;
+                  const r        = rateForDog(svc, selectedDog?.size ?? null);
+                  const selected = svc.id === selectedSvcId;
+                  return (
+                    <button
+                      key={svc.id}
+                      type="button"
+                      onClick={() => { setSelectedSvcId(svc.id); setEndDate(""); }}
+                      className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
+                      style={
+                        selected
+                          ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" }
+                          : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }
+                      }
+                    >
+                      <span className="text-2xl">{st.emoji}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{st.name}</p>
+                        <p className="text-xs text-gray-400">{st.unit_label}</p>
+                      </div>
+                      {r !== null ? (
+                        <span className="shrink-0 text-sm font-extrabold" style={{ color: "#00b096" }}>
+                          GHS {r}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-xs text-gray-400">
+                          {selectedDog ? "On request" : "Select dog for price"}
+                        </span>
+                      )}
+                      {selected && (
+                        <span className="ml-1 shrink-0 text-xs font-bold" style={{ color: "#00b096" }}>✓</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-              {multiDay && (
+            </div>
+
+            {/* ── Dog selector ── */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <p className="mb-3 text-sm font-bold" style={{ color: "#0a2e30" }}>Select Dog</p>
+              {dogs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-8 text-center">
+                  <span className="mb-2 text-3xl">🐶</span>
+                  <p className="text-sm font-medium text-gray-600">No dogs registered yet</p>
+                  <p className="mt-1 mb-3 text-xs text-gray-400">
+                    Add a dog to your profile to continue
+                  </p>
+                  <Link
+                    href="/dashboard/owner"
+                    className="rounded-full px-5 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+                    style={{ backgroundColor: "#00b096" }}
+                  >
+                    Add a dog
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {dogs.map(dog => (
+                    <button
+                      key={dog.id}
+                      type="button"
+                      onClick={() => setDogId(dog.id)}
+                      className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
+                      style={
+                        dogId === dog.id
+                          ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" }
+                          : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }
+                      }
+                    >
+                      <span className="text-2xl">🐕</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold" style={{ color: "#0a2e30" }}>
+                          {dog.name}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {[dog.breed, dog.size].filter(Boolean).join(" · ") || "No details"}
+                        </p>
+                      </div>
+                      {dogId === dog.id && (
+                        <span className="shrink-0 text-xs font-bold" style={{ color: "#00b096" }}>✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedDog?.size && selectedSvc && rate !== null && (
+                <p className="mt-2.5 text-xs text-gray-500">
+                  Rate for <span className="font-semibold">{selectedDog.size}</span> dog:{" "}
+                  <span className="font-bold" style={{ color: "#00b096" }}>GHS {rate}</span>
+                  {" "}{selectedSvc.service_types?.unit_label}
+                </p>
+              )}
+            </div>
+
+            {/* ── Date picker(s) ── */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <p className="mb-1 text-sm font-bold" style={{ color: "#0a2e30" }}>
+                {multiDay ? "Select Dates" : "Select Date"}
+              </p>
+              {availDays.length > 0 && (
+                <p className="mb-3 text-xs text-gray-500">
+                  Available on:{" "}
+                  <span className="font-semibold" style={{ color: "#00b096" }}>
+                    {availDays.join(", ")}
+                  </span>
+                </p>
+              )}
+              {!selectedSvc && (
+                <p className="mb-3 text-xs text-gray-400">Select a service to see available days.</p>
+              )}
+              <div className={`grid gap-4 ${multiDay ? "sm:grid-cols-2" : ""}`}>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-gray-500">End date</label>
+                  <label className="mb-1 block text-xs font-semibold text-gray-500">
+                    {multiDay ? "Start date" : "Date"}
+                  </label>
                   <input
                     type="date"
                     required
-                    min={startDate || today}
-                    value={endDate}
-                    onChange={e => setEndDate(e.target.value)}
+                    min={today}
+                    value={startDate}
+                    onChange={e => {
+                      setStartDate(e.target.value);
+                      if (endDate && e.target.value > endDate) setEndDate(e.target.value);
+                    }}
                     className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
                   />
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── Dog selector ── */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="mb-3 text-sm font-bold" style={{ color: "#0a2e30" }}>Select Dog</p>
-            {dogs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 py-8 text-center">
-                <span className="mb-2 text-3xl">🐶</span>
-                <p className="text-sm font-medium text-gray-600">No dogs registered yet</p>
-                <p className="mt-1 mb-3 text-xs text-gray-400">
-                  Add a dog to your profile to continue
-                </p>
-                <Link
-                  href="/dashboard/owner"
-                  className="rounded-full px-5 py-2 text-xs font-semibold text-white transition hover:opacity-90"
-                  style={{ backgroundColor: "#00b096" }}
-                >
-                  Add a dog
-                </Link>
+                {multiDay && (
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-gray-500">End date</label>
+                    <input
+                      type="date"
+                      required
+                      min={startDate || today}
+                      value={endDate}
+                      onChange={e => setEndDate(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
+                    />
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {dogs.map(dog => (
-                  <button
-                    key={dog.id}
-                    type="button"
-                    onClick={() => setDogId(dog.id)}
-                    className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
-                    style={
-                      dogId === dog.id
-                        ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" }
-                        : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }
-                    }
+            </div>
+
+            {/* ── Notes ── */}
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <label className="mb-2 block text-sm font-bold" style={{ color: "#0a2e30" }}>
+                Notes{" "}
+                <span className="text-xs font-normal text-gray-400">(optional)</span>
+              </label>
+              <textarea
+                rows={3}
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Special requirements, your dog's routine, allergies, feeding schedule…"
+                className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
+              />
+            </div>
+
+            {/* ── Price summary ── */}
+            {gross !== null && (
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <p className="mb-3 text-sm font-bold" style={{ color: "#0a2e30" }}>Price Summary</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-gray-600">
+                    <span>
+                      GHS {rate} {selectedSvc?.service_types?.unit_label}
+                      {multiDay && days > 1 && (
+                        <span className="text-gray-400"> × {days} days</span>
+                      )}
+                    </span>
+                    <span>GHS {gross.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>Platform fee (10%)</span>
+                    <span>GHS {commission?.toFixed(2)}</span>
+                  </div>
+                  <div
+                    className="flex justify-between border-t border-gray-100 pt-2 text-base font-extrabold"
+                    style={{ color: "#0a2e30" }}
                   >
-                    <span className="text-2xl">🐕</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold" style={{ color: "#0a2e30" }}>
-                        {dog.name}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {[dog.breed, dog.size].filter(Boolean).join(" · ") || "No details"}
-                      </p>
-                    </div>
-                    {dogId === dog.id && (
-                      <span className="shrink-0 text-xs font-bold" style={{ color: "#00b096" }}>✓</span>
-                    )}
-                  </button>
-                ))}
+                    <span>Total</span>
+                    <span>GHS {gross.toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
             )}
-          </div>
 
-          {/* ── Notes ── */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <label className="mb-2 block text-sm font-bold" style={{ color: "#0a2e30" }}>
-              Notes{" "}
-              <span className="text-xs font-normal text-gray-400">(optional)</span>
-            </label>
-            <textarea
-              rows={3}
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Special requirements, your dog's routine, allergies, feeding schedule…"
-              className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
-            />
-          </div>
+            {error && (
+              <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                {error}
+              </p>
+            )}
 
-          {/* ── Price summary ── */}
-          {gross !== null && (
-            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-              <p className="mb-3 text-sm font-bold" style={{ color: "#0a2e30" }}>Price Summary</p>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between text-gray-600">
-                  <span>
-                    GHS {rate} {svcMeta?.unit}
-                    {multiDay && days > 1 && (
-                      <span className="text-gray-400"> × {days} days</span>
-                    )}
-                  </span>
-                  <span>GHS {gross.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-xs text-gray-400">
-                  <span>Platform fee (10%)</span>
-                  <span>GHS {commission?.toFixed(2)}</span>
-                </div>
-                <div
-                  className="flex justify-between border-t border-gray-100 pt-2 text-base font-extrabold"
-                  style={{ color: "#0a2e30" }}
-                >
-                  <span>Total</span>
-                  <span>GHS {gross.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          )}
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="w-full rounded-2xl py-3.5 text-sm font-bold text-white transition hover:opacity-90 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40"
+              style={{ backgroundColor: "#00b096" }}
+            >
+              {submitting ? "Sending request…" : "Request Booking"}
+            </button>
 
-          {error && (
-            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-              {error}
+            <p className="text-center text-xs text-gray-400">
+              No payment required now — the provider has 24 hours to accept your request.
             </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="w-full rounded-2xl py-3.5 text-sm font-bold text-white transition hover:opacity-90 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ backgroundColor: "#00b096" }}
-          >
-            {submitting ? "Sending request…" : "Request Booking"}
-          </button>
-
-          <p className="text-center text-xs text-gray-400">
-            No payment required now — the provider has 24 hours to accept your request.
-          </p>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );

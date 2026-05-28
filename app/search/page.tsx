@@ -15,12 +15,15 @@ type ServiceType = {
   emoji: string;
 };
 
+type AvailSlot = { available: boolean; start?: string; end?: string };
+
 type ProviderService = {
   service_type_id: string;
   rate_small: number | null;
   rate_medium: number | null;
   rate_large: number | null;
   is_active: boolean;
+  availability: Record<string, AvailSlot> | null;
   service_types: { slug: string; name: string; emoji: string } | null;
 };
 
@@ -74,6 +77,16 @@ function minServicePrice(svcs: ProviderService[]): number | null {
     if (ps.rate_large  != null) prices.push(ps.rate_large);
   }
   return prices.length > 0 ? Math.min(...prices) : null;
+}
+
+const TODAY_KEY = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][new Date().getDay()];
+
+function isAvailableToday(svcs: ProviderService[]): boolean {
+  return svcs.some(ps => {
+    const a = ps.availability;
+    if (!a || Object.keys(a).length === 0) return true; // no schedule set = always available
+    return a[TODAY_KEY]?.available === true;
+  });
 }
 
 function fmtDist(km: number): string {
@@ -284,7 +297,7 @@ function SearchResults() {
         sb.from("providers")
           .select(`id, user_id, rating_avg, review_count, active, neighbourhood, avatar_url, lat, lng,
                    users!user_id(name),
-                   provider_services(service_type_id, rate_small, rate_medium, rate_large, is_active, service_types(slug, name, emoji))`)
+                   provider_services(service_type_id, rate_small, rate_medium, rate_large, is_active, availability, service_types(slug, name, emoji))`)
           .order("rating_avg", { ascending: false }),
       ]);
 
@@ -317,9 +330,12 @@ function SearchResults() {
             : null,
       }))
       .filter(p => {
-        if (avail === "available" && !p.active) return false;
         const activeSvcs = (p.provider_services ?? []).filter(ps => ps.is_active);
         if (activeSvcs.length === 0) return false;
+        if (avail === "available") {
+          if (!p.active) return false;
+          if (!isAvailableToday(activeSvcs)) return false;
+        }
         if (selectedTypeId && !activeSvcs.some(ps => ps.service_type_id === selectedTypeId)) return false;
         const price = minServicePrice(activeSvcs);
         if (price !== null && range.max < Infinity && price > range.max) return false;
@@ -467,7 +483,7 @@ function SearchResults() {
                       : { color: "#9ca3af" }
                   }
                 >
-                  {v === "all" ? "All" : "Available now"}
+                  {v === "all" ? "All" : "Available today"}
                 </button>
               ))}
             </div>
