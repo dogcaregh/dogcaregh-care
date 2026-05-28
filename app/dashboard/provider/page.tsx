@@ -263,6 +263,12 @@ export default function ProviderDashboard() {
           Dog<span style={{ color: "#00b096" }}>Care</span>GH
         </Link>
         <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/provider/services"
+            className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 sm:block"
+          >
+            My Services
+          </Link>
           <Link href="/dashboard/provider/profile" className="flex items-center transition hover:opacity-80" title="My Profile">
             {providerAvatar ? (
               <img src={providerAvatar} alt={providerName.split(" ")[0]} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/25" />

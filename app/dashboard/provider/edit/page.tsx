@@ -369,6 +369,12 @@ export default function EditProfilePage() {
           >
             ← Dashboard
           </Link>
+          <Link
+            href="/dashboard/provider/services"
+            className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 sm:block"
+          >
+            My Services
+          </Link>
           {providerId && (
             <Link
               href={`/provider/${providerId}`}
