@@ -15,7 +15,7 @@ type ProviderService = {
   rate_medium: number | null;
   rate_large: number | null;
   availability: Record<string, AvailSlot>;
-  service_types: { slug: string; name: string; emoji: string; unit_label: string };
+  service_types: { slug: string; name: string; emoji: string; rate_unit: string };
 };
 
 type ProviderProfile = {
@@ -110,7 +110,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 }
 
 function ServiceRateCard({ svc }: { svc: ProviderService }) {
-  const { name, emoji, unit_label } = svc.service_types;
+  const { name, emoji, rate_unit } = svc.service_types;
   const hasRates = svc.rate_small != null || svc.rate_medium != null || svc.rate_large != null;
   const activeDays = DAYS.filter(d => svc.availability?.[d.id]?.available === true);
 
@@ -123,7 +123,7 @@ function ServiceRateCard({ svc }: { svc: ProviderService }) {
         <span className="text-2xl">{emoji}</span>
         <div>
           <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{name}</p>
-          <p className="text-xs text-gray-400">{unit_label}</p>
+          <p className="text-xs text-gray-400">{rate_unit}</p>
         </div>
       </div>
 
@@ -221,7 +221,7 @@ export default function ProviderPage() {
           .eq("to_user_id", p.user_id)
           .eq("from_role", "owner")
           .order("created_at", { ascending: false }),
-        sb.from("service_types").select("id, slug, name, emoji, unit_label"),
+        sb.from("service_types").select("id, slug, name, emoji, rate_unit"),
       ]);
 
       if (cancelled) return;
@@ -229,7 +229,7 @@ export default function ProviderPage() {
       const svMapped = activeSv.map(s => ({
         ...s,
         service_types: (stData ?? []).find(st => st.id === (s as Record<string, unknown>).service_type_id)
-          ?? { slug: "", name: "Unknown", emoji: "🐾", unit_label: "" },
+          ?? { slug: "", name: "Unknown", emoji: "🐾", rate_unit: "" },
       }));
       if (!sv) console.error("[provider] provider_services returned null — check RLS");
       setServices(svMapped as unknown as ProviderService[]);

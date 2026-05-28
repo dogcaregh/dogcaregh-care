@@ -211,12 +211,15 @@ export default function ProviderDashboard() {
 
       if (cancelled) return;
       setBookings((bks ?? []) as unknown as Booking[]);
+      if (!svcs) console.error("[dashboard] provider_services null — check RLS or column names");
+      if (!stData) console.error("[dashboard] service_types null — check RLS or column names");
+      console.log("[dashboard] svcs:", svcs?.length, "stData:", stData?.length);
       const activeRows = (svcs ?? []).filter(s => (s as Record<string, unknown>).is_active);
-      const svcsMapped = activeRows.map(s => ({
-        ...s,
-        service_types: (stData ?? []).find(st => st.id === (s as Record<string, unknown>).service_type_id) ?? null,
-      }));
-      if (!svcs) console.error("[dashboard] provider_services returned null — check RLS");
+      const svcsMapped = activeRows.map(s => {
+        const sid = (s as Record<string, unknown>).service_type_id as string;
+        const st = (stData ?? []).find(t => t.id === sid) ?? null;
+        return { ...s, service_types: st };
+      });
       setServices(svcsMapped as unknown as ProviderService[]);
       setLoading(false);
     }
@@ -380,7 +383,8 @@ export default function ProviderDashboard() {
             <div className="grid gap-3 border-t border-gray-50 p-5 sm:grid-cols-2 lg:grid-cols-3">
               {services.map(svc => {
                 const st = svc.service_types;
-                if (!st) return null;
+                const label = st?.name ?? "Service";
+                const emoji = st?.emoji ?? "🐾";
                 const DAYS_SHORT: Record<string, string> = {
                   monday: "Mon", tuesday: "Tue", wednesday: "Wed",
                   thursday: "Thu", friday: "Fri", saturday: "Sat", sunday: "Sun",
@@ -395,8 +399,8 @@ export default function ProviderDashboard() {
                     style={{ borderLeftWidth: 3, borderLeftColor: "#00b096" }}
                   >
                     <div className="mb-3 flex items-center gap-2">
-                      <span className="text-xl">{st.emoji}</span>
-                      <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>{st.name}</p>
+                      <span className="text-xl">{emoji}</span>
+                      <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>{label}</p>
                     </div>
                     <div className="space-y-1">
                       {svc.rate_small  != null && <div className="flex justify-between text-xs"><span className="text-gray-400">Small dog</span><span className="font-semibold" style={{ color: "#00b096" }}>GHS {Number(svc.rate_small).toFixed(2)}</span></div>}
