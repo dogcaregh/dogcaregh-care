@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useChat } from "@/lib/chat-context";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { useNotifications } from "@/lib/notifications-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -229,6 +230,12 @@ function AddDogForm({ ownerId, onAdded, onCancel }: {
 export default function OwnerDashboard() {
   const router = useRouter();
   const { openChat } = useChat();
+  const { notifications: bellNotifs } = useNotifications();
+
+  // Booking IDs with unread message notifications — navigate to messages tab for these
+  const unreadMsgBookings = useMemo(() =>
+    new Set(bellNotifs.filter(n => n.type === "new_message" && !n.read && n.booking_id).map(n => n.booking_id!)),
+  [bellNotifs]);
 
   const [ownerName,   setOwnerName]   = useState("");
   const [ownerAvatar, setOwnerAvatar] = useState<string | null>(null);
@@ -586,7 +593,7 @@ export default function OwnerDashboard() {
                   <article
                     key={b.id}
                     className="cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md"
-                    onClick={() => router.push(`/booking/${b.id}`)}
+                    onClick={() => router.push(`/booking/${b.id}${unreadMsgBookings.has(b.id) ? "?tab=messages" : ""}`)}
                   >
                     <div className="p-5">
 

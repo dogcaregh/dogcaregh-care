@@ -415,7 +415,7 @@ export function ChatPopup() {
               {/* Full-page link */}
               {booking && (
                 <Link
-                  href={`/booking/${booking.id}`}
+                  href={`/booking/${booking.id}?tab=messages`}
                   title="Open full page"
                   className="flex h-7 w-7 items-center justify-center rounded-lg text-white/40 transition hover:bg-white/10 hover:text-white"
                 >

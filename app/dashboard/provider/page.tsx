@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useChat } from "@/lib/chat-context";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { useNotifications } from "@/lib/notifications-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -162,8 +163,12 @@ function StatusTrack({ status }: { status: BookingStatus }) {
 
 export default function ProviderDashboard() {
   const router = useRouter();
-
   const { openChat } = useChat();
+  const { notifications: bellNotifs } = useNotifications();
+
+  const unreadMsgBookings = useMemo(() =>
+    new Set(bellNotifs.filter(n => n.type === "new_message" && !n.read && n.booking_id).map(n => n.booking_id!)),
+  [bellNotifs]);
   const [providerName,   setProviderName]   = useState("");
   const [providerId,     setProviderId]     = useState("");
   const [providerAvatar, setProviderAvatar] = useState<string | null>(null);
@@ -486,7 +491,7 @@ export default function ProviderDashboard() {
                 <article
                   key={b.id}
                   className="cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md"
-                  onClick={() => router.push(`/booking/${b.id}`)}
+                  onClick={() => router.push(`/booking/${b.id}${unreadMsgBookings.has(b.id) ? "?tab=messages" : ""}`)}
                 >
                   <div className="p-5">
 
