@@ -58,8 +58,11 @@ function NotificationItem({
   );
 
   if (n.booking_id) {
+    const href = n.type === "new_message"
+      ? `/booking/${n.booking_id}?tab=messages`
+      : `/booking/${n.booking_id}`;
     return (
-      <Link href={`/booking/${n.booking_id}`} onClick={handleClick} className="block">
+      <Link href={href} onClick={handleClick} className="block">
         {inner}
       </Link>
     );

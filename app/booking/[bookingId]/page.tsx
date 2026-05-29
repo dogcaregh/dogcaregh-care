@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { NotificationsBell } from "@/components/notifications-bell";
 
@@ -267,9 +267,15 @@ function ReviewCard({
 
 export default function BookingPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
 
-  const [tab,          setTab]          = useState<"details" | "messages">("details");
+  const [tab, setTab] = useState<"details" | "messages">("details");
+
+  // Open messages tab directly when navigated from a message notification
+  useEffect(() => {
+    if (searchParams.get("tab") === "messages") setTab("messages");
+  }, [searchParams]);
   const [booking,      setBooking]      = useState<BookingDetail | null>(null);
   const [extraDogs,    setExtraDogs]    = useState<{ id: string; name: string; size: string | null }[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
