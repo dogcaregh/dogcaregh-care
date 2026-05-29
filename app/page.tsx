@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { ACCRA_AREAS } from "@/lib/geocode";
 
 const services = [
   { emoji: "🐾", name: "Dog Sitting",  id: "dog_sitting",  description: "A trusted sitter cares for your dog in their own home while you're away."  },
@@ -157,7 +158,7 @@ export default function HomePage() {
               autoComplete="off"
             />
             <datalist id="home-accra-areas">
-              {["Achimota","Adenta","Airport Residential","Cantonments","Dansoman","Dome","Dzorwulu","East Legon","Haatso","Kasoa","Kotobabi","Labone","Lapaz","Legon","Madina","Nima","North Kaneshie","Osu","Roman Ridge","Sakumono","Spintex","Tema","Tesano","Teshie","Trasacco Valley"].map(a => (
+              {ACCRA_AREAS.map(a => (
                 <option key={a} value={a} />
               ))}
             </datalist>

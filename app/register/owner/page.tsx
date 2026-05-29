@@ -3,14 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
-
-const ACCRA_AREAS = [
-  "Achimota", "Adenta", "Airport Residential", "Cantonments", "Dansoman",
-  "Dome", "Dzorwulu", "East Legon", "Haatso", "Kasoa", "Kotobabi",
-  "Labone", "Lapaz", "Legon", "Madina", "Nima", "North Kaneshie",
-  "Osu", "Roman Ridge", "Sakumono", "Spintex", "Tema", "Tesano",
-  "Teshie", "Trasacco Valley",
-];
+import { ACCRA_AREAS } from "@/lib/geocode";
 
 const SIZES = ["small", "medium", "large"] as const;
 const TEMPERAMENTS = ["friendly", "selective", "nervous"] as const;

@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
-import { lookupCoords, haversine, rankScore } from "@/lib/geocode";
+import { lookupCoords, haversine, rankScore, ACCRA_AREAS } from "@/lib/geocode";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -447,7 +447,7 @@ function SearchResults() {
               className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400"
             />
             <datalist id="search-accra-areas">
-              {["Achimota","Adenta","Airport Residential","Cantonments","Dansoman","Dome","Dzorwulu","East Legon","Haatso","Kasoa","Kotobabi","Labone","Lapaz","Legon","Madina","Nima","North Kaneshie","Osu","Roman Ridge","Sakumono","Spintex","Tema","Tesano","Teshie","Trasacco Valley"].map(a => (
+              {ACCRA_AREAS.map(a => (
                 <option key={a} value={a} />
               ))}
             </datalist>

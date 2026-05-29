@@ -1,6 +1,6 @@
 // Known Accra neighbourhoods with approximate centre coordinates.
 // These cover the areas in the datalist so Nominatim is rarely needed.
-const AREA_COORDS: Record<string, [number, number]> = {
+export const AREA_COORDS: Record<string, [number, number]> = {
   "Achimota":            [5.6108, -0.2239],
   "Adenta":              [5.7043, -0.1618],
   "Airport Residential": [5.6052, -0.1769],
@@ -27,6 +27,8 @@ const AREA_COORDS: Record<string, [number, number]> = {
   "Teshie":              [5.5840, -0.1136],
   "Trasacco Valley":     [5.6411, -0.1609],
 };
+
+export const ACCRA_AREAS = Object.keys(AREA_COORDS);
 
 export function lookupCoords(area: string): { lat: number; lng: number } | null {
   const key = Object.keys(AREA_COORDS).find(

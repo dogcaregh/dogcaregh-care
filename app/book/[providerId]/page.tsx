@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import { COMMISSION_RATE } from "@/lib/constants";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +53,6 @@ const DAYS = [
   { id: "sunday",    short: "Sun" },
 ];
 
-const COMMISSION_RATE = 0.10;
 
 const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
 

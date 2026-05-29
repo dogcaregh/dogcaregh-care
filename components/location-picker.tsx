@@ -1,12 +1,6 @@
 "use client";
 
-const ACCRA_AREAS = [
-  "Achimota", "Adenta", "Airport Residential", "Cantonments", "Dansoman",
-  "Dome", "Dzorwulu", "East Legon", "Haatso", "Kasoa", "Kotobabi",
-  "Labone", "Lapaz", "Legon", "Madina", "Nima", "North Kaneshie",
-  "Osu", "Roman Ridge", "Sakumono", "Spintex", "Tema", "Tesano",
-  "Teshie", "Trasacco Valley",
-];
+import { ACCRA_AREAS } from "@/lib/geocode";
 
 const INPUT_CLS =
   "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-[#00b096] focus:bg-white focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400";

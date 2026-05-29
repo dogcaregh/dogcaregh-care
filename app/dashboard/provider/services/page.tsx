@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { ACCRA_AREAS } from "@/lib/geocode";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,14 +86,6 @@ const DAYS: { id: DayId; short: string }[] = [
   { id: "friday",    short: "Fri" },
   { id: "saturday",  short: "Sat" },
   { id: "sunday",    short: "Sun" },
-];
-
-const ACCRA_AREAS = [
-  "Achimota", "Adenta", "Airport Residential", "Cantonments", "Dansoman",
-  "Dome", "Dzorwulu", "East Legon", "Haatso", "Kasoa", "Kotobabi",
-  "Labone", "Lapaz", "Legon", "Madina", "Nima", "North Kaneshie",
-  "Osu", "Roman Ridge", "Sakumono", "Spintex", "Tema", "Tesano",
-  "Teshie", "Trasacco Valley",
 ];
 
 const INPUT =
