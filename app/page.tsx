@@ -88,7 +88,7 @@ export default function HomePage() {
 
         {/* ── Nav ── */}
         <nav className="relative z-10 flex items-center justify-between px-6 py-5 md:px-12">
-          <img src="/weblogo.png" alt="DogCareGH" className="h-8 w-auto" />
+          <img src="/weblogo.png" alt="DogCareGH" className="h-12 w-auto" />
 
           <div className="flex items-center gap-3">
             {!authLoaded ? null : authUser ? (

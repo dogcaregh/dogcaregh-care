@@ -65,7 +65,7 @@ export default function OwnerProfilePage() {
 
   if (loading) return (
     <div className="flex min-h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
-      <img src="/weblogo.png" alt="DogCareGH" className="h-10 w-auto" />
+      <img src="/weblogo.png" alt="DogCareGH" className="h-12 w-auto" />
       <p className="mt-3 animate-pulse text-sm text-white/50">Loading profile…</p>
     </div>
   );
@@ -80,7 +80,7 @@ export default function OwnerProfilePage() {
         className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 px-6 py-4 md:px-12"
         style={{ backgroundColor: "#0a2e30" }}
       >
-        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-8 w-auto" /></Link>
+        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-12 w-auto" /></Link>
         <Link
           href="/dashboard/owner"
           className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:bg-white/10"
