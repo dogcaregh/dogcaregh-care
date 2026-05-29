@@ -43,6 +43,11 @@ type Dog = {
 
 const MULTI_DAY_SLUGS = new Set(["dog_daycare", "dog_boarding"]);
 
+const SLUG_EMOJI: Record<string, string> = {
+  dog_walking: "🦮", dog_sitting: "🐾", dog_daycare: "🏡",
+  dog_boarding: "🛏️", dog_grooming: "✂️",
+};
+
 const DAYS = [
   { id: "monday",    short: "Mon" },
   { id: "tuesday",   short: "Tue" },
@@ -122,13 +127,13 @@ export default function BookPage() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { router.replace(`/login?redirect=/book/${providerId}`); return; }
 
-      const [{ data: p }, { data: svcs }, { data: d }] = await Promise.all([
+      const [{ data: p }, { data: svcs, error: svcsErr }, { data: d }] = await Promise.all([
         sb.from("providers")
           .select("id, user_id, rating_avg, neighbourhood, avatar_url, active, users!user_id(name)")
           .eq("id", providerId)
           .single(),
         sb.from("provider_services")
-          .select("id, service_type_id, rate_small, rate_medium, rate_large, grooming_mode, is_active, availability, service_types(slug, name, emoji, rate_unit)")
+          .select("id, service_type_id, rate_small, rate_medium, rate_large, grooming_mode, is_active, availability, service_types(slug, name, rate_unit)")
           .eq("provider_id", providerId)
           .eq("is_active", true),
         sb.from("dogs")
@@ -138,9 +143,15 @@ export default function BookPage() {
       ]);
 
       if (cancelled) return;
+      if (svcsErr) console.error("[book] provider_services error:", svcsErr);
       if (!p) { router.replace("/search"); return; }
 
-      const activeSvcs = (svcs ?? []) as unknown as ProviderService[];
+      const activeSvcs = ((svcs ?? []) as unknown as ProviderService[]).map(svc => ({
+        ...svc,
+        service_types: svc.service_types
+          ? { ...svc.service_types, emoji: SLUG_EMOJI[svc.service_types.slug] ?? "🐾" }
+          : null,
+      }));
       if (activeSvcs.length === 1) setSelectedSvcId(activeSvcs[0].id);
 
       setProvider(p as unknown as ProviderInfo);
