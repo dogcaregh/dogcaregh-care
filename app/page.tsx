@@ -95,13 +95,13 @@ export default function HomePage() {
               <>
                 <Link
                   href={authUser.isProvider ? "/dashboard/provider" : "/dashboard/owner"}
-                  className="rounded-full border border-white/30 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                  className="rounded-full border border-white/30 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/10 md:px-4 md:py-2 md:text-sm"
                 >
                   My Dashboard
                 </Link>
                 <button
                   onClick={handleSignOut}
-                  className="rounded-full px-4 py-2 text-sm font-semibold transition hover:opacity-90"
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold transition hover:opacity-90 md:px-4 md:py-2 md:text-sm"
                   style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
                 >
                   Sign Out
@@ -111,13 +111,13 @@ export default function HomePage() {
               <>
                 <Link
                   href="/login"
-                  className="rounded-full border border-white/30 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                  className="rounded-full border border-white/30 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/10 md:px-5 md:py-2 md:text-sm"
                 >
                   Log In
                 </Link>
                 <Link
                   href="/register/owner"
-                  className="rounded-full px-5 py-2 text-sm font-semibold transition hover:opacity-90"
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold transition hover:opacity-90 md:px-5 md:py-2 md:text-sm"
                   style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
                 >
                   Sign Up
