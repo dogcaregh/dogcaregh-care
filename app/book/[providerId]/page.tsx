@@ -107,18 +107,26 @@ function svcAvailDays(svc: ProviderService): string[] {
   return DAYS.filter(d => a[d.id]?.available).map(d => d.short);
 }
 
-function svcAvailWindow(svc: ProviderService): string | null {
+function svcAvailWindow(svc: ProviderService): { start: string; end: string } | null {
   const a = svc.availability;
   if (!a) return null;
   const slots = Object.values(a).filter(s => s.available && s.start && s.end);
   if (slots.length === 0) return null;
   const starts = slots.map(s => s.start!).sort();
   const ends   = slots.map(s => s.end!).sort();
-  function fmt(t: string) {
-    const [h, m] = t.split(":");
-    return `${parseInt(h)}:${m}`;
-  }
-  return `${fmt(starts[0])} – ${fmt(ends[ends.length - 1])}`;
+  return { start: starts[0], end: ends[ends.length - 1] };
+}
+
+function fmtWindow(w: { start: string; end: string }) {
+  const fmt = (t: string) => t.slice(0, 5);
+  return `${fmt(w.start)} – ${fmt(w.end)}`;
+}
+
+function timeDiffHours(start: string, end: string): number {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const mins = eh * 60 + em - (sh * 60 + sm);
+  return Math.round((mins / 60) * 10) / 10;
 }
 
 const today = new Date().toISOString().split("T")[0];
@@ -255,8 +263,8 @@ export default function BookPage() {
   const [startDate, setStartDate]         = useState("");        // boarding only
   const [endDate, setEndDate]             = useState("");        // boarding only
   const [selectedDates, setSelectedDates] = useState<string[]>([]); // all calendar services
-  const [preferredTime, setPreferredTime] = useState("");        // walking + sitting
-  const [durationHours, setDurationHours] = useState(1);        // walking + sitting
+  const [startTime, setStartTime] = useState("");  // walking + sitting
+  const [endTime,   setEndTime]   = useState("");  // walking + sitting
   const [dogId, setDogId]                 = useState("");
   const [notes, setNotes]                 = useState("");
 
@@ -323,15 +331,21 @@ export default function BookPage() {
     ? (startDate && endDate ? daysBetween(startDate, endDate) : 1)
     : (selectedDates.length || 1);
   const datesReady     = isRange ? !!(startDate && endDate) : selectedDates.length > 0;
-  const gross          = rate !== null && datesReady
+  const durationHours  = (isTimeRequired && startTime && endTime && endTime > startTime)
+    ? timeDiffHours(startTime, endTime) : 0;
+  const availWindow    = (selectedSvc && isTimeRequired) ? svcAvailWindow(selectedSvc) : null;
+  const timeInWindow   = !availWindow || (
+    (!startTime || startTime >= availWindow.start) &&
+    (!endTime   || endTime   <= availWindow.end)
+  );
+  const timeValid      = !isTimeRequired || (!!startTime && !!endTime && endTime > startTime && timeInWindow);
+  const gross          = rate !== null && datesReady && (!isTimeRequired || durationHours > 0)
     ? rate * (isTimeRequired ? durationHours : 1) * days
     : null;
   const commission     = gross !== null ? Math.round(gross * COMMISSION_RATE * 100) / 100 : null;
   const availDays      = selectedSvc ? svcAvailDays(selectedSvc) : [];
-  const availWindow    = (selectedSvc && isTimeRequired) ? svcAvailWindow(selectedSvc) : null;
 
-  const canSubmit = !!selectedSvcId && !!dogId && !submitting && datesReady &&
-    (!isTimeRequired || !!preferredTime);
+  const canSubmit = !!selectedSvcId && !!dogId && !submitting && datesReady && timeValid;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -372,8 +386,9 @@ export default function BookPage() {
         start_date:        effectiveStart,
         end_date:          effectiveEnd,
         selected_dates:    isRange ? null : selectedDates,
-        preferred_time:    isTimeRequired ? (preferredTime || null) : null,
-        duration_hours:    isTimeRequired ? durationHours : null,
+        preferred_time:     isTimeRequired ? (startTime || null) : null,
+        preferred_end_time: isTimeRequired ? (endTime   || null) : null,
+        duration_hours:     isTimeRequired ? (durationHours || null) : null,
         status:            "pending",
         gross_amount:      effectiveGross,
         commission_amount: effectiveComm,
@@ -519,7 +534,7 @@ export default function BookPage() {
                     <button
                       key={svc.id}
                       type="button"
-                      onClick={() => { setSelectedSvcId(svc.id); setStartDate(""); setEndDate(""); setSelectedDates([]); setPreferredTime(""); setDurationHours(1); }}
+                      onClick={() => { setSelectedSvcId(svc.id); setStartDate(""); setEndDate(""); setSelectedDates([]); setStartTime(""); setEndTime(""); }}
                       className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
                       style={
                         selected
@@ -630,7 +645,7 @@ export default function BookPage() {
                     {availDays.join(", ")}
                   </span>
                   {availWindow && (
-                    <span className="ml-1 text-gray-400">({availWindow})</span>
+                    <span className="ml-1 text-gray-400">({fmtWindow(availWindow)})</span>
                   )}
                 </p>
               )}
@@ -661,48 +676,64 @@ export default function BookPage() {
                 <>
                   <CalendarPicker selected={selectedDates} onChange={setSelectedDates} />
 
-                  {/* Time + duration — only for walking & sitting */}
+                  {/* Time range — only for walking & sitting */}
                   {isTimeRequired && (
                     <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                      <p className="text-xs font-semibold text-gray-500">Preferred time</p>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                          <label className="mb-1.5 block text-xs font-semibold text-gray-500">
-                            Preferred start time
-                          </label>
+                          <label className="mb-1.5 block text-xs text-gray-400">Start time</label>
                           <input
                             type="time"
                             required
-                            value={preferredTime}
-                            onChange={e => setPreferredTime(e.target.value)}
+                            value={startTime}
+                            min={availWindow?.start}
+                            max={endTime || availWindow?.end}
+                            onChange={e => setStartTime(e.target.value)}
                             className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
                           />
                         </div>
                         <div>
-                          <label className="mb-1.5 block text-xs font-semibold text-gray-500">
-                            Duration (hours)
-                          </label>
-                          <div className="flex items-center gap-2">
-                            {[1, 2, 3, 4].map(h => (
-                              <button
-                                key={h}
-                                type="button"
-                                onClick={() => setDurationHours(h)}
-                                className="flex-1 rounded-xl border py-2.5 text-sm font-semibold transition"
-                                style={
-                                  durationHours === h
-                                    ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.08)", color: "#0a2e30" }
-                                    : { borderColor: "#e5e7eb", color: "#9ca3af" }
-                                }
-                              >
-                                {h}h
-                              </button>
-                            ))}
-                          </div>
+                          <label className="mb-1.5 block text-xs text-gray-400">End time</label>
+                          <input
+                            type="time"
+                            required
+                            value={endTime}
+                            min={startTime || availWindow?.start}
+                            max={availWindow?.end}
+                            onChange={e => setEndTime(e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
+                          />
                         </div>
                       </div>
+
+                      {/* Duration feedback */}
+                      {durationHours > 0 && (
+                        <p className="text-xs font-semibold" style={{ color: "#00b096" }}>
+                          Duration: {durationHours} hr{durationHours !== 1 ? "s" : ""}
+                        </p>
+                      )}
+
+                      {/* Provider window hint */}
                       {availWindow && (
                         <p className="text-xs text-gray-400">
-                          Provider available: <span className="font-semibold text-gray-600">{availWindow}</span>
+                          Provider available:{" "}
+                          <span className="font-semibold text-gray-600">{fmtWindow(availWindow)}</span>
+                        </p>
+                      )}
+
+                      {/* Inline validation errors */}
+                      {startTime && endTime && endTime <= startTime && (
+                        <p className="text-xs font-medium text-red-500">End time must be after start time.</p>
+                      )}
+                      {startTime && availWindow && startTime < availWindow.start && (
+                        <p className="text-xs font-medium text-red-500">
+                          Start time is before the provider&apos;s available hours ({fmtWindow(availWindow)}).
+                        </p>
+                      )}
+                      {endTime && availWindow && endTime > availWindow.end && (
+                        <p className="text-xs font-medium text-red-500">
+                          End time exceeds the provider&apos;s available hours ({fmtWindow(availWindow)}).
                         </p>
                       )}
                     </div>
