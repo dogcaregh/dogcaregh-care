@@ -127,15 +127,17 @@ export default function BookPage() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { router.replace(`/login?redirect=/book/${providerId}`); return; }
 
-      const [{ data: p }, { data: svcs, error: svcsErr }, { data: d }] = await Promise.all([
+      const [{ data: p }, { data: svcs, error: svcsErr }, { data: stData, error: stErr }, { data: d }] = await Promise.all([
         sb.from("providers")
           .select("id, user_id, rating_avg, neighbourhood, avatar_url, active, users!user_id(name)")
           .eq("id", providerId)
           .single(),
         sb.from("provider_services")
-          .select("id, service_type_id, rate_small, rate_medium, rate_large, grooming_mode, is_active, availability, service_types(slug, name, rate_unit)")
+          .select("id, service_type_id, rate_small, rate_medium, rate_large, grooming_mode, availability, is_active")
           .eq("provider_id", providerId)
           .eq("is_active", true),
+        sb.from("service_types")
+          .select("id, slug, name, rate_unit"),
         sb.from("dogs")
           .select("id, name, breed, size")
           .eq("owner_id", user.id)
@@ -144,14 +146,20 @@ export default function BookPage() {
 
       if (cancelled) return;
       if (svcsErr) console.error("[book] provider_services error:", svcsErr);
+      if (stErr)   console.error("[book] service_types error:", stErr);
       if (!p) { router.replace("/search"); return; }
 
-      const activeSvcs = ((svcs ?? []) as unknown as ProviderService[]).map(svc => ({
-        ...svc,
-        service_types: svc.service_types
-          ? { ...svc.service_types, emoji: SLUG_EMOJI[svc.service_types.slug] ?? "🐾" }
-          : null,
-      }));
+      const stMap = Object.fromEntries((stData ?? []).map(st => [st.id, st]));
+
+      const activeSvcs = ((svcs ?? []) as unknown as ProviderService[]).map(svc => {
+        const st = stMap[(svc as unknown as Record<string, string>).service_type_id];
+        return {
+          ...svc,
+          service_types: st
+            ? { slug: st.slug, name: st.name, rate_unit: st.rate_unit, emoji: SLUG_EMOJI[st.slug] ?? "🐾" }
+            : null,
+        };
+      });
       if (activeSvcs.length === 1) setSelectedSvcId(activeSvcs[0].id);
 
       setProvider(p as unknown as ProviderInfo);
