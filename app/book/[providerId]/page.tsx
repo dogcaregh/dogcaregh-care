@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -728,7 +728,7 @@ export default function BookPage() {
 
   if (loading) return (
     <div className="flex min-h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
-      <p className="text-2xl font-bold text-white">Dog<span style={{ color: "#00b096" }}>Care</span>GH</p>
+      <img src="/weblogo.png" alt="DogCareGH" className="h-10 w-auto" />
       <p className="mt-3 animate-pulse text-sm text-white/50">Loading…</p>
     </div>
   );
@@ -743,7 +743,7 @@ export default function BookPage() {
 
       {/* Nav */}
       <nav className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 px-6 py-4 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
-        <Link href="/" className="text-2xl font-bold tracking-tight text-white">Dog<span style={{ color: "#00b096" }}>Care</span>GH</Link>
+        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-8 w-auto" /></Link>
         <Link href={`/provider/${providerId}`} className="text-sm text-white/60 transition hover:text-white">← Back to profile</Link>
       </nav>
 
