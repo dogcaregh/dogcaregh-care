@@ -12,6 +12,7 @@ const TYPE_EMOJI: Record<string, string> = {
   service_started:      "▶️",
   awaiting_confirmation:"⏳",
   payout_triggered:     "💰",
+  new_message:          "💬",
 };
 
 function fmtTime(iso: string) {
@@ -105,8 +106,8 @@ export function NotificationsBell() {
 
       {open && (
         <div
-          className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl shadow-black/20"
-          style={{ maxHeight: "70vh" }}
+          className="absolute right-0 top-10 z-50 w-64 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl shadow-black/20"
+          style={{ maxHeight: "70vh", maxWidth: "calc(100vw - 1rem)" }}
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
@@ -138,7 +139,7 @@ export function NotificationsBell() {
                 <span className="text-3xl">🔔</span>
                 <p className="text-xs font-semibold text-gray-500">No notifications yet</p>
                 <p className="text-[11px] text-gray-400">
-                  You&apos;ll be notified when bookings change status.
+                  You&apos;ll be notified when bookings change status or you receive a message.
                 </p>
               </div>
             ) : (
