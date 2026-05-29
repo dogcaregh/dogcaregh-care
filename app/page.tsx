@@ -131,7 +131,7 @@ export default function HomePage() {
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-24 text-center">
           <p
             className="mb-4 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-widest"
-            style={{ backgroundColor: "rgba(0,176,150,0.35)", color: "#00b096" }}
+            style={{ backgroundColor: "rgba(0,176,150,0.35)", color: "#80d8cb" }}
           >
             Ghana&apos;s #1 Pet Care Network
           </p>
