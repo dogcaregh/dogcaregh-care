@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -493,12 +494,15 @@ export default function BookingPage() {
           <Link href="/" className="text-xl font-bold tracking-tight text-white">
             Dog<span style={{ color: "#00b096" }}>Care</span>GH
           </Link>
-          <Link
-            href={me.role === "provider" ? "/dashboard/provider" : "/dashboard/owner"}
-            className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:border-white/40 hover:text-white"
-          >
-            ← Dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <NotificationsBell />
+            <Link
+              href={me.role === "provider" ? "/dashboard/provider" : "/dashboard/owner"}
+              className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-medium text-white/70 transition hover:border-white/40 hover:text-white"
+            >
+              ← Dashboard
+            </Link>
+          </div>
         </nav>
 
         {/* Tab bar */}

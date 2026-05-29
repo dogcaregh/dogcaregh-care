@@ -306,6 +306,7 @@ export default function ProviderDashboard() {
           >
             My Services
           </Link>
+          <NotificationsBell />
           <Link href="/dashboard/provider/profile" className="flex items-center transition hover:opacity-80" title="My Profile">
             {providerAvatar ? (
               <img src={providerAvatar} alt={providerName.split(" ")[0]} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/25" />
