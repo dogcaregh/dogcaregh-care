@@ -16,6 +16,9 @@ type ProviderService = {
   rate_small: number | null;
   rate_medium: number | null;
   rate_large: number | null;
+  rate_half_small: number | null;
+  rate_half_medium: number | null;
+  rate_half_large: number | null;
   is_active: boolean;
   availability: Record<string, AvailSlot> | null;
   grooming_mode: "simple" | "itemised" | null;
@@ -42,8 +45,9 @@ type Dog = {
 // ── Constants ──────────────────────────────────────────────────────────────
 
 // Booking mode per service slug
-const RANGE_SLUGS         = new Set(["dog_boarding"]);          // start → end date, no time
-const TIME_REQUIRED_SLUGS = new Set(["dog_walking", "dog_sitting"]); // dates + start time + duration
+const RANGE_SLUGS  = new Set(["dog_boarding"]);  // start → end date range
+const HOURLY_SLUGS = new Set(["dog_walking"]);   // calendar + time range → rate × hrs × dates
+const TIERED_SLUGS = new Set(["dog_sitting"]);   // calendar + half/full day + start time
 // dog_daycare and dog_grooming: dates only (calendar), no time
 
 const RATE_UNIT_LABEL: Record<string, string> = {
@@ -99,6 +103,20 @@ function rateForDog(svc: ProviderService, dogSize: string | null): number | null
   if (s.includes("large"))  return svc.rate_large;
   // fallback: return smallest available rate
   return svc.rate_small ?? svc.rate_medium ?? svc.rate_large ?? null;
+}
+
+function rateHalfForDog(svc: ProviderService, dogSize: string | null): number | null {
+  const s = (dogSize ?? "").toLowerCase();
+  if (s.includes("small"))  return svc.rate_half_small;
+  if (s.includes("medium")) return svc.rate_half_medium;
+  if (s.includes("large"))  return svc.rate_half_large;
+  return svc.rate_half_small ?? svc.rate_half_medium ?? svc.rate_half_large ?? null;
+}
+
+function addHours(time: string, hrs: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total  = h * 60 + m + hrs * 60;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
 function svcAvailDays(svc: ProviderService): string[] {
@@ -263,8 +281,9 @@ export default function BookPage() {
   const [startDate, setStartDate]         = useState("");        // boarding only
   const [endDate, setEndDate]             = useState("");        // boarding only
   const [selectedDates, setSelectedDates] = useState<string[]>([]); // all calendar services
-  const [startTime, setStartTime] = useState("");  // walking + sitting
-  const [endTime,   setEndTime]   = useState("");  // walking + sitting
+  const [startTime,   setStartTime]   = useState("");                     // walking + sitting
+  const [endTime,     setEndTime]     = useState("");                     // walking (hourly)
+  const [sittingTier, setSittingTier] = useState<"half"|"full"|"">("");  // sitting
   const [dogId, setDogId]                 = useState("");
   const [notes, setNotes]                 = useState("");
 
@@ -281,7 +300,7 @@ export default function BookPage() {
           .eq("id", providerId)
           .single(),
         sb.from("provider_services")
-          .select("id, service_type_id, rate_small, rate_medium, rate_large, grooming_mode, availability, is_active")
+          .select("id, service_type_id, rate_small, rate_medium, rate_large, rate_half_small, rate_half_medium, rate_half_large, grooming_mode, availability, is_active")
           .eq("provider_id", providerId)
           .eq("is_active", true),
         sb.from("service_types")
@@ -320,30 +339,59 @@ export default function BookPage() {
   }, [providerId, router]);
 
   // Derived values
-  const selectedSvc    = services.find(s => s.id === selectedSvcId) ?? null;
-  const selectedDog    = dogs.find(d => d.id === dogId) ?? null;
-  const slug           = selectedSvc?.service_types?.slug ?? "";
-  const isRange        = RANGE_SLUGS.has(slug);
-  const isTimeRequired = TIME_REQUIRED_SLUGS.has(slug);
-  const isItemised     = selectedSvc?.grooming_mode === "itemised";
-  const rate           = (!isItemised && selectedSvc) ? rateForDog(selectedSvc, selectedDog?.size ?? null) : null;
-  const days           = isRange
+  const selectedSvc  = services.find(s => s.id === selectedSvcId) ?? null;
+  const selectedDog  = dogs.find(d => d.id === dogId) ?? null;
+  const slug         = selectedSvc?.service_types?.slug ?? "";
+  const isRange      = RANGE_SLUGS.has(slug);
+  const isHourly     = HOURLY_SLUGS.has(slug);
+  const isTiered     = TIERED_SLUGS.has(slug);
+  const isItemised   = selectedSvc?.grooming_mode === "itemised";
+
+  const rate         = (!isItemised && selectedSvc) ? rateForDog(selectedSvc, selectedDog?.size ?? null) : null;
+  const halfRate     = (isTiered && selectedSvc)    ? rateHalfForDog(selectedSvc, selectedDog?.size ?? null) : null;
+  const fullRate     = (isTiered && selectedSvc)    ? rate : null;
+  const sittingRate  = sittingTier === "half" ? halfRate : sittingTier === "full" ? fullRate : null;
+
+  const days         = isRange
     ? (startDate && endDate ? daysBetween(startDate, endDate) : 1)
     : (selectedDates.length || 1);
-  const datesReady     = isRange ? !!(startDate && endDate) : selectedDates.length > 0;
-  const durationHours  = (isTimeRequired && startTime && endTime && endTime > startTime)
+  const datesReady   = isRange ? !!(startDate && endDate) : selectedDates.length > 0;
+
+  // Hourly (walking)
+  const durationHours  = (isHourly && startTime && endTime && endTime > startTime)
     ? timeDiffHours(startTime, endTime) : 0;
-  const availWindow    = (selectedSvc && isTimeRequired) ? svcAvailWindow(selectedSvc) : null;
-  const timeInWindow   = !availWindow || (
+
+  // Tiered (sitting)
+  const sittingDuration = sittingTier === "half" ? 6 : sittingTier === "full" ? 12 : 0;
+  const sittingEndTime  = (isTiered && startTime && sittingTier)
+    ? addHours(startTime, sittingDuration) : "";
+
+  const availWindow  = (selectedSvc && (isHourly || isTiered)) ? svcAvailWindow(selectedSvc) : null;
+
+  const hourlyTimeInWindow = !availWindow || (
     (!startTime || startTime >= availWindow.start) &&
     (!endTime   || endTime   <= availWindow.end)
   );
-  const timeValid      = !isTimeRequired || (!!startTime && !!endTime && endTime > startTime && timeInWindow);
-  const gross          = rate !== null && datesReady && (!isTimeRequired || durationHours > 0)
-    ? rate * (isTimeRequired ? durationHours : 1) * days
-    : null;
-  const commission     = gross !== null ? Math.round(gross * COMMISSION_RATE * 100) / 100 : null;
-  const availDays      = selectedSvc ? svcAvailDays(selectedSvc) : [];
+  const sittingTimeInWindow = !availWindow || (
+    (!startTime     || startTime     >= availWindow.start) &&
+    (!sittingEndTime || sittingEndTime <= availWindow.end)
+  );
+
+  const timeValid = isHourly
+    ? (!!startTime && !!endTime && endTime > startTime && hourlyTimeInWindow)
+    : isTiered
+    ? (!!sittingTier && !!startTime && sittingTimeInWindow)
+    : true;
+
+  const gross = (() => {
+    if (!datesReady) return null;
+    if (isTiered)  return sittingRate !== null ? sittingRate * days : null;
+    if (rate === null) return null;
+    if (isHourly)  return durationHours > 0 ? rate * durationHours * days : null;
+    return rate * days;
+  })();
+  const commission = gross !== null ? Math.round(gross * COMMISSION_RATE * 100) / 100 : null;
+  const availDays  = selectedSvc ? svcAvailDays(selectedSvc) : [];
 
   const canSubmit = !!selectedSvcId && !!dogId && !submitting && datesReady && timeValid;
 
@@ -386,9 +434,11 @@ export default function BookPage() {
         start_date:        effectiveStart,
         end_date:          effectiveEnd,
         selected_dates:    isRange ? null : selectedDates,
-        preferred_time:     isTimeRequired ? (startTime || null) : null,
-        preferred_end_time: isTimeRequired ? (endTime   || null) : null,
-        duration_hours:     isTimeRequired ? (durationHours || null) : null,
+        preferred_time:     (isHourly || isTiered) ? (startTime      || null) : null,
+        preferred_end_time: isHourly            ? (endTime          || null)
+                          : isTiered            ? (sittingEndTime   || null) : null,
+        duration_hours:     isHourly            ? (durationHours    || null)
+                          : isTiered            ? (sittingDuration  || null) : null,
         status:            "pending",
         gross_amount:      effectiveGross,
         commission_amount: effectiveComm,
@@ -534,7 +584,7 @@ export default function BookPage() {
                     <button
                       key={svc.id}
                       type="button"
-                      onClick={() => { setSelectedSvcId(svc.id); setStartDate(""); setEndDate(""); setSelectedDates([]); setStartTime(""); setEndTime(""); }}
+                      onClick={() => { setSelectedSvcId(svc.id); setStartDate(""); setEndDate(""); setSelectedDates([]); setStartTime(""); setEndTime(""); setSittingTier(""); }}
                       className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
                       style={
                         selected
@@ -547,7 +597,9 @@ export default function BookPage() {
                         <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{st.name}</p>
                         <p className="text-xs text-gray-400">{st.rate_unit}</p>
                       </div>
-                      {svc.grooming_mode === "itemised" ? (
+                      {svc.service_types?.slug === "dog_sitting" ? (
+                        <span className="shrink-0 text-xs text-gray-400">Half / Full day</span>
+                      ) : svc.grooming_mode === "itemised" ? (
                         <span className="shrink-0 text-xs text-gray-400">Itemised</span>
                       ) : r !== null ? (
                         <span className="shrink-0 text-sm font-extrabold" style={{ color: "#00b096" }}>
@@ -615,7 +667,7 @@ export default function BookPage() {
                   ))}
                 </div>
               )}
-              {selectedDog?.size && selectedSvc && !isItemised && rate !== null && (
+              {selectedDog?.size && selectedSvc && !isItemised && !isTiered && rate !== null && (
                 <p className="mt-2.5 text-xs text-gray-500">
                   Rate for <span className="font-semibold">{selectedDog.size}</span> dog:{" "}
                   <span className="font-bold" style={{ color: "#00b096" }}>GHS {rate}</span>
@@ -636,7 +688,7 @@ export default function BookPage() {
             {/* ── Date / time picker ── */}
             <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <p className="mb-1 text-sm font-bold" style={{ color: "#0a2e30" }}>
-                {isTimeRequired ? "Select Dates & Time" : "Select Dates"}
+                {(isHourly || isTiered) ? "Select Dates & Time" : "Select Dates"}
               </p>
               {availDays.length > 0 && (
                 <p className="mb-3 text-xs text-gray-500">
@@ -676,8 +728,85 @@ export default function BookPage() {
                 <>
                   <CalendarPicker selected={selectedDates} onChange={setSelectedDates} />
 
-                  {/* Time range — only for walking & sitting */}
-                  {isTimeRequired && (
+                  {/* Tiered time — sitting only */}
+                  {isTiered && (
+                    <div className="mt-4 space-y-4 border-t border-gray-100 pt-4">
+                      <p className="text-xs font-semibold text-gray-500">Session type</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {(["half", "full"] as const).map(tier => {
+                          const tierRate = tier === "half" ? halfRate : fullRate;
+                          return (
+                            <button
+                              key={tier}
+                              type="button"
+                              onClick={() => setSittingTier(tier)}
+                              className="rounded-xl border p-4 text-left transition"
+                              style={sittingTier === tier
+                                ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" }
+                                : { borderColor: "#e5e7eb" }}
+                            >
+                              <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>
+                                {tier === "half" ? "Half day" : "Full day"}
+                              </p>
+                              <p className="text-xs text-gray-400">{tier === "half" ? "6 hours" : "12 hours"}</p>
+                              {tierRate !== null ? (
+                                <p className="mt-1.5 text-sm font-extrabold" style={{ color: "#00b096" }}>
+                                  GHS {tierRate}
+                                </p>
+                              ) : selectedDog ? (
+                                <p className="mt-1 text-xs text-gray-400">Rate on request</p>
+                              ) : (
+                                <p className="mt-1 text-xs text-gray-400">Select dog for price</p>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {sittingTier && (
+                        <div>
+                          <label className="mb-1.5 block text-xs font-semibold text-gray-500">
+                            Preferred start time
+                          </label>
+                          <input
+                            type="time"
+                            required
+                            value={startTime}
+                            min={availWindow?.start}
+                            max={availWindow?.end}
+                            onChange={e => setStartTime(e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
+                          />
+                          {startTime && sittingEndTime && (
+                            <p className="mt-2 text-xs font-semibold" style={{ color: "#00b096" }}>
+                              Your sitter will be with your dog from{" "}
+                              <span>{startTime}</span> to <span>{sittingEndTime}</span>
+                            </p>
+                          )}
+                          {availWindow && (
+                            <p className="mt-1 text-xs text-gray-400">
+                              Provider available:{" "}
+                              <span className="font-semibold text-gray-600">{fmtWindow(availWindow)}</span>
+                            </p>
+                          )}
+                          {startTime && availWindow && startTime < availWindow.start && (
+                            <p className="mt-1 text-xs font-medium text-red-500">
+                              Start time is before provider&apos;s available hours ({fmtWindow(availWindow)}).
+                            </p>
+                          )}
+                          {sittingEndTime && availWindow && sittingEndTime > availWindow.end && (
+                            <p className="mt-1 text-xs font-medium text-red-500">
+                              This {sittingTier === "half" ? "6-hour" : "12-hour"} session ends at{" "}
+                              {sittingEndTime}, which exceeds the provider&apos;s hours ({fmtWindow(availWindow)}).
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Hourly time range — walking only */}
+                  {isHourly && (
                     <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
                       <p className="text-xs font-semibold text-gray-500">Preferred time</p>
                       <div className="grid gap-4 sm:grid-cols-2">
@@ -764,11 +893,24 @@ export default function BookPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-gray-600">
                     <span>
-                      GHS {rate}
-                      {selectedSvc?.service_types?.rate_unit
-                        ? <span className="text-gray-400"> {RATE_UNIT_LABEL[selectedSvc.service_types.rate_unit] ?? selectedSvc.service_types.rate_unit}</span>
-                        : null}
-                      {isTimeRequired && durationHours > 0 && (
+                      {isTiered ? (
+                        <>
+                          GHS {sittingRate}
+                          <span className="text-gray-400">
+                            {" "}/ {sittingTier === "half" ? "half day" : "full day"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          GHS {rate}
+                          {selectedSvc?.service_types?.rate_unit && (
+                            <span className="text-gray-400">
+                              {" "}{RATE_UNIT_LABEL[selectedSvc.service_types.rate_unit] ?? selectedSvc.service_types.rate_unit}
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {isHourly && durationHours > 0 && (
                         <span className="text-gray-400"> × {durationHours} hr{durationHours !== 1 ? "s" : ""}</span>
                       )}
                       {isRange && days > 1 && (

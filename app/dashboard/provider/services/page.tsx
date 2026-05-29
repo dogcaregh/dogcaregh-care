@@ -21,6 +21,9 @@ type ServiceConfig = {
   rateSmall: string;
   rateMedium: string;
   rateLarge: string;
+  rateHalfSmall: string;   // sitting half-day (6 hrs)
+  rateHalfMedium: string;
+  rateHalfLarge: string;
   maxCapacity: string;
   description: string;
   groomingMode: "simple" | "itemised";
@@ -59,7 +62,7 @@ const SERVICES: {
   unit: string;
 }[] = [
   { slug: "dog_walking",  emoji: "🦮", label: "Dog Walking",  unit: "per hour"    },
-  { slug: "dog_sitting",  emoji: "🐾", label: "Dog Sitting",  unit: "per hour"    },
+  { slug: "dog_sitting",  emoji: "🐾", label: "Dog Sitting",  unit: "half / full day" },
   { slug: "dog_daycare",  emoji: "🏡", label: "Dog Daycare",  unit: "per 12 hrs"  },
   { slug: "dog_boarding", emoji: "🛏️", label: "Dog Boarding", unit: "per night"   },
   { slug: "dog_grooming", emoji: "✂️", label: "Dog Grooming", unit: "per session" },
@@ -99,6 +102,9 @@ const DEFAULT_CONFIG: ServiceConfig = {
   rateSmall: "",
   rateMedium: "",
   rateLarge: "",
+  rateHalfSmall: "",
+  rateHalfMedium: "",
+  rateHalfLarge: "",
   maxCapacity: "",
   description: "",
   groomingMode: "simple",
@@ -322,7 +328,7 @@ export default function ProviderServicesPage() {
         sb
           .from("provider_services")
           .select(
-            "id, service_type_id, rate_small, rate_medium, rate_large, max_capacity, description, grooming_mode, is_active, availability"
+            "id, service_type_id, rate_small, rate_medium, rate_large, rate_half_small, rate_half_medium, rate_half_large, max_capacity, description, grooming_mode, is_active, availability"
           )
           .eq("provider_id", pid),
         sb
@@ -351,15 +357,18 @@ export default function ProviderServicesPage() {
         const slug = slugById[ps.service_type_id];
         if (!slug) continue;
         newConfigs[slug] = {
-          dbId:         ps.id,
-          enabled:      ps.is_active,
-          rateSmall:    ps.rate_small  != null ? String(ps.rate_small)  : "",
-          rateMedium:   ps.rate_medium != null ? String(ps.rate_medium) : "",
-          rateLarge:    ps.rate_large  != null ? String(ps.rate_large)  : "",
-          maxCapacity:  ps.max_capacity != null ? String(ps.max_capacity) : "",
-          description:  ps.description ?? "",
-          groomingMode:  (ps.grooming_mode as "simple" | "itemised") ?? "simple",
-          availability:  (ps.availability ?? {}) as Partial<Record<DayId, AvailSlot>>,
+          dbId:           ps.id,
+          enabled:        ps.is_active,
+          rateSmall:      ps.rate_small       != null ? String(ps.rate_small)       : "",
+          rateMedium:     ps.rate_medium      != null ? String(ps.rate_medium)      : "",
+          rateLarge:      ps.rate_large       != null ? String(ps.rate_large)       : "",
+          rateHalfSmall:  ps.rate_half_small  != null ? String(ps.rate_half_small)  : "",
+          rateHalfMedium: ps.rate_half_medium != null ? String(ps.rate_half_medium) : "",
+          rateHalfLarge:  ps.rate_half_large  != null ? String(ps.rate_half_large)  : "",
+          maxCapacity:    ps.max_capacity     != null ? String(ps.max_capacity)     : "",
+          description:    ps.description ?? "",
+          groomingMode:   (ps.grooming_mode as "simple" | "itemised") ?? "simple",
+          availability:   (ps.availability ?? {}) as Partial<Record<DayId, AvailSlot>>,
         };
         if (slug === "dog_grooming") groomingServiceId = ps.id;
       }
@@ -508,9 +517,12 @@ export default function ProviderServicesPage() {
                 ...(cfg.dbId ? { id: cfg.dbId } : {}),
                 provider_id:     providerId,
                 service_type_id: stId,
-                rate_small:      itemised || !cfg.rateSmall   ? null : Number(cfg.rateSmall),
-                rate_medium:     itemised || !cfg.rateMedium  ? null : Number(cfg.rateMedium),
-                rate_large:      itemised || !cfg.rateLarge   ? null : Number(cfg.rateLarge),
+                rate_small:       itemised || !cfg.rateSmall       ? null : Number(cfg.rateSmall),
+                rate_medium:      itemised || !cfg.rateMedium     ? null : Number(cfg.rateMedium),
+                rate_large:       itemised || !cfg.rateLarge      ? null : Number(cfg.rateLarge),
+                rate_half_small:  svc.slug !== "dog_sitting" || !cfg.rateHalfSmall  ? null : Number(cfg.rateHalfSmall),
+                rate_half_medium: svc.slug !== "dog_sitting" || !cfg.rateHalfMedium ? null : Number(cfg.rateHalfMedium),
+                rate_half_large:  svc.slug !== "dog_sitting" || !cfg.rateHalfLarge  ? null : Number(cfg.rateHalfLarge),
                 max_capacity:    cfg.maxCapacity ? Number(cfg.maxCapacity) : null,
                 description:     cfg.description.trim() || null,
                 grooming_mode:   isGrooming ? cfg.groomingMode : null,
@@ -804,28 +816,65 @@ export default function ProviderServicesPage() {
                           </div>
                         )}
 
-                        {/* Rate inputs — hidden for itemised grooming */}
-                        {!itemised && (
-                          <RateInputs
-                            rateSmall={cfg.rateSmall}
-                            rateMedium={cfg.rateMedium}
-                            rateLarge={cfg.rateLarge}
-                            onChange={(key, val) => updateConfig(svc.slug, { [key]: val })}
-                            rateLabel={
-                              svc.slug === "dog_walking" || svc.slug === "dog_sitting"
-                                ? "Hourly Rate by Dog Size (GH₵)"
-                                : svc.slug === "dog_daycare"
-                                ? "Rate per 12 hrs by Dog Size (GH₵)"
-                                : "Rate by Dog Size (GH₵)"
-                            }
-                          />
-                        )}
-
-                        {/* Hint for time-based services */}
-                        {(svc.slug === "dog_walking" || svc.slug === "dog_sitting") && (
-                          <p className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-                            💡 Owners will see your available days and hours when booking, and can specify their preferred start time and duration.
-                          </p>
+                        {/* Sitting: two rate tiers */}
+                        {svc.slug === "dog_sitting" ? (
+                          <div className="space-y-4">
+                            <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
+                              <p className="mb-3 text-xs font-bold" style={{ color: "#0a2e30" }}>
+                                Half-day rate — 6 hours (GH₵)
+                              </p>
+                              <RateInputs
+                                rateSmall={cfg.rateHalfSmall}
+                                rateMedium={cfg.rateHalfMedium}
+                                rateLarge={cfg.rateHalfLarge}
+                                onChange={(key, val) => updateConfig(svc.slug, {
+                                  rateHalfSmall:  key === "rateSmall"  ? val : cfg.rateHalfSmall,
+                                  rateHalfMedium: key === "rateMedium" ? val : cfg.rateHalfMedium,
+                                  rateHalfLarge:  key === "rateLarge"  ? val : cfg.rateHalfLarge,
+                                })}
+                                rateLabel=""
+                              />
+                            </div>
+                            <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
+                              <p className="mb-3 text-xs font-bold" style={{ color: "#0a2e30" }}>
+                                Full-day rate — 12 hours (GH₵)
+                              </p>
+                              <RateInputs
+                                rateSmall={cfg.rateSmall}
+                                rateMedium={cfg.rateMedium}
+                                rateLarge={cfg.rateLarge}
+                                onChange={(key, val) => updateConfig(svc.slug, { [key]: val })}
+                                rateLabel=""
+                              />
+                            </div>
+                            <p className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                              💡 Owners choose half-day or full-day when booking. Set both rates and your available hours below.
+                            </p>
+                          </div>
+                        ) : (
+                          /* All other services: single rate input, hidden for itemised grooming */
+                          <>
+                            {!itemised && (
+                              <RateInputs
+                                rateSmall={cfg.rateSmall}
+                                rateMedium={cfg.rateMedium}
+                                rateLarge={cfg.rateLarge}
+                                onChange={(key, val) => updateConfig(svc.slug, { [key]: val })}
+                                rateLabel={
+                                  svc.slug === "dog_walking"
+                                    ? "Hourly Rate by Dog Size (GH₵)"
+                                    : svc.slug === "dog_daycare"
+                                    ? "Rate per 12 hrs by Dog Size (GH₵)"
+                                    : "Rate by Dog Size (GH₵)"
+                                }
+                              />
+                            )}
+                            {svc.slug === "dog_walking" && (
+                              <p className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                                💡 Owners will see your available days and hours when booking, and can select a time range.
+                              </p>
+                            )}
+                          </>
                         )}
 
                         {/* Capacity + description */}
