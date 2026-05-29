@@ -219,8 +219,14 @@ function CalendarPicker({ selected, onChange }: { selected: string[]; onChange: 
   function toggle(ds: string) {
     onChange(selected.includes(ds) ? selected.filter(d => d !== ds) : [...selected, ds].sort());
   }
-  function prevMonth() { viewMonth === 0 ? (setViewYear(y => y - 1), setViewMonth(11)) : setViewMonth(m => m - 1); }
-  function nextMonth() { viewMonth === 11 ? (setViewYear(y => y + 1), setViewMonth(0)) : setViewMonth(m => m + 1); }
+  function prevMonth() {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
+    else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); }
+    else setViewMonth(m => m + 1);
+  }
   const cells: (string | null)[] = [...Array(startOffset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => toStr(i + 1))];
   while (cells.length % 7 !== 0) cells.push(null);
   return (
@@ -826,7 +832,7 @@ export default function BookPage() {
                   {validSlots.length > 1 ? "Total for all services" : "Price Summary"}
                 </p>
                 <div className="space-y-2 text-sm">
-                  {validSlots.length > 1 && validSlots.map((s, i) => {
+                  {validSlots.length > 1 && validSlots.map((s) => {
                     const g = slotGross(s, services, dogs);
                     const sv = services.find(sv => sv.id === s.svcId);
                     return g !== null ? (
