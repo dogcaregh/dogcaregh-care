@@ -87,6 +87,7 @@ const NOTIF_ICONS: Record<string, string> = {
   booking_declined:     "❌",
   booking_cancelled:    "🚫",
   payment_received:     "💳",
+  payment_confirmed:    "✅",
   service_started:      "🐾",
   awaiting_confirmation:"⏰",
   payout_triggered:     "💰",

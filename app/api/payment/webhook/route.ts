@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   const { data: booking } = await admin
     .from("bookings")
-    .select("id, gross_amount, status, provider_id")
+    .select("id, gross_amount, status, provider_id, owner_id")
     .eq("id", bookingId)
     .single();
 
@@ -58,15 +58,22 @@ export async function POST(req: NextRequest) {
     .eq("id", booking.provider_id)
     .single();
 
-  if (provider) {
-    await admin.from("notifications").insert({
+  await admin.from("notifications").insert([
+    ...(provider ? [{
       user_id: provider.user_id,
       booking_id: bookingId,
       type: "payment_received",
       message: "Payment received for your booking. Get ready for the service!",
       read: false,
-    });
-  }
+    }] : []),
+    {
+      user_id: booking.owner_id,
+      booking_id: bookingId,
+      type: "payment_confirmed",
+      message: "Your payment was successful! Your booking is now confirmed.",
+      read: false,
+    },
+  ]);
 
   return NextResponse.json({ success: true });
 }
