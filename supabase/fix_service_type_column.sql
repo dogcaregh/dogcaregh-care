@@ -31,6 +31,10 @@ ALTER TABLE public.providers
   ALTER COLUMN services TYPE text[]
   USING services::text[];
 
+-- Reset the default so it no longer references the enum type
+ALTER TABLE public.providers
+  ALTER COLUMN services SET DEFAULT '{}'::text[];
+
 UPDATE public.providers
   SET services = ARRAY(
     SELECT CASE
