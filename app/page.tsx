@@ -146,16 +146,16 @@ export default function HomePage() {
           </p>
 
           {/* Search */}
-          <form onSubmit={handleSearch} className="mt-10 flex w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl shadow-black/30">
-            <span className="flex items-center pl-5 text-xl">📍</span>
+          <form onSubmit={handleSearch} className="mt-8 flex w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-2xl shadow-black/30 md:mt-10 md:rounded-2xl">
+            <span className="flex items-center pl-3 text-base md:pl-5 md:text-xl">📍</span>
             <input
               ref={inputRef}
               type="text"
               list="home-accra-areas"
               value={location}
               onChange={e => setLocation(e.target.value)}
-              placeholder="Enter your neighbourhood or city…"
-              className="flex-1 bg-transparent px-4 py-4 text-sm placeholder-gray-400 outline-none"
+              placeholder="Enter your neighbourhood…"
+              className="flex-1 bg-transparent px-3 py-3 text-xs placeholder-gray-400 outline-none md:px-4 md:py-4 md:text-sm"
               style={{ color: "#0a2e30" }}
               autoComplete="off"
             />
@@ -166,7 +166,7 @@ export default function HomePage() {
             </datalist>
             <button
               type="submit"
-              className="m-2 rounded-xl px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+              className="m-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90 md:m-2 md:rounded-xl md:px-6 md:py-3 md:text-sm"
               style={{ backgroundColor: "#00b096" }}
             >
               Search
