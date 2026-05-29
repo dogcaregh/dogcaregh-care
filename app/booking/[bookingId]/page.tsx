@@ -50,6 +50,7 @@ type BookingDetail = {
   created_at: string;
   providers: ProviderRow | ProviderRow[] | null;
   dogs: DogRow | DogRow[] | null;
+  additional_dog_ids: string[] | null;
   users: OwnerRow | OwnerRow[] | null;
 };
 
@@ -268,8 +269,9 @@ export default function BookingPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
 
-  const [tab,      setTab]      = useState<"details" | "messages">("details");
-  const [booking,  setBooking]  = useState<BookingDetail | null>(null);
+  const [tab,          setTab]          = useState<"details" | "messages">("details");
+  const [booking,      setBooking]      = useState<BookingDetail | null>(null);
+  const [extraDogs,    setExtraDogs]    = useState<{ id: string; name: string; size: string | null }[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [me,       setMe]       = useState<Party | null>(null);
   const [other,    setOther]    = useState<Party | null>(null);
@@ -303,7 +305,7 @@ export default function BookingPage() {
         sb
           .from("bookings")
           .select(`
-            id, service_type, start_date, end_date, selected_dates, preferred_time, preferred_end_time, duration_hours, gross_amount, provider_payout,
+            id, service_type, start_date, end_date, selected_dates, additional_dog_ids, preferred_time, preferred_end_time, duration_hours, gross_amount, provider_payout,
             status, owner_id, created_at,
             providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
             dogs!dog_id(name, breed, size, age, vaccination_status),
@@ -347,6 +349,12 @@ export default function BookingPage() {
           ? { userId: provider?.user_id ?? "", name: providerUser?.name ?? "Provider", avatarUrl: provider?.avatar_url ?? null, role: "provider" }
           : { userId: bk.owner_id, name: ownerRow?.name ?? "Owner", avatarUrl: ownerRow?.avatar_url ?? null, role: "owner" }
       );
+
+      // Fetch additional dogs if present
+      if (bk.additional_dog_ids && bk.additional_dog_ids.length > 0) {
+        const { data: extraData } = await sb.from("dogs").select("id, name, size").in("id", bk.additional_dog_ids);
+        setExtraDogs((extraData ?? []) as { id: string; name: string; size: string | null }[]);
+      }
 
       setBooking(bk);
       setMessages((msgsRes.data ?? []) as Message[]);
@@ -648,31 +656,31 @@ export default function BookingPage() {
               {/* Dog card */}
               {dog && (
                 <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Dog</p>
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl"
-                      style={{ backgroundColor: "rgba(0,176,150,.1)" }}
-                    >
-                      🐕
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-base font-bold" style={{ color: "#0a2e30" }}>{dog.name}</p>
-                      <p className="mt-0.5 text-xs text-gray-500">
-                        {[dog.breed, dog.size ? (SIZE_LABEL[dog.size] ?? dog.size) : null, dog.age ? `${dog.age}y` : null]
-                          .filter(Boolean).join(" · ") || "No details"}
-                      </p>
-                    </div>
-                    <span
-                      className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                      style={
-                        dog.vaccination_status
-                          ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
-                          : { background: "rgba(239,68,68,.1)", color: "#dc2626" }
-                      }
-                    >
-                      {dog.vaccination_status ? "Vaccinated" : "Unvaccinated"}
-                    </span>
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    Dog{extraDogs.length > 0 ? `s (${1 + extraDogs.length})` : ""}
+                  </p>
+                  <div className="space-y-3">
+                    {[{ ...dog, isPrimary: true }, ...extraDogs.map(d => ({ ...d, breed: null, age: null, vaccination_status: null, isPrimary: false }))].map((d, i) => (
+                      <div key={i} className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl" style={{ backgroundColor: "rgba(0,176,150,.1)" }}>🐕</div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold" style={{ color: "#0a2e30" }}>{d.name}</p>
+                          <p className="mt-0.5 text-xs text-gray-500">
+                            {[
+                              "breed" in d ? d.breed : null,
+                              d.size ? (SIZE_LABEL[d.size] ?? d.size) : null,
+                              "age" in d && d.age ? `${d.age}y` : null,
+                            ].filter(Boolean).join(" · ") || "No details"}
+                          </p>
+                        </div>
+                        {"vaccination_status" in d && d.vaccination_status !== null && (
+                          <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                            style={d.vaccination_status ? { background: "rgba(0,176,150,.12)", color: "#00b096" } : { background: "rgba(239,68,68,.1)", color: "#dc2626" }}>
+                            {d.vaccination_status ? "Vaccinated" : "Unvaccinated"}
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
