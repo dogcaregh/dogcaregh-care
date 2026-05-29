@@ -283,6 +283,7 @@ export default function BookingPage() {
   const [other,    setOther]    = useState<Party | null>(null);
   const [loading,  setLoading]  = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [paying,   setPaying]   = useState(false);
   const [text,     setText]     = useState("");
   const [sending,  setSending]  = useState(false);
   const [uploading,setUploading]= useState(false);
@@ -399,6 +400,28 @@ export default function BookingPage() {
     const { error } = await sb.from("bookings").update({ status }).eq("id", booking.id);
     if (!error) setBooking(prev => prev ? { ...prev, status } : prev);
     setUpdating(false);
+  }
+
+  async function handlePayment() {
+    if (!booking || paying) return;
+    setPaying(true);
+    try {
+      const res = await fetch("/api/payment/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+      const data = await res.json();
+      if (data.authorization_url) {
+        window.location.href = data.authorization_url;
+      } else {
+        alert(data.error ?? "Could not start payment. Please try again.");
+        setPaying(false);
+      }
+    } catch {
+      alert("Could not start payment. Please try again.");
+      setPaying(false);
+    }
   }
 
   async function sendMessage(e: React.FormEvent) {
@@ -764,17 +787,14 @@ export default function BookingPage() {
 
                 {/* Owner: Pay now */}
                 {isOwner && booking.status === "confirmed" && (
-                  <>
-                    <button
-                      disabled={updating}
-                      onClick={() => updateStatus("paid")}
-                      className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                      style={{ backgroundColor: "#00b096" }}
-                    >
-                      {updating ? "Processing…" : `💳 Pay Now — GHS ${Number(booking.gross_amount).toFixed(2)}`}
-                    </button>
-                    <p className="text-center text-xs text-gray-400">Paystack integration coming soon — payment is simulated.</p>
-                  </>
+                  <button
+                    disabled={paying}
+                    onClick={handlePayment}
+                    className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                    style={{ backgroundColor: "#00b096" }}
+                  >
+                    {paying ? "Redirecting to Paystack…" : `💳 Pay Now — GHS ${Number(booking.gross_amount).toFixed(2)}`}
+                  </button>
                 )}
 
                 {/* Owner: Confirm complete */}

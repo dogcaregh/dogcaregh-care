@@ -300,6 +300,27 @@ export default function OwnerDashboard() {
     setUpdating(null);
   }
 
+  async function handlePayment(bookingId: string) {
+    setUpdating(bookingId);
+    try {
+      const res = await fetch("/api/payment/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId }),
+      });
+      const data = await res.json();
+      if (data.authorization_url) {
+        window.location.href = data.authorization_url;
+      } else {
+        alert(data.error ?? "Could not start payment. Please try again.");
+        setUpdating(null);
+      }
+    } catch {
+      alert("Could not start payment. Please try again.");
+      setUpdating(null);
+    }
+  }
+
   async function dismissNotif(id: string) {
     setNotifs(prev => prev.filter(n => n.id !== id));
     await createClient().from("notifications").update({ read: true }).eq("id", id);
@@ -674,14 +695,11 @@ export default function OwnerDashboard() {
 
                         {b.status === "confirmed" && (
                           <div className="mt-4 space-y-2">
-                            <button disabled={isBusy} onClick={() => updateStatus(b.id, "paid")}
+                            <button disabled={isBusy} onClick={() => handlePayment(b.id)}
                               className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
                               style={{ backgroundColor: "#00b096" }}>
-                              {isBusy ? "Processing…" : `💳  Pay Now — GHS ${Number(b.gross_amount).toFixed(2)}`}
+                              {isBusy ? "Redirecting to Paystack…" : `💳  Pay Now — GHS ${Number(b.gross_amount).toFixed(2)}`}
                             </button>
-                            <p className="text-center text-xs text-gray-400">
-                              Paystack integration coming soon — payment is simulated.
-                            </p>
                             <button disabled={isBusy} onClick={() => updateStatus(b.id, "cancelled")}
                               className="w-full rounded-xl border border-gray-200 py-2 text-xs font-medium text-gray-400 transition hover:bg-gray-50 disabled:opacity-50">
                               Cancel booking
