@@ -115,7 +115,7 @@ export default function OwnerRegisterPage() {
       </div>
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-5 md:px-12">
-        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-7 w-auto md:h-12" /></Link>
+        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto md:h-[4.5rem]" /></Link>
         <Link
           href="/register/provider"
           className="text-sm text-white/60 transition hover:text-white"

@@ -639,7 +639,7 @@ export default function ProviderServicesPage() {
         className="flex min-h-screen flex-col items-center justify-center"
         style={{ backgroundColor: "#0a2e30" }}
       >
-        <img src="/weblogo.png" alt="DogCareGH" className="h-7 w-auto md:h-12" />
+        <img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto md:h-[4.5rem]" />
         <p className="mt-3 animate-pulse text-sm text-white/50">
           Loading services…
         </p>
@@ -659,7 +659,7 @@ export default function ProviderServicesPage() {
         className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 px-6 py-4 md:px-12"
         style={{ backgroundColor: "#0a2e30" }}
       >
-        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-7 w-auto md:h-12" /></Link>
+        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto md:h-[4.5rem]" /></Link>
         <Link
           href="/dashboard/provider"
           className="text-xs font-medium text-white/60 transition hover:text-white"

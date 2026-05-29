@@ -488,7 +488,7 @@ export default function BookingPage() {
   // ── Loading / not found ───────────────────────────────────────────────────
   if (loading) return (
     <div className="flex h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
-      <img src="/weblogo.png" alt="DogCareGH" className="h-7 w-auto md:h-12" />
+      <img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto md:h-[4.5rem]" />
       <p className="mt-3 animate-pulse text-sm text-white/50">Loading…</p>
     </div>
   );
@@ -529,7 +529,7 @@ export default function BookingPage() {
 
         {/* Nav */}
         <nav className="shrink-0 flex items-center justify-between border-b border-white/10 px-5 py-3 md:px-8" style={{ backgroundColor: "#0a2e30" }}>
-          <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-7 w-auto md:h-12" /></Link>
+          <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto md:h-[4.5rem]" /></Link>
           <div className="flex items-center gap-2">
             <NotificationsBell />
             <Link

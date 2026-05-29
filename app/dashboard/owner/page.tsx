@@ -360,7 +360,7 @@ export default function OwnerDashboard() {
 
   if (loading) return (
     <div className="flex min-h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
-      <img src="/weblogo.png" alt="DogCareGH" className="h-7 w-auto md:h-12" />
+      <img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto md:h-[4.5rem]" />
       <p className="mt-3 animate-pulse text-sm text-white/50">Loading…</p>
     </div>
   );
@@ -372,7 +372,7 @@ export default function OwnerDashboard() {
 
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 px-6 py-4 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
-        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-7 w-auto md:h-12" /></Link>
+        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto md:h-[4.5rem]" /></Link>
         <div className="flex items-center gap-3">
           <Link href="/search" className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 sm:block">
             Find Providers
