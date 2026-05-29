@@ -35,10 +35,10 @@ type BookingStatus =
   | "cancelled";
 
 type ServiceId =
-  | "pet_sitting"
-  | "doggy_daycare"
+  | "dog_sitting"
+  | "dog_daycare"
   | "dog_boarding"
-  | "mobile_grooming"
+  | "dog_grooming"
   | "dog_walking";
 
 type Booking = {
@@ -60,11 +60,11 @@ type Booking = {
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const SERVICES: Record<ServiceId, { label: string; emoji: string }> = {
-  pet_sitting:     { label: "Pet Sitting",     emoji: "🐾" },
-  doggy_daycare:   { label: "Doggy Daycare",   emoji: "🏡" },
-  dog_boarding:    { label: "Dog Boarding",    emoji: "🛏️" },
-  mobile_grooming: { label: "Mobile Grooming", emoji: "✂️" },
-  dog_walking:     { label: "Dog Walking",     emoji: "🦮" },
+  dog_sitting:  { label: "Dog Sitting",  emoji: "🐾" },
+  dog_daycare:  { label: "Dog Daycare",  emoji: "🏡" },
+  dog_boarding: { label: "Dog Boarding", emoji: "🛏️" },
+  dog_grooming: { label: "Dog Grooming", emoji: "✂️" },
+  dog_walking:  { label: "Dog Walking",  emoji: "🦮" },
 };
 
 const STATUS_META: Record<BookingStatus, { label: string; color: string; bg: string }> = {

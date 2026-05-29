@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
 const services = [
-  { emoji: "🐾", name: "Pet Sitting",     id: "pet_sitting",     description: "A trusted sitter cares for your pet in their own home while you're away."          },
-  { emoji: "🏡", name: "Doggy Daycare",   id: "doggy_daycare",   description: "Socialisation and supervised play for your dog during the day."                    },
-  { emoji: "🛏️", name: "Dog Boarding",    id: "dog_boarding",    description: "Overnight stays in a comfortable home — no kennels, ever."                        },
-  { emoji: "✂️", name: "Mobile Grooming", id: "mobile_grooming", description: "Professional grooming that comes straight to your door."                           },
-  { emoji: "🦮", name: "Dog Walking",     id: "dog_walking",     description: "Daily walks to keep your dog happy, healthy, and well-exercised."                  },
+  { emoji: "🐾", name: "Dog Sitting",  id: "dog_sitting",  description: "A trusted sitter cares for your dog in their own home while you're away."  },
+  { emoji: "🏡", name: "Dog Daycare",  id: "dog_daycare",  description: "Socialisation and supervised play for your dog during the day."              },
+  { emoji: "🛏️", name: "Dog Boarding", id: "dog_boarding", description: "Overnight stays in a comfortable home — no kennels, ever."                  },
+  { emoji: "✂️", name: "Dog Grooming", id: "dog_grooming", description: "Professional grooming services for your dog."                                },
+  { emoji: "🦮", name: "Dog Walking",  id: "dog_walking",  description: "Daily walks to keep your dog happy, healthy, and well-exercised."            },
 ];
 
 type AuthUser = { name: string; isProvider: boolean } | null;

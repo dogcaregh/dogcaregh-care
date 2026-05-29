@@ -17,7 +17,8 @@ type ProviderService = {
   rate_large: number | null;
   is_active: boolean;
   availability: Record<string, AvailSlot> | null;
-  service_types: { slug: string; name: string; emoji: string; unit_label: string } | null;
+  grooming_mode: "simple" | "itemised" | null;
+  service_types: { slug: string; name: string; emoji: string; rate_unit: string } | null;
 };
 
 type ProviderInfo = {
@@ -105,6 +106,7 @@ export default function BookPage() {
   const [loading, setLoading]       = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
+  const [dateWarning, setDateWarning] = useState(false);
 
   // Form fields
   const [selectedSvcId, setSelectedSvcId] = useState("");
@@ -126,7 +128,7 @@ export default function BookPage() {
           .eq("id", providerId)
           .single(),
         sb.from("provider_services")
-          .select("id, service_type_id, rate_small, rate_medium, rate_large, is_active, availability, service_types(slug, name, emoji, unit_label)")
+          .select("id, service_type_id, rate_small, rate_medium, rate_large, grooming_mode, is_active, availability, service_types(slug, name, emoji, rate_unit)")
           .eq("provider_id", providerId)
           .eq("is_active", true),
         sb.from("dogs")
@@ -155,7 +157,8 @@ export default function BookPage() {
   const selectedDog  = dogs.find(d => d.id === dogId) ?? null;
   const slug         = selectedSvc?.service_types?.slug ?? "";
   const multiDay     = MULTI_DAY_SLUGS.has(slug);
-  const rate         = selectedSvc ? rateForDog(selectedSvc, selectedDog?.size ?? null) : null;
+  const isItemised   = selectedSvc?.grooming_mode === "itemised";
+  const rate         = (!isItemised && selectedSvc) ? rateForDog(selectedSvc, selectedDog?.size ?? null) : null;
   const days         = multiDay && startDate && endDate ? daysBetween(startDate, endDate) : 1;
   const gross        = rate !== null ? rate * days : null;
   const commission   = gross !== null ? Math.round(gross * COMMISSION_RATE * 100) / 100 : null;
@@ -173,7 +176,20 @@ export default function BookPage() {
     const { data: { user } } = await sb.auth.getUser();
     if (!user) { router.replace("/login"); return; }
 
-    const effectiveEnd    = multiDay ? endDate : startDate;
+    const effectiveEnd = multiDay ? endDate : startDate;
+
+    // Check for overlapping non-cancelled bookings from this provider (soft warning only)
+    const { data: conflicts } = await sb
+      .from("bookings")
+      .select("id")
+      .eq("provider_id", provider.id)
+      .neq("status", "cancelled")
+      .lte("start_date", effectiveEnd)
+      .gte("end_date", startDate)
+      .limit(1);
+
+    if (conflicts && conflicts.length > 0) setDateWarning(true);
+
     const effectiveGross  = gross ?? 0;
     const effectiveComm   = commission ?? 0;
     const effectivePayout = Math.round((effectiveGross - effectiveComm) * 100) / 100;
@@ -343,9 +359,11 @@ export default function BookPage() {
                       <span className="text-2xl">{st.emoji}</span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{st.name}</p>
-                        <p className="text-xs text-gray-400">{st.unit_label}</p>
+                        <p className="text-xs text-gray-400">{st.rate_unit}</p>
                       </div>
-                      {r !== null ? (
+                      {svc.grooming_mode === "itemised" ? (
+                        <span className="shrink-0 text-xs text-gray-400">Itemised</span>
+                      ) : r !== null ? (
                         <span className="shrink-0 text-sm font-extrabold" style={{ color: "#00b096" }}>
                           GHS {r}
                         </span>
@@ -411,11 +429,16 @@ export default function BookPage() {
                   ))}
                 </div>
               )}
-              {selectedDog?.size && selectedSvc && rate !== null && (
+              {selectedDog?.size && selectedSvc && !isItemised && rate !== null && (
                 <p className="mt-2.5 text-xs text-gray-500">
                   Rate for <span className="font-semibold">{selectedDog.size}</span> dog:{" "}
                   <span className="font-bold" style={{ color: "#00b096" }}>GHS {rate}</span>
-                  {" "}{selectedSvc.service_types?.unit_label}
+                  {" "}{selectedSvc.service_types?.rate_unit}
+                </p>
+              )}
+              {isItemised && selectedSvc && (
+                <p className="mt-2.5 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  ✂️ This provider offers itemised grooming pricing. Final cost depends on the services chosen — discuss directly via chat after booking.
                 </p>
               )}
             </div>
@@ -491,7 +514,7 @@ export default function BookPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-gray-600">
                     <span>
-                      GHS {rate} {selectedSvc?.service_types?.unit_label}
+                      GHS {rate} {selectedSvc?.service_types?.rate_unit}
                       {multiDay && days > 1 && (
                         <span className="text-gray-400"> × {days} days</span>
                       )}
@@ -511,6 +534,12 @@ export default function BookPage() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {dateWarning && (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                ⚠️ This provider may already have a booking on these dates. Your request has been sent — they&apos;ll confirm whether they can accommodate you.
+              </p>
             )}
 
             {error && (

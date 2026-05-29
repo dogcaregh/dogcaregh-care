@@ -67,11 +67,11 @@ type Party = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SERVICES: Record<string, { label: string; emoji: string }> = {
-  pet_sitting:     { label: "Pet Sitting",     emoji: "🐾" },
-  doggy_daycare:   { label: "Doggy Daycare",   emoji: "🏡" },
-  dog_boarding:    { label: "Dog Boarding",    emoji: "🛏️" },
-  mobile_grooming: { label: "Mobile Grooming", emoji: "✂️" },
-  dog_walking:     { label: "Dog Walking",     emoji: "🦮" },
+  dog_sitting:  { label: "Dog Sitting",  emoji: "🐾" },
+  dog_daycare:  { label: "Dog Daycare",  emoji: "🏡" },
+  dog_boarding: { label: "Dog Boarding", emoji: "🛏️" },
+  dog_grooming: { label: "Dog Grooming", emoji: "✂️" },
+  dog_walking:  { label: "Dog Walking",  emoji: "🦮" },
 };
 
 const STATUS_META: Record<BookingStatus, { label: string; color: string; bg: string; desc: string }> = {
