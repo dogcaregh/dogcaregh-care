@@ -69,7 +69,7 @@ export default function HomePage() {
         {/* 70% dark-green blend overlay */}
         <div
           className="pointer-events-none absolute inset-0"
-          style={{ backgroundColor: "rgba(10, 46, 48, 0.70)" }}
+          style={{ backgroundColor: "rgba(10, 46, 48, 0.60)" }}
         />
         <div
           className="pointer-events-none absolute inset-0"
