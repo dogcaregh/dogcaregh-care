@@ -166,7 +166,7 @@ export default function HomePage() {
             </datalist>
             <button
               type="submit"
-              className="m-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90 md:m-2 md:rounded-xl md:px-6 md:py-3 md:text-sm"
+              className="m-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 md:m-2 md:rounded-xl md:px-6 md:py-3 md:text-sm"
               style={{ backgroundColor: "#00b096" }}
             >
               Search
