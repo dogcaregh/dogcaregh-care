@@ -165,7 +165,7 @@ export default function LoginPage() {
         </svg>
       </div>
       <nav className="flex items-center justify-between px-6 py-5 md:px-12">
-        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-12 w-auto" /></Link>
+        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-7 w-auto md:h-12" /></Link>
       </nav>
 
       <div className="flex flex-1 items-center justify-center px-4 py-12">
