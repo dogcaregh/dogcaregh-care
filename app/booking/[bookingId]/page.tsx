@@ -38,6 +38,7 @@ type BookingDetail = {
   service_type: string;
   start_date: string;
   end_date: string;
+  selected_dates: string[] | null;
   gross_amount: number;
   provider_payout: number;
   status: BookingStatus;
@@ -298,7 +299,7 @@ export default function BookingPage() {
         sb
           .from("bookings")
           .select(`
-            id, service_type, start_date, end_date, gross_amount, provider_payout,
+            id, service_type, start_date, end_date, selected_dates, gross_amount, provider_payout,
             status, owner_id, created_at,
             providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
             dogs!dog_id(name, breed, size, age, vaccination_status),
@@ -547,10 +548,25 @@ export default function BookingPage() {
                       <p className="mt-0.5 text-gray-700">{svc?.emoji} {svc?.label}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{sameDay ? "Date" : "Dates"}</p>
-                      <p className="mt-0.5 text-gray-700">
-                        {sameDay ? fmtDate(booking.start_date) : `${fmtDate(booking.start_date)} → ${fmtDate(booking.end_date)}`}
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                        {booking.selected_dates && booking.selected_dates.length > 1
+                          ? `Dates (${booking.selected_dates.length})`
+                          : sameDay ? "Date" : "Dates"}
                       </p>
+                      {booking.selected_dates && booking.selected_dates.length > 0 ? (
+                        <div className="mt-0.5 flex flex-wrap gap-1">
+                          {booking.selected_dates.map(d => (
+                            <span key={d} className="rounded-md px-1.5 py-0.5 text-xs font-medium"
+                              style={{ backgroundColor: "rgba(0,176,150,.1)", color: "#00b096" }}>
+                              {fmtDate(d)}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-0.5 text-gray-700">
+                          {sameDay ? fmtDate(booking.start_date) : `${fmtDate(booking.start_date)} → ${fmtDate(booking.end_date)}`}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Booked On</p>

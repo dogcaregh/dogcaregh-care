@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
@@ -99,6 +99,119 @@ function svcAvailDays(svc: ProviderService): string[] {
 
 const today = new Date().toISOString().split("T")[0];
 
+// ── Calendar multi-date picker ─────────────────────────────────────────────
+
+function CalendarPicker({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (dates: string[]) => void;
+}) {
+  const now = new Date();
+  const [viewYear,  setViewYear]  = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth());
+
+  const firstOfMonth = useMemo(() => new Date(viewYear, viewMonth, 1), [viewYear, viewMonth]);
+  const daysInMonth  = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const startOffset  = (firstOfMonth.getDay() + 6) % 7; // Mon-first
+
+  const monthLabel = firstOfMonth.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+
+  function pad(n: number) { return String(n).padStart(2, "0"); }
+  function toStr(d: number) { return `${viewYear}-${pad(viewMonth + 1)}-${pad(d)}`; }
+
+  function toggle(ds: string) {
+    onChange(
+      selected.includes(ds)
+        ? selected.filter(d => d !== ds)
+        : [...selected, ds].sort()
+    );
+  }
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
+    else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); }
+    else setViewMonth(m => m + 1);
+  }
+
+  const cells: (string | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => toStr(i + 1)),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <button type="button" onClick={prevMonth}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-lg text-gray-500 transition hover:bg-gray-100">
+          ‹
+        </button>
+        <span className="text-sm font-bold" style={{ color: "#0a2e30" }}>{monthLabel}</span>
+        <button type="button" onClick={nextMonth}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-lg text-gray-500 transition hover:bg-gray-100">
+          ›
+        </button>
+      </div>
+
+      <div className="mb-1 grid grid-cols-7 text-center">
+        {["Mo","Tu","We","Th","Fr","Sa","Su"].map(d => (
+          <span key={d} className="text-[10px] font-semibold text-gray-400">{d}</span>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-y-1">
+        {cells.map((ds, i) => {
+          if (!ds) return <div key={`e-${i}`} />;
+          const isPast     = ds < today;
+          const isSelected = selected.includes(ds);
+          const isToday    = ds === today;
+          return (
+            <button
+              key={ds}
+              type="button"
+              disabled={isPast}
+              onClick={() => toggle(ds)}
+              className="mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm transition"
+              style={
+                isSelected
+                  ? { backgroundColor: "#00b096", color: "#fff", fontWeight: 700 }
+                  : isPast
+                  ? { color: "#d1d5db", cursor: "not-allowed" }
+                  : isToday
+                  ? { border: "2px solid #00b096", color: "#0a2e30", fontWeight: 600 }
+                  : { color: "#374151" }
+              }
+            >
+              {parseInt(ds.split("-")[2])}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between">
+        {selected.length > 0 ? (
+          <>
+            <p className="text-xs font-semibold" style={{ color: "#00b096" }}>
+              {selected.length} date{selected.length !== 1 ? "s" : ""} selected
+            </p>
+            <button type="button" onClick={() => onChange([])}
+              className="text-xs text-gray-400 transition hover:text-red-400">
+              Clear all
+            </button>
+          </>
+        ) : (
+          <p className="text-xs text-gray-400">Tap dates to select them</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function BookPage() {
@@ -115,8 +228,9 @@ export default function BookPage() {
 
   // Form fields
   const [selectedSvcId, setSelectedSvcId] = useState("");
-  const [startDate, setStartDate]         = useState("");
-  const [endDate, setEndDate]             = useState("");
+  const [startDate, setStartDate]         = useState("");   // range services only
+  const [endDate, setEndDate]             = useState("");   // range services only
+  const [selectedDates, setSelectedDates] = useState<string[]>([]); // multi-date services
   const [dogId, setDogId]                 = useState("");
   const [notes, setNotes]                 = useState("");
 
@@ -175,15 +289,20 @@ export default function BookPage() {
   const selectedSvc  = services.find(s => s.id === selectedSvcId) ?? null;
   const selectedDog  = dogs.find(d => d.id === dogId) ?? null;
   const slug         = selectedSvc?.service_types?.slug ?? "";
-  const multiDay     = MULTI_DAY_SLUGS.has(slug);
+  const isRange      = MULTI_DAY_SLUGS.has(slug);
   const isItemised   = selectedSvc?.grooming_mode === "itemised";
   const rate         = (!isItemised && selectedSvc) ? rateForDog(selectedSvc, selectedDog?.size ?? null) : null;
-  const days         = multiDay && startDate && endDate ? daysBetween(startDate, endDate) : 1;
-  const gross        = rate !== null ? rate * days : null;
+  const days         = isRange
+    ? (startDate && endDate ? daysBetween(startDate, endDate) : 1)
+    : (selectedDates.length || 1);
+  const gross        = rate !== null && (isRange ? !!(startDate && endDate) : selectedDates.length > 0)
+    ? rate * days
+    : null;
   const commission   = gross !== null ? Math.round(gross * COMMISSION_RATE * 100) / 100 : null;
   const availDays    = selectedSvc ? svcAvailDays(selectedSvc) : [];
 
-  const canSubmit = !!selectedSvcId && !!startDate && (!multiDay || !!endDate) && !!dogId && !submitting;
+  const canSubmit = !!selectedSvcId && !!dogId && !submitting &&
+    (isRange ? !!(startDate && endDate) : selectedDates.length > 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -195,16 +314,17 @@ export default function BookPage() {
     const { data: { user } } = await sb.auth.getUser();
     if (!user) { router.replace("/login"); return; }
 
-    const effectiveEnd = multiDay ? endDate : startDate;
+    const effectiveStart = isRange ? startDate : selectedDates[0];
+    const effectiveEnd   = isRange ? endDate   : selectedDates[selectedDates.length - 1];
 
-    // Check for overlapping non-cancelled bookings from this provider (soft warning only)
+    // Soft overlap check
     const { data: conflicts } = await sb
       .from("bookings")
       .select("id")
       .eq("provider_id", provider.id)
       .neq("status", "cancelled")
       .lte("start_date", effectiveEnd)
-      .gte("end_date", startDate)
+      .gte("end_date", effectiveStart)
       .limit(1);
 
     if (conflicts && conflicts.length > 0) setDateWarning(true);
@@ -220,8 +340,9 @@ export default function BookPage() {
         provider_id:       provider.id,
         dog_id:            dogId,
         service_type:      selectedSvc.service_types?.slug ?? "",
-        start_date:        startDate,
+        start_date:        effectiveStart,
         end_date:          effectiveEnd,
+        selected_dates:    isRange ? null : selectedDates,
         status:            "pending",
         gross_amount:      effectiveGross,
         commission_amount: effectiveComm,
@@ -367,7 +488,7 @@ export default function BookPage() {
                     <button
                       key={svc.id}
                       type="button"
-                      onClick={() => { setSelectedSvcId(svc.id); setEndDate(""); }}
+                      onClick={() => { setSelectedSvcId(svc.id); setStartDate(""); setEndDate(""); setSelectedDates([]); }}
                       className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
                       style={
                         selected
@@ -465,7 +586,7 @@ export default function BookPage() {
             {/* ── Date picker(s) ── */}
             <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <p className="mb-1 text-sm font-bold" style={{ color: "#0a2e30" }}>
-                {multiDay ? "Select Dates" : "Select Date"}
+                Select Dates
               </p>
               {availDays.length > 0 && (
                 <p className="mb-3 text-xs text-gray-500">
@@ -475,27 +596,24 @@ export default function BookPage() {
                   </span>
                 </p>
               )}
-              {!selectedSvc && (
-                <p className="mb-3 text-xs text-gray-400">Select a service to see available days.</p>
-              )}
-              <div className={`grid gap-4 ${multiDay ? "sm:grid-cols-2" : ""}`}>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-gray-500">
-                    {multiDay ? "Start date" : "Date"}
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    min={today}
-                    value={startDate}
-                    onChange={e => {
-                      setStartDate(e.target.value);
-                      if (endDate && e.target.value > endDate) setEndDate(e.target.value);
-                    }}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
-                  />
-                </div>
-                {multiDay && (
+              {!selectedSvc ? (
+                <p className="text-xs text-gray-400">Select a service first.</p>
+              ) : isRange ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-gray-500">Start date</label>
+                    <input
+                      type="date"
+                      required
+                      min={today}
+                      value={startDate}
+                      onChange={e => {
+                        setStartDate(e.target.value);
+                        if (endDate && e.target.value > endDate) setEndDate(e.target.value);
+                      }}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
+                    />
+                  </div>
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-gray-500">End date</label>
                     <input
@@ -507,8 +625,10 @@ export default function BookPage() {
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
                     />
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <CalendarPicker selected={selectedDates} onChange={setSelectedDates} />
+              )}
             </div>
 
             {/* ── Notes ── */}
@@ -534,8 +654,11 @@ export default function BookPage() {
                   <div className="flex justify-between text-gray-600">
                     <span>
                       GHS {rate} {selectedSvc?.service_types?.rate_unit}
-                      {multiDay && days > 1 && (
+                      {isRange && days > 1 && (
                         <span className="text-gray-400"> × {days} days</span>
+                      )}
+                      {!isRange && selectedDates.length > 1 && (
+                        <span className="text-gray-400"> × {selectedDates.length} dates</span>
                       )}
                     </span>
                     <span>GHS {gross.toFixed(2)}</span>
