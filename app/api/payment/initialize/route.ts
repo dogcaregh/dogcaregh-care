@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
 
   const reference = `dogcare_${bookingId}_${Date.now()}`;
   const amountInPesewas = Math.round(Number(booking.gross_amount) * 100);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+    ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
   const paystackRes = await fetch("https://api.paystack.co/transaction/initialize", {
     method: "POST",
