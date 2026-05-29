@@ -59,6 +59,18 @@ export default function HomePage() {
     <main className="font-sans">
       {/* ── Hero ── */}
       <section className="relative flex min-h-screen flex-col" style={{ backgroundColor: "#0a2e30" }}>
+        {/* Fullscreen background photo */}
+        <img
+          src="/homepage.jpg"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+        />
+        {/* 70% dark-green blend overlay */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ backgroundColor: "rgba(10, 46, 48, 0.70)" }}
+        />
         <div
           className="pointer-events-none absolute inset-0"
           style={{ background: "radial-gradient(ellipse 70% 60% at 50% 30%, rgba(0,176,150,0.18) 0%, transparent 70%)" }}
