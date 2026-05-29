@@ -39,6 +39,8 @@ type BookingDetail = {
   start_date: string;
   end_date: string;
   selected_dates: string[] | null;
+  preferred_time: string | null;
+  duration_hours: number | null;
   gross_amount: number;
   provider_payout: number;
   status: BookingStatus;
@@ -299,7 +301,7 @@ export default function BookingPage() {
         sb
           .from("bookings")
           .select(`
-            id, service_type, start_date, end_date, selected_dates, gross_amount, provider_payout,
+            id, service_type, start_date, end_date, selected_dates, preferred_time, duration_hours, gross_amount, provider_payout,
             status, owner_id, created_at,
             providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
             dogs!dog_id(name, breed, size, age, vaccination_status),
@@ -568,6 +570,19 @@ export default function BookingPage() {
                         </p>
                       )}
                     </div>
+                    {booking.preferred_time && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Time</p>
+                        <p className="mt-0.5 text-gray-700">
+                          {booking.preferred_time.slice(0, 5)}
+                          {booking.duration_hours && (
+                            <span className="ml-1 text-gray-400">
+                              · {booking.duration_hours} hr{booking.duration_hours !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Booked On</p>
                       <p className="mt-0.5 text-gray-700">{fmtDate(booking.created_at.split("T")[0])}</p>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useChat } from "@/lib/chat-context";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -349,6 +350,7 @@ export default function OwnerDashboard() {
           <Link href="/search" className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 sm:block">
             Find Providers
           </Link>
+          <NotificationsBell />
           <Link href="/dashboard/owner/profile" className="flex items-center transition hover:opacity-80" title="My Profile">
             {ownerAvatar ? (
               <img src={ownerAvatar} alt={firstName} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/25" />

@@ -58,9 +58,9 @@ const SERVICES: {
   label: string;
   unit: string;
 }[] = [
-  { slug: "dog_walking",  emoji: "🦮", label: "Dog Walking",  unit: "per walk"    },
-  { slug: "dog_sitting",  emoji: "🐾", label: "Dog Sitting",  unit: "per visit"   },
-  { slug: "dog_daycare",  emoji: "🏡", label: "Dog Daycare",  unit: "per day"     },
+  { slug: "dog_walking",  emoji: "🦮", label: "Dog Walking",  unit: "per hour"    },
+  { slug: "dog_sitting",  emoji: "🐾", label: "Dog Sitting",  unit: "per hour"    },
+  { slug: "dog_daycare",  emoji: "🏡", label: "Dog Daycare",  unit: "per 12 hrs"  },
   { slug: "dog_boarding", emoji: "🛏️", label: "Dog Boarding", unit: "per night"   },
   { slug: "dog_grooming", emoji: "✂️", label: "Dog Grooming", unit: "per session" },
 ];
@@ -138,15 +138,17 @@ function RateInputs({
   rateMedium,
   rateLarge,
   onChange,
+  rateLabel = "Rate by Dog Size (GH₵)",
 }: {
   rateSmall: string;
   rateMedium: string;
   rateLarge: string;
   onChange: (key: "rateSmall" | "rateMedium" | "rateLarge", val: string) => void;
+  rateLabel?: string;
 }) {
   return (
     <div>
-      <label className={LABEL}>Rate by Dog Size (GH₵)</label>
+      <label className={LABEL}>{rateLabel}</label>
       <div className="grid grid-cols-3 gap-3">
         {(
           [
@@ -808,10 +810,22 @@ export default function ProviderServicesPage() {
                             rateSmall={cfg.rateSmall}
                             rateMedium={cfg.rateMedium}
                             rateLarge={cfg.rateLarge}
-                            onChange={(key, val) =>
-                              updateConfig(svc.slug, { [key]: val })
+                            onChange={(key, val) => updateConfig(svc.slug, { [key]: val })}
+                            rateLabel={
+                              svc.slug === "dog_walking" || svc.slug === "dog_sitting"
+                                ? "Hourly Rate by Dog Size (GH₵)"
+                                : svc.slug === "dog_daycare"
+                                ? "Rate per 12 hrs by Dog Size (GH₵)"
+                                : "Rate by Dog Size (GH₵)"
                             }
                           />
+                        )}
+
+                        {/* Hint for time-based services */}
+                        {(svc.slug === "dog_walking" || svc.slug === "dog_sitting") && (
+                          <p className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                            💡 Owners will see your available days and hours when booking, and can specify their preferred start time and duration.
+                          </p>
                         )}
 
                         {/* Capacity + description */}

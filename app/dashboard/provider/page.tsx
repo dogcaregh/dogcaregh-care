@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { useChat } from "@/lib/chat-context";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
