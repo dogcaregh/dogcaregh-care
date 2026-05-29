@@ -15,6 +15,7 @@ type ChatContextValue = {
   openBookingId: string | null;
   isMinimized: boolean;
   openChat: (bookingId: string) => void;
+  openChatMinimized: (bookingId: string) => void;
   closeChat: () => void;
   toggleMinimize: () => void;
 };
@@ -23,6 +24,7 @@ const ChatContext = createContext<ChatContextValue>({
   openBookingId: null,
   isMinimized: false,
   openChat: () => {},
+  openChatMinimized: () => {},
   closeChat: () => {},
   toggleMinimize: () => {},
 });
@@ -93,6 +95,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     broadcast({ type: "open", bookingId });
   }, [broadcast]);
 
+  const openChatMinimized = useCallback((bookingId: string) => {
+    setOpenBookingId(bookingId);
+    setIsMinimized(true);
+    localStorage.setItem(KEY_ID, bookingId);
+    localStorage.setItem(KEY_MIN, "1");
+    broadcast({ type: "open", bookingId });
+    broadcast({ type: "minimize", value: true });
+  }, [broadcast]);
+
   const closeChat = useCallback(() => {
     setOpenBookingId(null);
     setIsMinimized(false);
@@ -112,7 +123,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [broadcast]);
 
   return (
-    <ChatContext.Provider value={{ openBookingId, isMinimized, openChat, closeChat, toggleMinimize }}>
+    <ChatContext.Provider value={{ openBookingId, isMinimized, openChat, openChatMinimized, closeChat, toggleMinimize }}>
       {children}
     </ChatContext.Provider>
   );

@@ -17,6 +17,8 @@ type NotificationsContextValue = {
   unreadCount: number;
   markRead: (id: string) => void;
   markAllRead: () => void;
+  toastQueue: AppNotification[];
+  dismissToast: (id: string) => void;
 };
 
 const NotificationsContext = createContext<NotificationsContextValue>({
@@ -24,10 +26,13 @@ const NotificationsContext = createContext<NotificationsContextValue>({
   unreadCount: 0,
   markRead: () => {},
   markAllRead: () => {},
+  toastQueue: [],
+  dismissToast: () => {},
 });
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [toastQueue,    setToastQueue]    = useState<AppNotification[]>([]);
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -46,6 +51,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         .order("created_at", { ascending: false })
         .limit(30);
 
+      // Populate history — do NOT add to toastQueue (no toasts for old notifications)
       setNotifications((data ?? []) as AppNotification[]);
 
       channel = sb
@@ -59,7 +65,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
-            setNotifications(prev => [payload.new as AppNotification, ...prev].slice(0, 30));
+            const incoming = payload.new as AppNotification;
+            setNotifications(prev => [incoming, ...prev].slice(0, 30));
+            // Only new real-time arrivals go into the toast queue
+            setToastQueue(prev => [...prev, incoming]);
           }
         )
         .subscribe();
@@ -70,9 +79,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const markRead = useCallback(async (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     await createClient().from("notifications").update({ read: true }).eq("id", id);
   }, []);
 
@@ -80,17 +87,17 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     const uid = userIdRef.current;
     if (!uid) return;
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    await createClient()
-      .from("notifications")
-      .update({ read: true })
-      .eq("user_id", uid)
-      .eq("read", false);
+    await createClient().from("notifications").update({ read: true }).eq("user_id", uid).eq("read", false);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToastQueue(prev => prev.filter(n => n.id !== id));
   }, []);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <NotificationsContext.Provider value={{ notifications, unreadCount, markRead, markAllRead }}>
+    <NotificationsContext.Provider value={{ notifications, unreadCount, markRead, markAllRead, toastQueue, dismissToast }}>
       {children}
     </NotificationsContext.Provider>
   );
