@@ -183,7 +183,7 @@ export default function DogProfilePage() {
 
         const { data, error: err } = await sb
           .from("dogs")
-          .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, avatar_url, temperament, allergies, diet_preference, bio")
+          .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, leash_trained, avatar_url, temperament, allergies, diet_preference, bio")
           .eq("id", dogId)
           .single();
 
@@ -270,6 +270,7 @@ export default function DogProfilePage() {
           size:               (size as Dog["size"]) || null,
           vaccination_status: vaccinated,
           neutered,
+          leash_trained:      leashTrained,
           avatar_url:         avatarUrl,
           temperament,
           allergies,
@@ -277,7 +278,7 @@ export default function DogProfilePage() {
           bio:                bio.trim() || null,
         })
         .eq("id", dogId)
-        .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, avatar_url, temperament, allergies, diet_preference, bio")
+        .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, leash_trained, avatar_url, temperament, allergies, diet_preference, bio")
         .single();
 
       if (err) {
