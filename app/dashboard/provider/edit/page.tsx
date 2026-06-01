@@ -160,6 +160,8 @@ export default function EditProfilePage() {
       const { data: { publicUrl } } = sb.storage.from("provider-photos").getPublicUrl(path);
       setAvatarUrl(publicUrl);
       setAvatarPreview(null);
+    } else {
+      setError(`Photo upload failed: ${upErr.message}`);
     }
     setAvatarUploading(false);
   }
@@ -185,6 +187,8 @@ export default function EditProfilePage() {
       if (!upErr) {
         const { data: { publicUrl } } = sb.storage.from("provider-photos").getPublicUrl(path);
         newUrls.push(publicUrl);
+      } else {
+        setError(`Gallery upload failed: ${upErr.message}`);
       }
     }
 

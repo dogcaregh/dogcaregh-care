@@ -103,6 +103,8 @@ export default function OwnerEditPage() {
       const { data: { publicUrl } } = sb.storage.from("owner-photos").getPublicUrl(path);
       setAvatarUrl(publicUrl);
       setAvatarPreview(null);
+    } else {
+      setError(`Photo upload failed: ${upErr.message}`);
     }
     setAvatarUploading(false);
   }
