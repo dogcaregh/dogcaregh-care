@@ -18,6 +18,7 @@ export default function ProviderProfilePage() {
   const [userId,       setUserId]       = useState("");
   const [providerId,   setProviderId]   = useState("");
   const [name,         setName]         = useState("");
+  const [email,        setEmail]        = useState<string | null>(null);
   const [phone,        setPhone]        = useState<string | null>(null);
   const [neighbourhood, setNeighbourhood] = useState<string | null>(null);
   const [bio,          setBio]          = useState<string | null>(null);
@@ -44,6 +45,7 @@ export default function ProviderProfilePage() {
 
       setUserId(user.id);
       setName(uRow?.name ?? "");
+      setEmail(user.email ?? null);
       setPhone(uRow?.phone ?? null);
       setProviderId(pRow?.id ?? "");
       setActive(pRow?.active ?? true);
@@ -142,6 +144,16 @@ setAvatarUrl(pRow?.avatar_url ?? null);
 
             {/* Details */}
             <div className="mt-6 space-y-3">
+              {email && (
+                <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+                  <span className="text-base">✉️</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Email</p>
+                    <p className="text-sm font-medium text-gray-700">{email}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-400">Only you</span>
+                </div>
+              )}
               {neighbourhood && (
                 <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
                   <span className="text-base">📍</span>

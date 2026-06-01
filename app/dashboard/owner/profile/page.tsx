@@ -31,6 +31,7 @@ export default function OwnerProfilePage() {
 
   const [userId,    setUserId]    = useState("");
   const [name,      setName]      = useState("");
+  const [email,     setEmail]     = useState<string | null>(null);
   const [phone,     setPhone]     = useState<string | null>(null);
   const [location,  setLocation]  = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export default function OwnerProfilePage() {
       const uRow = u as { name: string; phone: string | null; location: string | null; avatar_url: string | null } | null;
       setUserId(user.id);
       setName(uRow?.name ?? "");
+      setEmail(user.email ?? null);
       setPhone(uRow?.phone ?? null);
       setLocation(uRow?.location ?? null);
       setAvatarUrl(uRow?.avatar_url ?? null);
@@ -116,6 +118,16 @@ export default function OwnerProfilePage() {
 
             {/* Details */}
             <div className="mt-6 space-y-3">
+              {email && (
+                <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+                  <span className="text-base">✉️</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Email</p>
+                    <p className="text-sm font-medium text-gray-700">{email}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-400">Only you</span>
+                </div>
+              )}
               {location && (
                 <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
                   <span className="text-base">📍</span>
