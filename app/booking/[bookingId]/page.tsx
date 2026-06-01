@@ -316,7 +316,7 @@ export default function BookingPage() {
             id, service_type, start_date, end_date, selected_dates, additional_dog_ids, preferred_time, preferred_end_time, duration_hours, gross_amount, provider_payout,
             status, owner_id, created_at,
             providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
-            dogs!dog_id(name, breed, size, age, vaccination_status, leash_trained),
+            dogs!dog_id(name, breed, size, age, vaccination_status),
             users!owner_id(name, avatar_url, location)
           `)
           .eq("id", bookingId)
