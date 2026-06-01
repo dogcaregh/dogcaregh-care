@@ -245,7 +245,7 @@ export default function OwnerProfileForProvider() {
           ) : (
             <div className="space-y-3">
               {dogs.map(dog => (
-                <div key={dog.id} className="flex items-start gap-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                <Link key={dog.id} href={`/dog/${dog.id}`} className="flex items-start gap-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md">
                   {dog.avatar_url ? (
                     <img src={dog.avatar_url} alt={dog.name} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
                   ) : (
@@ -266,7 +266,7 @@ export default function OwnerProfileForProvider() {
                       : { background: "rgba(239,68,68,.1)", color: "#dc2626" }}>
                     {dog.vaccination_status ? "Vaccinated" : "Unvaccinated"}
                   </span>
-                </div>
+                </Link>
               ))}
             </div>
           )}

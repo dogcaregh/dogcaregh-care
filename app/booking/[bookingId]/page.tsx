@@ -21,6 +21,7 @@ type ProviderRow = {
 };
 
 type DogRow = {
+  id: string;
   name: string;
   breed: string | null;
   size: string | null;
@@ -316,7 +317,7 @@ export default function BookingPage() {
             id, service_type, start_date, end_date, selected_dates, additional_dog_ids, preferred_time, preferred_end_time, duration_hours, gross_amount, provider_payout,
             status, owner_id, created_at,
             providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
-            dogs!dog_id(name, breed, size, age, vaccination_status, leash_trained),
+            dogs!dog_id(id, name, breed, size, age, vaccination_status, leash_trained),
             users!owner_id(name, avatar_url, location)
           `)
           .eq("id", bookingId)
@@ -689,7 +690,7 @@ export default function BookingPage() {
                   </p>
                   <div className="space-y-3">
                     {[{ ...dog, isPrimary: true }, ...extraDogs.map(d => ({ ...d, breed: null, age: null, vaccination_status: null, isPrimary: false }))].map((d, i) => (
-                      <div key={i} className="flex items-center gap-4">
+                      <Link key={i} href={`/dog/${"id" in d && d.id ? d.id : ""}`} className="flex items-center gap-4 rounded-xl transition hover:bg-gray-50 -mx-1 px-1 py-0.5">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl" style={{ backgroundColor: "rgba(0,176,150,.1)" }}>🐕</div>
                         <div className="min-w-0 flex-1">
                           <p className="font-bold" style={{ color: "#0a2e30" }}>{d.name}</p>
@@ -715,7 +716,7 @@ export default function BookingPage() {
                             )}
                           </div>
                         )}
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>
