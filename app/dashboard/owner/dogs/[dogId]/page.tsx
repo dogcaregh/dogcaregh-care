@@ -40,6 +40,8 @@ const TEMPERAMENT = [
   { id: "anxious",      emoji: "😰", label: "Anxious"      },
   { id: "stubborn",     emoji: "🐂", label: "Stubborn"     },
   { id: "gentle",       emoji: "🕊️", label: "Gentle"       },
+  { id: "aggressive",   emoji: "⚠️", label: "Aggressive"   },
+  { id: "bites",        emoji: "🦷", label: "Bites"        },
 ];
 
 const DIET = [
