@@ -17,6 +17,7 @@ type Dog = {
   age: number | null;
   vaccination_status: boolean;
   neutered: boolean | null;
+  leash_trained: boolean | null;
   avatar_url: string | null;
   temperament: string[] | null;
   allergies: string[] | null;
@@ -160,8 +161,9 @@ export default function DogProfilePage() {
   const [breed,       setBreed]       = useState("");
   const [age,         setAge]         = useState("");
   const [size,        setSize]        = useState("");
-  const [vaccinated,  setVaccinated]  = useState(false);
-  const [neutered,    setNeutered]    = useState(false);
+  const [vaccinated,   setVaccinated]   = useState(false);
+  const [neutered,     setNeutered]     = useState(false);
+  const [leashTrained, setLeashTrained] = useState(false);
   const [temperament, setTemperament] = useState<string[]>([]);
   const [diet,        setDiet]        = useState("");
   const [allergies,   setAllergies]   = useState<string[]>([]);
@@ -181,7 +183,7 @@ export default function DogProfilePage() {
 
         const { data, error: err } = await sb
           .from("dogs")
-          .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, avatar_url, temperament, allergies, diet_preference, bio")
+          .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, leash_trained, avatar_url, temperament, allergies, diet_preference, bio")
           .eq("id", dogId)
           .single();
 
@@ -210,6 +212,7 @@ export default function DogProfilePage() {
     setSize(d.size ?? "");
     setVaccinated(d.vaccination_status);
     setNeutered(d.neutered ?? false);
+    setLeashTrained(d.leash_trained ?? false);
     setTemperament(d.temperament ?? []);
     setDiet(d.diet_preference ?? "");
     setAllergies(d.allergies ?? []);
@@ -262,6 +265,7 @@ export default function DogProfilePage() {
           size:               (size as Dog["size"]) || null,
           vaccination_status: vaccinated,
           neutered,
+          leash_trained:      leashTrained,
           avatar_url:         avatarUrl,
           temperament,
           allergies,
@@ -269,7 +273,7 @@ export default function DogProfilePage() {
           bio:                bio.trim() || null,
         })
         .eq("id", dogId)
-        .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, avatar_url, temperament, allergies, diet_preference, bio")
+        .select("id, owner_id, name, breed, size, age, vaccination_status, neutered, leash_trained, avatar_url, temperament, allergies, diet_preference, bio")
         .single();
 
       if (err) {
@@ -362,6 +366,16 @@ export default function DogProfilePage() {
                   <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-500">
                     {dog.neutered ? "Neutered / Spayed" : "Intact"}
                   </span>
+                  {dog.leash_trained !== null && (
+                    <span
+                      className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                      style={dog.leash_trained
+                        ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
+                        : { background: "rgba(239,68,68,.1)", color: "#dc2626" }}
+                    >
+                      {dog.leash_trained ? "🦮 Leash Trained" : "🦮 Not Leash Trained"}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -524,8 +538,9 @@ export default function DogProfilePage() {
 
             {/* Quick toggles */}
             <div className="grid grid-cols-2 gap-3">
-              <ToggleCard on={vaccinated} onClick={() => setVaccinated(!vaccinated)} emoji="💉" label="Vaccinated" sub={vaccinated ? "Yes" : "No"} />
-              <ToggleCard on={neutered}   onClick={() => setNeutered(!neutered)}     emoji="🏥" label="Neutered / Spayed" sub={neutered ? "Yes" : "No"} />
+              <ToggleCard on={vaccinated}   onClick={() => setVaccinated(!vaccinated)}     emoji="💉" label="Vaccinated"        sub={vaccinated   ? "Yes" : "No"} />
+              <ToggleCard on={neutered}     onClick={() => setNeutered(!neutered)}         emoji="🏥" label="Neutered / Spayed" sub={neutered     ? "Yes" : "No"} />
+              <ToggleCard on={leashTrained} onClick={() => setLeashTrained(!leashTrained)} emoji="🦮" label="Leash Trained"     sub={leashTrained ? "Yes" : "No"} />
             </div>
 
             {/* Personality */}

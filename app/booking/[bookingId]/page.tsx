@@ -26,6 +26,7 @@ type DogRow = {
   size: string | null;
   age: number | null;
   vaccination_status: boolean;
+  leash_trained: boolean | null;
 };
 
 type OwnerRow = {
@@ -315,7 +316,7 @@ export default function BookingPage() {
             id, service_type, start_date, end_date, selected_dates, additional_dog_ids, preferred_time, preferred_end_time, duration_hours, gross_amount, provider_payout,
             status, owner_id, created_at,
             providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
-            dogs!dog_id(name, breed, size, age, vaccination_status),
+            dogs!dog_id(name, breed, size, age, vaccination_status, leash_trained),
             users!owner_id(name, avatar_url, location)
           `)
           .eq("id", bookingId)
@@ -701,10 +702,18 @@ export default function BookingPage() {
                           </p>
                         </div>
                         {"vaccination_status" in d && d.vaccination_status !== null && (
-                          <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                            style={d.vaccination_status ? { background: "rgba(0,176,150,.12)", color: "#00b096" } : { background: "rgba(239,68,68,.1)", color: "#dc2626" }}>
-                            {d.vaccination_status ? "Vaccinated" : "Unvaccinated"}
-                          </span>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                              style={d.vaccination_status ? { background: "rgba(0,176,150,.12)", color: "#00b096" } : { background: "rgba(239,68,68,.1)", color: "#dc2626" }}>
+                              {d.vaccination_status ? "Vaccinated" : "Unvaccinated"}
+                            </span>
+                            {"leash_trained" in d && d.leash_trained !== null && (
+                              <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                                style={d.leash_trained ? { background: "rgba(0,176,150,.12)", color: "#00b096" } : { background: "rgba(239,68,68,.1)", color: "#dc2626" }}>
+                                {d.leash_trained ? "🦮 Leash Trained" : "🦮 Not Leash Trained"}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     ))}
