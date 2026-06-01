@@ -366,16 +366,16 @@ export default function DogProfilePage() {
                   <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-500">
                     {dog.neutered ? "Neutered / Spayed" : "Intact"}
                   </span>
-                  {dog.leash_trained !== null && (
-                    <span
-                      className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                      style={dog.leash_trained
-                        ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
-                        : { background: "rgba(239,68,68,.1)", color: "#dc2626" }}
-                    >
-                      {dog.leash_trained ? "🦮 Leash Trained" : "🦮 Not Leash Trained"}
-                    </span>
-                  )}
+                  <span
+                    className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                    style={dog.leash_trained === true
+                      ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
+                      : dog.leash_trained === false
+                        ? { background: "rgba(239,68,68,.1)", color: "#dc2626" }
+                        : { background: "#f3f4f6", color: "#9ca3af" }}
+                  >
+                    {dog.leash_trained === true ? "🦮 Leash Trained" : dog.leash_trained === false ? "🦮 Not Leash Trained" : "🦮 Leash status not set"}
+                  </span>
                 </div>
               </div>
             </div>
