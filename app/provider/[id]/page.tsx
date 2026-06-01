@@ -114,14 +114,17 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
-function ServiceRateCard({ svc }: { svc: ProviderService }) {
+function ServiceRateCard({ svc, providerId, authed }: { svc: ProviderService; providerId: string; authed: boolean }) {
   const { name, emoji, rate_unit } = svc.service_types;
   const hasRates = svc.rate_small != null || svc.rate_medium != null || svc.rate_large != null;
   const activeDays = DAYS.filter(d => svc.availability?.[d.id]?.available === true);
 
+  const href = authed ? `/book/${providerId}?service=${svc.id}` : `/login?redirect=/book/${providerId}?service=${svc.id}`;
+
   return (
-    <div
-      className="rounded-xl border border-gray-100 bg-gray-50/50 p-4"
+    <Link
+      href={href}
+      className="block rounded-xl border border-gray-100 bg-gray-50/50 p-4 transition hover:border-[#00b096] hover:shadow-sm"
       style={{ borderLeftWidth: 3, borderLeftColor: "#00b096" }}
     >
       <div className="flex items-center gap-2 mb-3">
@@ -181,7 +184,11 @@ function ServiceRateCard({ svc }: { svc: ProviderService }) {
           </div>
         </div>
       )}
-    </div>
+
+      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-end">
+        <span className="text-xs font-semibold" style={{ color: "#00b096" }}>Book this service →</span>
+      </div>
+    </Link>
   );
 }
 
@@ -396,7 +403,7 @@ export default function ProviderPage() {
           <SectionCard title="Services &amp; Rates">
             <div className="grid gap-3 sm:grid-cols-2">
               {services.map(svc => (
-                <ServiceRateCard key={svc.id} svc={svc} />
+                <ServiceRateCard key={svc.id} svc={svc} providerId={id} authed={authed} />
               ))}
             </div>
           </SectionCard>

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { COMMISSION_RATE } from "@/lib/constants";
@@ -586,7 +586,8 @@ function SlotPanel({
 
 export default function BookPage() {
   const { providerId } = useParams<{ providerId: string }>();
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
 
   const [provider,    setProvider]    = useState<ProviderInfo | null>(null);
   const [services,    setServices]    = useState<ProviderService[]>([]);
@@ -623,8 +624,12 @@ export default function BookPage() {
         return { ...svc, service_types: st ? { slug: st.slug, name: st.name, rate_unit: st.rate_unit, emoji: SLUG_EMOJI[st.slug] ?? "🐾" } : null };
       });
 
-      // Auto-select service if only one
-      if (activeSvcs.length === 1) {
+      // Pre-select service from ?service= param, or auto-select if only one
+      const preselect = searchParams.get("service");
+      const preselectMatch = preselect && activeSvcs.find(s => s.id === preselect);
+      if (preselectMatch) {
+        setSlots([{ ...emptySlot(), svcId: preselectMatch.id }]);
+      } else if (activeSvcs.length === 1) {
         setSlots([{ ...emptySlot(), svcId: activeSvcs[0].id }]);
       }
 
