@@ -187,7 +187,12 @@ export default function DogProfilePage() {
           .eq("id", dogId)
           .single();
 
-        if (err || !data || data.owner_id !== user.id) {
+        if (err) {
+          setError(`Failed to load dog profile: ${err.message}`);
+          setLoading(false);
+          return;
+        }
+        if (!data || data.owner_id !== user.id) {
           router.replace("/dashboard/owner");
           return;
         }
