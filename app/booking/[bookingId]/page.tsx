@@ -279,7 +279,7 @@ export default function BookingPage() {
     if (searchParams.get("tab") === "messages") setTab("messages");
   }, [searchParams]);
   const [booking,      setBooking]      = useState<BookingDetail | null>(null);
-  const [extraDogs,    setExtraDogs]    = useState<{ id: string; name: string; size: string | null }[]>([]);
+  const [extraDogs,    setExtraDogs]    = useState<{ id: string; name: string; breed: string | null; age: number | null; size: string | null; vaccination_status: boolean; leash_trained: boolean | null }[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [me,       setMe]       = useState<Party | null>(null);
   const [other,    setOther]    = useState<Party | null>(null);
@@ -342,8 +342,8 @@ export default function BookingPage() {
       );
 
       if (typedBk.additional_dog_ids && typedBk.additional_dog_ids.length > 0) {
-        const { data: extraData } = await sb.from("dogs").select("id, name, size").in("id", typedBk.additional_dog_ids);
-        setExtraDogs((extraData ?? []) as { id: string; name: string; size: string | null }[]);
+        const { data: extraData } = await sb.from("dogs").select("id, name, breed, age, size, vaccination_status, leash_trained").in("id", typedBk.additional_dog_ids);
+        setExtraDogs((extraData ?? []) as { id: string; name: string; breed: string | null; age: number | null; size: string | null; vaccination_status: boolean; leash_trained: boolean | null }[]);
       }
 
       setBooking(typedBk);
@@ -670,7 +670,7 @@ export default function BookingPage() {
                     Dog{extraDogs.length > 0 ? `s (${1 + extraDogs.length})` : ""}
                   </p>
                   <div className="space-y-3">
-                    {[{ ...dog, isPrimary: true }, ...extraDogs.map(d => ({ ...d, breed: null, age: null, vaccination_status: null, isPrimary: false }))].map((d, i) => (
+                    {[{ ...dog, isPrimary: true }, ...extraDogs.map(d => ({ ...d, isPrimary: false }))].map((d, i) => (
                       <Link key={i} href={`/dog/${"id" in d && d.id ? d.id : ""}`} className="flex items-center gap-4 rounded-xl transition hover:bg-gray-50 -mx-1 px-1 py-0.5">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl" style={{ backgroundColor: "rgba(0,176,150,.1)" }}>🐕</div>
                         <div className="min-w-0 flex-1">
