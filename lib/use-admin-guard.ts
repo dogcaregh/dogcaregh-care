@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase";
 
 export function useAdminGuard() {
   const router = useRouter();
@@ -10,14 +9,10 @@ export function useAdminGuard() {
 
   useEffect(() => {
     async function check() {
-      const sb = createClient();
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user) { router.replace("/login"); return; }
-      const { data } = await sb.from("users").select("role").eq("id", user.id).single();
-      if (!data || (data as { role: string }).role !== "admin") {
-        router.replace("/");
-        return;
-      }
+      const res = await fetch("/api/admin/check");
+      if (!res.ok) { router.replace("/"); return; }
+      const { admin } = await res.json();
+      if (!admin) { router.replace("/"); return; }
       setReady(true);
     }
     check();
