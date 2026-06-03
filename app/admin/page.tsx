@@ -209,11 +209,12 @@ export default function AdminOverviewPage() {
         </div>
 
         {/* Nav cards */}
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { href: "/admin/users",    label: "Manage Users",    desc: "View all owners and providers, verify providers", accent: "#6366f1" },
-            { href: "/admin/bookings", label: "All Bookings",    desc: "Filter and browse every booking on the platform", accent: "#0891b2" },
-            { href: "/admin/cashouts", label: "Cashout Requests",desc: "Process pending provider withdrawal requests",     accent: "#f59e0b" },
+            { href: "/admin/transactions", label: "Transactions",     desc: "Unified money ledger — payments in and cashouts out", accent: "#10b981" },
+            { href: "/admin/users",        label: "Manage Users",     desc: "View all owners and providers, verify providers",     accent: "#6366f1" },
+            { href: "/admin/bookings",     label: "All Bookings",     desc: "Filter and browse every booking on the platform",     accent: "#0891b2" },
+            { href: "/admin/cashouts",     label: "Cashout Requests", desc: "Process pending provider withdrawal requests",        accent: "#f59e0b" },
           ].map(c => (
             <Link
               key={c.href}

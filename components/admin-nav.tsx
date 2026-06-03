@@ -6,10 +6,11 @@ import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
 const LINKS = [
-  { href: "/admin",          label: "Overview"  },
-  { href: "/admin/users",    label: "Users"     },
-  { href: "/admin/bookings", label: "Bookings"  },
-  { href: "/admin/cashouts", label: "Cashouts"  },
+  { href: "/admin",               label: "Overview"     },
+  { href: "/admin/transactions",  label: "Transactions" },
+  { href: "/admin/users",         label: "Users"        },
+  { href: "/admin/bookings",      label: "Bookings"     },
+  { href: "/admin/cashouts",      label: "Cashouts"     },
 ];
 
 export function AdminNav() {
