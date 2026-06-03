@@ -44,13 +44,17 @@ function LoginForm() {
       return;
     }
 
-    // Route to the right dashboard based on role
-    const { data: provRow } = await supabase
-      .from("providers")
-      .select("id")
-      .eq("user_id", (await supabase.auth.getUser()).data.user!.id)
-      .maybeSingle();
+    // Route based on role
+    const uid = (await supabase.auth.getUser()).data.user!.id;
+    const { data: userRow } = await supabase.from("users").select("role").eq("id", uid).single();
 
+    if ((userRow as { role: string } | null)?.role === "admin") {
+      router.push("/admin");
+      router.refresh();
+      return;
+    }
+
+    const { data: provRow } = await supabase.from("providers").select("id").eq("user_id", uid).maybeSingle();
     router.push(provRow ? "/dashboard/provider" : "/dashboard/owner");
     router.refresh();
   };
