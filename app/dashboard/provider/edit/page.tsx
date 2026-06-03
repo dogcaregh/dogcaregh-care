@@ -112,28 +112,24 @@ export default function EditProfilePage() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { router.replace("/login?redirect=/dashboard/provider/edit"); return; }
 
-      const [uRes, pRes] = await Promise.all([
-        sb.from("users").select("name, phone").eq("id", user.id).single(),
-        sb.from("providers")
-          .select("id, bio, years_experience, neighbourhood, active, avatar_url, gallery_photos, momo_network, momo_number")
-          .eq("user_id", user.id)
-          .single(),
-      ]);
+      const provRes = await fetch("/api/dashboard/provider");
+      if (!provRes.ok) { router.replace("/register/provider"); return; }
+      const { provider: pData } = await provRes.json();
+      if (!pData) { router.replace("/register/provider"); return; }
 
-      if (!pRes.data) { router.replace("/register/provider"); return; }
-
-      const u = uRes.data  as { name: string; phone: string | null } | null;
-      const p = pRes.data as {
+      const p = pData as {
         id: string; bio: string | null; years_experience: number | null;
         neighbourhood: string | null; active: boolean;
         avatar_url: string | null; gallery_photos: string[];
         momo_network: string | null; momo_number: string | null;
+        users: { name: string; phone: string | null } | { name: string; phone: string | null }[] | null;
       };
+      const pUser = Array.isArray(p.users) ? p.users[0] : p.users;
 
       setUserId(user.id);
       setProviderId(p.id);
-      setName(u?.name ?? "");
-      setPhone(u?.phone ?? "");
+      setName(pUser?.name ?? "");
+      setPhone(pUser?.phone ?? "");
       setBio(p.bio ?? "");
       setNeighbourhood(p.neighbourhood ?? "");
       setYearsExp(p.years_experience ?? "");

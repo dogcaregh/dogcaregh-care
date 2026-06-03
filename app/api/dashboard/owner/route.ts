@@ -18,19 +18,25 @@ export async function GET() {
 
   const service = db();
 
-  const { data: provider, error } = await service
-    .from("providers")
-    .select(
-      `id, active, bio, years_experience, neighbourhood,
-       avatar_url, gallery_photos, momo_network, momo_number,
-       users!user_id(name, phone)`
-    )
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: owner }, { data: bookings }] = await Promise.all([
+    service
+      .from("users")
+      .select("name, avatar_url")
+      .eq("id", user.id)
+      .single(),
+    service
+      .from("bookings")
+      .select(
+        `id, service_type, start_date, end_date, gross_amount, status, created_at,
+         providers!provider_id(id, neighbourhood, avatar_url, user_id, users!user_id(name)),
+         dogs!dog_id(name)`
+      )
+      .eq("owner_id", user.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  if (error || !provider) {
-    return NextResponse.json({ error: "Provider not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ provider });
+  return NextResponse.json({
+    owner: owner ?? null,
+    bookings: bookings ?? [],
+  });
 }

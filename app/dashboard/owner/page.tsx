@@ -266,15 +266,9 @@ export default function OwnerDashboard() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { router.replace("/login?redirect=/dashboard/owner"); return; }
 
-      const [{ data: u }, { data: dgs }, { data: bks }, { data: nf }] = await Promise.all([
-        sb.from("users").select("name, avatar_url").eq("id", user.id).single(),
+      const [ownerRes, { data: dgs }, { data: nf }] = await Promise.all([
+        fetch("/api/dashboard/owner"),
         sb.from("dogs").select("id, name, breed, age, size, vaccination_status, avatar_url").eq("owner_id", user.id).order("created_at"),
-        sb.from("bookings")
-          .select(`id, service_type, start_date, end_date, gross_amount, status, created_at,
-            providers!provider_id(id, neighbourhood, avatar_url, user_id, users!user_id(name)),
-            dogs!dog_id(name)`)
-          .eq("owner_id", user.id)
-          .order("created_at", { ascending: false }),
         sb.from("notifications")
           .select("id, type, message, booking_id")
           .eq("read", false)
@@ -283,9 +277,9 @@ export default function OwnerDashboard() {
       ]);
 
       if (cancelled) return;
-      const uRow = u as { name: string; avatar_url: string | null } | null;
-      setOwnerName(uRow?.name ?? "");
-      setOwnerAvatar(uRow?.avatar_url ?? null);
+      const { owner: uRow, bookings: bks } = ownerRes.ok ? await ownerRes.json() : { owner: null, bookings: [] };
+      setOwnerName((uRow as { name: string } | null)?.name ?? "");
+      setOwnerAvatar((uRow as { avatar_url: string | null } | null)?.avatar_url ?? null);
       setOwnerId(user.id);
       setDogs((dgs ?? []) as Dog[]);
       setBookings((bks ?? []) as unknown as Booking[]);

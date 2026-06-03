@@ -302,17 +302,22 @@ export default function ProviderServicesPage() {
         return;
       }
 
-      const [pRes, stRes] = await Promise.all([
-        sb.from("providers").select("id").eq("user_id", user.id).single(),
+      const [provRes, stRes] = await Promise.all([
+        fetch("/api/dashboard/provider"),
         sb.from("service_types").select("id, slug"),
       ]);
 
-      if (!pRes.data) {
+      if (!provRes.ok) {
+        router.replace("/register/provider");
+        return;
+      }
+      const { provider: pData } = await provRes.json();
+      if (!pData) {
         router.replace("/register/provider");
         return;
       }
 
-      const pid = pRes.data.id;
+      const pid = (pData as { id: string }).id;
       setProviderId(pid);
 
       const stMap: Record<string, string> = {};

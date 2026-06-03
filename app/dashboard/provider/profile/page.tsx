@@ -34,24 +34,23 @@ export default function ProviderProfilePage() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { router.replace("/login?redirect=/dashboard/provider/profile"); return; }
 
-      const [{ data: u }, { data: p }] = await Promise.all([
-        sb.from("users").select("name, phone").eq("id", user.id).single(),
-        sb.from("providers").select("id, active, bio, neighbourhood, avatar_url").eq("user_id", user.id).single(),
-      ]);
-
+      const provRes = await fetch("/api/dashboard/provider");
       if (cancelled) return;
-      const uRow = u as { name: string; phone: string | null } | null;
-      const pRow = p as { id: string; active: boolean; bio: string | null; neighbourhood: string | null; avatar_url: string | null } | null;
+
+      const pRow = provRes.ok
+        ? ((await provRes.json()).provider as { id: string; active: boolean; bio: string | null; neighbourhood: string | null; avatar_url: string | null; users: { name: string; phone: string | null } | { name: string; phone: string | null }[] | null } | null)
+        : null;
+      const pUser = pRow ? (Array.isArray(pRow.users) ? pRow.users[0] : pRow.users) : null;
 
       setUserId(user.id);
-      setName(uRow?.name ?? "");
+      setName(pUser?.name ?? "");
       setEmail(user.email ?? null);
-      setPhone(uRow?.phone ?? null);
+      setPhone(pUser?.phone ?? null);
       setProviderId(pRow?.id ?? "");
       setActive(pRow?.active ?? true);
       setBio(pRow?.bio ?? null);
       setNeighbourhood(pRow?.neighbourhood ?? null);
-setAvatarUrl(pRow?.avatar_url ?? null);
+      setAvatarUrl(pRow?.avatar_url ?? null);
       setLoading(false);
     }
     load();
