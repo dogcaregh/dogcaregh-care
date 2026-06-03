@@ -409,15 +409,20 @@ export default function OwnerDashboard() {
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[
-              { label: "Action Needed", value: stats.action,    accent: "#f59e0b" },
-              { label: "Pending",       value: stats.pending,   accent: "#60a5fa" },
-              { label: "Active",        value: stats.active,    accent: "#00b096" },
-              { label: "Completed",     value: stats.completed, accent: "#a78bfa" },
+              { label: "Action Needed", value: stats.action,    accent: "#f59e0b", dest: "action"  as TabKey },
+              { label: "Pending",       value: stats.pending,   accent: "#60a5fa", dest: "active"  as TabKey },
+              { label: "Active",        value: stats.active,    accent: "#00b096", dest: "active"  as TabKey },
+              { label: "Completed",     value: stats.completed, accent: "#a78bfa", dest: "history" as TabKey },
             ].map(s => (
-              <div key={s.label} className="rounded-2xl p-4 sm:p-5" style={{ backgroundColor: "rgba(255,255,255,.06)" }}>
+              <button
+                key={s.label}
+                onClick={() => setTab(s.dest)}
+                className="rounded-2xl p-4 sm:p-5 text-left transition hover:opacity-80 active:scale-95"
+                style={{ backgroundColor: "rgba(255,255,255,.06)" }}
+              >
                 <p className="text-xs font-medium text-white/50">{s.label}</p>
                 <p className="mt-1 text-xl font-extrabold sm:text-2xl" style={{ color: s.accent }}>{s.value}</p>
-              </div>
+              </button>
             ))}
           </div>
         </div>

@@ -611,17 +611,22 @@ export default function ProviderDashboard() {
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[
-              { label: "Needs Action",      value: stats.needsAction,                       accent: "#f59e0b" },
-              { label: "Active Bookings",   value: stats.active,                            accent: "#00b096" },
-              { label: "Earned This Month", value: `GHS ${stats.monthEarnings.toFixed(0)}`, accent: "#a78bfa" },
-              { label: "Total Earned",      value: `GHS ${stats.totalEarnings.toFixed(0)}`, accent: "#6366f1" },
+              { label: "Needs Action",      value: stats.needsAction,                       accent: "#f59e0b", dest: "requests"  as TabKey },
+              { label: "Active Bookings",   value: stats.active,                            accent: "#00b096", dest: "active"    as TabKey },
+              { label: "Earned This Month", value: `GHS ${stats.monthEarnings.toFixed(0)}`, accent: "#a78bfa", dest: "earnings"  as TabKey },
+              { label: "Total Earned",      value: `GHS ${stats.totalEarnings.toFixed(0)}`, accent: "#6366f1", dest: "earnings"  as TabKey },
             ].map(s => (
-              <div key={s.label} className="rounded-2xl p-4 sm:p-5" style={{ backgroundColor: "rgba(255,255,255,.06)" }}>
+              <button
+                key={s.label}
+                onClick={() => setTab(s.dest)}
+                className="rounded-2xl p-4 sm:p-5 text-left transition hover:opacity-80 active:scale-95"
+                style={{ backgroundColor: "rgba(255,255,255,.06)" }}
+              >
                 <p className="text-xs font-medium text-white/50">{s.label}</p>
                 <p className="mt-1 text-xl font-extrabold sm:text-2xl" style={{ color: s.accent }}>
                   {s.value}
                 </p>
-              </div>
+              </button>
             ))}
           </div>
 
