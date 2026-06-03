@@ -8,11 +8,6 @@ import { StarRating, RatingBadge } from "@/components/star-rating";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-const SLUG_EMOJI: Record<string, string> = {
-  dog_walking: "🦮", dog_sitting: "🐾", dog_daycare: "🏡",
-  dog_boarding: "🛏️", dog_grooming: "✂️",
-};
-
 type AvailSlot = { available: boolean; start?: string; end?: string };
 
 type ProviderService = {
@@ -201,50 +196,17 @@ export default function ProviderPage() {
     let cancelled = false;
     async function load() {
       const sb = createClient();
-      const [{ data: p }, { data: { user } }] = await Promise.all([
-        sb.from("providers")
-          .select(`id, user_id, bio,
-                   rating_avg, review_count, verified, active, neighbourhood,
-                   years_experience, avatar_url, gallery_photos,
-                   users!user_id(name)`)
-          .eq("id", id)
-          .single(),
+      const [res, { data: { user } }] = await Promise.all([
+        fetch(`/api/providers/${id}`),
         sb.auth.getUser(),
       ]);
       if (cancelled) return;
+      if (!res.ok) { setMissing(true); setLoading(false); return; }
+      const { provider: p, services: sv, reviews: rv } = await res.json();
       if (!p) { setMissing(true); setLoading(false); return; }
       setProvider(p as unknown as ProviderProfile);
       setAuthed(!!user);
-
-      const [{ data: sv }, { data: rv }, { data: stData }] = await Promise.all([
-        sb.from("provider_services")
-          .select("id, service_type_id, rate_small, rate_medium, rate_large, availability, is_active")
-          .eq("provider_id", p.id),
-        sb.from("reviews")
-          .select("id, rating, body, created_at, users!from_user_id(name)")
-          .eq("to_user_id", p.user_id)
-          .eq("from_role", "owner")
-          .order("created_at", { ascending: false }),
-        sb.from("service_types").select("id, slug, name, rate_unit"),
-      ]);
-
-      if (cancelled) return;
-      const activeSv = (sv ?? []).filter(s => (s as Record<string, unknown>).is_active);
-      const svMapped = activeSv.map(s => {
-        const sid = (s as Record<string, unknown>).service_type_id as string;
-        const row = (stData ?? []).find(t => t.id === sid);
-        const slug = row?.slug ?? "";
-        return {
-          ...s,
-          service_types: {
-            slug,
-            name: row?.name ?? "Service",
-            emoji: SLUG_EMOJI[slug] ?? "🐾",
-            rate_unit: row?.rate_unit ?? "",
-          },
-        };
-      });
-      setServices(svMapped as unknown as ProviderService[]);
+      setServices((sv ?? []) as unknown as ProviderService[]);
       setReviews((rv ?? []) as unknown as Review[]);
       setLoading(false);
     }

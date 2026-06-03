@@ -310,39 +310,21 @@ export default function BookingPage() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { router.push(`/login?redirect=/booking/${bookingId}`); return; }
 
-      const [bkRes, msgsRes, rvRes] = await Promise.all([
-        sb
-          .from("bookings")
-          .select(`
-            id, service_type, start_date, end_date, selected_dates, additional_dog_ids, preferred_time, preferred_end_time, duration_hours, gross_amount, provider_payout,
-            status, owner_id, created_at,
-            providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
-            dogs!dog_id(id, name, breed, size, age, vaccination_status, leash_trained),
-            users!owner_id(name, avatar_url, location)
-          `)
-          .eq("id", bookingId)
-          .single(),
-        sb
-          .from("messages")
-          .select("*")
-          .eq("booking_id", bookingId)
-          .order("created_at", { ascending: true }),
-        sb
-          .from("reviews")
-          .select("rating, body")
-          .eq("booking_id", bookingId)
-          .eq("from_user_id", user.id)
-          .maybeSingle(),
+      const [apiRes, msgsRes] = await Promise.all([
+        fetch(`/api/bookings/${bookingId}`),
+        sb.from("messages").select("*").eq("booking_id", bookingId).order("created_at", { ascending: true }),
       ]);
 
-      const bk = bkRes.data as unknown as BookingDetail;
+      if (!apiRes.ok) { setLoading(false); return; }
+      const { booking: bk, review: rvData } = await apiRes.json();
       if (!bk) { setLoading(false); return; }
 
-      const provider     = resolve(bk.providers as ProviderRow | ProviderRow[] | null);
+      const typedBk  = bk as unknown as BookingDetail;
+      const provider     = resolve(typedBk.providers as ProviderRow | ProviderRow[] | null);
       const providerUser = resolve(provider?.users ?? null);
-      const ownerRow     = resolve(bk.users as OwnerRow | OwnerRow[] | null);
-      const isOwner      = user.id === bk.owner_id;
-      const isProvider   = !!provider && provider.user_id === user.id;
+      const ownerRow     = resolve(typedBk.users as OwnerRow | OwnerRow[] | null);
+      const isOwner    = user.id === typedBk.owner_id;
+      const isProvider = !!provider && provider.user_id === user.id;
 
       if (!isOwner && !isProvider) { router.push("/"); return; }
 
@@ -356,18 +338,17 @@ export default function BookingPage() {
       setOther(
         isOwner
           ? { userId: provider?.user_id ?? "", name: providerUser?.name ?? "Provider", avatarUrl: provider?.avatar_url ?? null, role: "provider" }
-          : { userId: bk.owner_id, name: ownerRow?.name ?? "Owner", avatarUrl: ownerRow?.avatar_url ?? null, role: "owner" }
+          : { userId: typedBk.owner_id, name: ownerRow?.name ?? "Owner", avatarUrl: ownerRow?.avatar_url ?? null, role: "owner" }
       );
 
-      // Fetch additional dogs if present
-      if (bk.additional_dog_ids && bk.additional_dog_ids.length > 0) {
-        const { data: extraData } = await sb.from("dogs").select("id, name, size").in("id", bk.additional_dog_ids);
+      if (typedBk.additional_dog_ids && typedBk.additional_dog_ids.length > 0) {
+        const { data: extraData } = await sb.from("dogs").select("id, name, size").in("id", typedBk.additional_dog_ids);
         setExtraDogs((extraData ?? []) as { id: string; name: string; size: string | null }[]);
       }
 
-      setBooking(bk);
+      setBooking(typedBk);
       setMessages((msgsRes.data ?? []) as Message[]);
-      setExistingReview(rvRes.data ? { rating: rvRes.data.rating, body: rvRes.data.body } : null);
+      setExistingReview(rvData ? { rating: rvData.rating, body: rvData.body } : null);
       setReviewLoaded(true);
       setLoading(false);
     }

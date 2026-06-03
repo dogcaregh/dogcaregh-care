@@ -59,11 +59,6 @@ const RATE_UNIT_LABEL: Record<string, string> = {
   per_hour: "/ hr", per_12hrs: "/ 12 hrs", per_night: "/ night", per_session: "/ session",
 };
 
-const SLUG_EMOJI: Record<string, string> = {
-  dog_walking: "🦮", dog_sitting: "🐾", dog_daycare: "🏡",
-  dog_boarding: "🛏️", dog_grooming: "✂️",
-};
-
 const DAYS = [
   { id: "monday", short: "Mon" }, { id: "tuesday", short: "Tue" },
   { id: "wednesday", short: "Wed" }, { id: "thursday", short: "Thu" },
@@ -606,35 +601,28 @@ export default function BookPage() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { router.replace(`/login?redirect=/book/${providerId}`); return; }
 
-      const [{ data: p }, { data: svcs, error: svcsErr }, { data: stData, error: stErr }, { data: d }] = await Promise.all([
-        sb.from("providers").select("id, user_id, rating_avg, neighbourhood, avatar_url, active, users!user_id(name)").eq("id", providerId).single(),
-        sb.from("provider_services").select("id, service_type_id, rate_small, rate_medium, rate_large, rate_half_small, rate_half_medium, rate_half_large, grooming_mode, availability, is_active").eq("provider_id", providerId).eq("is_active", true),
-        sb.from("service_types").select("id, slug, name, rate_unit"),
+      const [apiRes, { data: d }] = await Promise.all([
+        fetch(`/api/providers/${providerId}`),
         sb.from("dogs").select("id, name, breed, size").eq("owner_id", user.id).order("created_at"),
       ]);
 
       if (cancelled) return;
-      if (svcsErr) console.error("[book] provider_services:", svcsErr);
-      if (stErr)   console.error("[book] service_types:", stErr);
-      if (!p) { router.replace("/search"); return; }
+      if (!apiRes.ok) { router.replace("/search"); return; }
 
-      const stMap    = Object.fromEntries((stData ?? []).map(st => [st.id, st]));
-      const activeSvcs = ((svcs ?? []) as unknown as ProviderService[]).map(svc => {
-        const st = stMap[(svc as unknown as Record<string, string>).service_type_id];
-        return { ...svc, service_types: st ? { slug: st.slug, name: st.name, rate_unit: st.rate_unit, emoji: SLUG_EMOJI[st.slug] ?? "🐾" } : null };
-      });
+      const { provider: p, services: activeSvcs } = await apiRes.json();
+      if (!p) { router.replace("/search"); return; }
 
       // Pre-select service from ?service= param, or auto-select if only one
       const preselect = searchParams.get("service");
-      const preselectMatch = preselect && activeSvcs.find(s => s.id === preselect);
+      const preselectMatch = preselect && (activeSvcs as ProviderService[]).find(s => s.id === preselect);
       if (preselectMatch) {
-        setSlots([{ ...emptySlot(), svcId: preselectMatch.id }]);
-      } else if (activeSvcs.length === 1) {
-        setSlots([{ ...emptySlot(), svcId: activeSvcs[0].id }]);
+        setSlots([{ ...emptySlot(), svcId: (preselectMatch as ProviderService).id }]);
+      } else if ((activeSvcs as ProviderService[]).length === 1) {
+        setSlots([{ ...emptySlot(), svcId: (activeSvcs as ProviderService[])[0].id }]);
       }
 
       setProvider(p as unknown as ProviderInfo);
-      setServices(activeSvcs);
+      setServices((activeSvcs ?? []) as unknown as ProviderService[]);
       setDogs((d ?? []) as Dog[]);
       setLoading(false);
     }

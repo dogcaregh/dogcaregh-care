@@ -44,21 +44,14 @@ function LoginForm() {
       return;
     }
 
-    // Check admin via service-role API (bypasses RLS)
-    const checkRes = await fetch("/api/admin/check");
-    if (checkRes.ok) {
-      const { admin } = await checkRes.json();
-      if (admin) {
-        router.push("/admin");
-        router.refresh();
-        return;
-      }
+    // Resolve role via service-role API (bypasses broken RLS)
+    const roleRes = await fetch("/api/auth/role");
+    if (roleRes.ok) {
+      const { isAdmin, isProvider } = await roleRes.json();
+      if (isAdmin)    { router.push("/admin");              router.refresh(); return; }
+      if (isProvider) { router.push("/dashboard/provider"); router.refresh(); return; }
     }
-
-    // Route provider vs owner
-    const uid = (await supabase.auth.getUser()).data.user!.id;
-    const { data: provRow } = await supabase.from("providers").select("id").eq("user_id", uid).maybeSingle();
-    router.push(provRow ? "/dashboard/provider" : "/dashboard/owner");
+    router.push("/dashboard/owner");
     router.refresh();
   };
 
