@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminGuard } from "@/lib/use-admin-guard";
 import { AdminNav } from "@/components/admin-nav";
-import { createClient } from "@/lib/supabase";
 
 const SERVICE_LABELS: Record<string, string> = {
   dog_walking:    "Dog Walking",
@@ -55,21 +54,12 @@ export default function AdminBookingsPage() {
 
   useEffect(() => {
     if (!ready) return;
-    async function load() {
-      const sb = createClient();
-      const { data } = await sb
-        .from("bookings")
-        .select(`
-          id, service_type, status, start_date, end_date,
-          gross_amount, commission_amount, provider_payout, created_at,
-          owner:users!bookings_owner_id_fkey(name),
-          provider:providers!bookings_provider_id_fkey(user:users!providers_user_id_fkey(name))
-        `)
-        .order("created_at", { ascending: false });
-      setBookings((data ?? []) as unknown as Booking[]);
-      setLoading(false);
-    }
-    load();
+    fetch("/api/admin/bookings")
+      .then(r => r.json())
+      .then(({ bookings: data }) => {
+        setBookings((data ?? []) as Booking[]);
+        setLoading(false);
+      });
   }, [ready]);
 
   const counts: Record<string, number> = { all: bookings.length };

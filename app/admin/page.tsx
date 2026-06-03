@@ -5,7 +5,6 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase";
 import { useAdminGuard } from "@/lib/use-admin-guard";
 import { AdminNav } from "@/components/admin-nav";
 
@@ -61,47 +60,21 @@ export default function AdminOverviewPage() {
 
   useEffect(() => {
     if (!ready) return;
-    async function load() {
-      const sb = createClient();
-
-      const [
-        { count: owners },
-        { count: providers },
-        { count: bookings },
-        { count: pendingCashouts },
-        { data: allBookings },
-        { data: recentRaw },
-      ] = await Promise.all([
-        sb.from("users").select("*", { count: "exact", head: true }).eq("role", "owner"),
-        sb.from("users").select("*", { count: "exact", head: true }).eq("role", "provider"),
-        sb.from("bookings").select("*", { count: "exact", head: true }),
-        sb.from("cashout_requests").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        sb.from("bookings").select("status, gross_amount, commission_amount"),
-        sb.from("bookings").select(`
-          id, service_type, status, gross_amount, commission_amount, created_at,
-          owner:users!bookings_owner_id_fkey(name),
-          provider:providers!bookings_provider_id_fkey(user:users!providers_user_id_fkey(name))
-        `).order("created_at", { ascending: false }).limit(8),
-      ]);
-
-      const bks = allBookings ?? [];
-      const closedBks = bks.filter(b => b.status === "closed");
-      const byStatus: Record<string, number> = {};
-      for (const b of bks) byStatus[b.status] = (byStatus[b.status] ?? 0) + 1;
-
-      setStats({
-        owners:          owners ?? 0,
-        providers:       providers ?? 0,
-        bookings:        bookings ?? 0,
-        pendingCashouts: pendingCashouts ?? 0,
-        totalRevenue:    closedBks.reduce((s, b) => s + Number(b.gross_amount), 0),
-        totalCommission: closedBks.reduce((s, b) => s + Number(b.commission_amount), 0),
-        bookingsByStatus: byStatus,
+    fetch("/api/admin/stats")
+      .then(r => r.json())
+      .then(data => {
+        setStats({
+          owners:           data.owners,
+          providers:        data.providers,
+          bookings:         data.bookings,
+          pendingCashouts:  data.pendingCashouts,
+          totalRevenue:     data.totalRevenue,
+          totalCommission:  data.totalCommission,
+          bookingsByStatus: data.bookingsByStatus,
+        });
+        setRecent(data.recentBookings as RecentBooking[]);
+        setLoading(false);
       });
-      setRecent((recentRaw ?? []) as unknown as RecentBooking[]);
-      setLoading(false);
-    }
-    load();
   }, [ready]);
 
   if (!ready || loading) return (
