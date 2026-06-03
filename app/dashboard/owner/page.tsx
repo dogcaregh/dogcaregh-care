@@ -420,7 +420,7 @@ export default function OwnerDashboard() {
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[
               { label: "Action Needed", value: stats.action,  accent: "#f59e0b", dest: "action"  as TabKey },
-              { label: "Pending",       value: stats.pending, accent: "#60a5fa", dest: "all"     as TabKey },
+              { label: "Pending",       value: stats.pending, accent: "#60a5fa", dest: "active"  as TabKey },
               { label: "Active",        value: stats.active,  accent: "#00b096", dest: "active"  as TabKey },
               { label: "History",       value: stats.history, accent: "#a78bfa", dest: "history" as TabKey },
             ].map(s => (
