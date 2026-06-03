@@ -535,6 +535,7 @@ export default function ProviderDashboard() {
     for (const b of bookings) {
       map.all++;
       for (const t of TABS) {
+        if (t.key === "all") continue;
         if (t.statuses.includes(b.status)) { map[t.key]++; break; }
       }
     }
