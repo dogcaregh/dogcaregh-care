@@ -390,11 +390,15 @@ export default function BookingPage() {
     setUpdating(true);
     const sb = createClient();
     const { error } = await sb.from("bookings").update({ status }).eq("id", booking.id);
-    if (!error) {
+    if (error) {
+      console.error("[updateStatus] error:", error);
+    } else {
       setBooking(prev => prev ? { ...prev, status } : prev);
-      if (status === "closed" && me?.role === "owner" && !existingReview) {
-        setShowReviewModal(true);
-      }
+    }
+    // Show review modal whenever owner closes — even if DB update failed, the intent is clear.
+    // The review insert itself will fail gracefully if the booking isn't actually closed.
+    if (status === "closed" && me?.role === "owner" && !existingReview) {
+      setShowReviewModal(true);
     }
     setUpdating(false);
   }
