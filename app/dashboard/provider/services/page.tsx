@@ -627,6 +627,7 @@ export default function ProviderServicesPage() {
       }
 
       setSaved(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       setTimeout(() => setSaved(false), 3000);
     } catch (err: unknown) {
       setError(
