@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import { useAdminGuard } from "@/lib/use-admin-guard";
+import { AdminNav } from "@/components/admin-nav";
 
 const MOMO_LABELS: Record<string, string> = {
   mtn:         "MTN MoMo",
@@ -40,7 +40,7 @@ function resolveArr<T>(v: T | T[] | null): T | null {
 }
 
 export default function AdminCashoutsPage() {
-  const router = useRouter();
+  const ready = useAdminGuard();
   const [rows,    setRows]    = useState<CashoutRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter,  setFilter]  = useState<"pending" | "paid" | "rejected" | "all">("pending");
@@ -48,17 +48,9 @@ export default function AdminCashoutsPage() {
   const [noteMap, setNoteMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    if (!ready) return;
     async function load() {
       const sb = createClient();
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user) { router.replace("/login"); return; }
-
-      const { data: uRow } = await sb.from("users").select("role").eq("id", user.id).single();
-      if (!uRow || (uRow as { role: string }).role !== "admin") {
-        router.replace("/");
-        return;
-      }
-
       const { data } = await sb
         .from("cashout_requests")
         .select(`
@@ -68,12 +60,11 @@ export default function AdminCashoutsPage() {
           )
         `)
         .order("created_at", { ascending: false });
-
       setRows((data ?? []) as unknown as CashoutRow[]);
       setLoading(false);
     }
     load();
-  }, [router]);
+  }, [ready]);
 
   async function markPaid(id: string) {
     setActing(id);
@@ -135,7 +126,7 @@ export default function AdminCashoutsPage() {
     rejected: { color: "#dc2626", bg: "rgba(220,38,38,.08)"  },
   };
 
-  if (loading) return (
+  if (!ready || loading) return (
     <div className="flex min-h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
       <img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto" />
       <p className="mt-3 animate-pulse text-sm text-white/50">Loading…</p>
@@ -146,10 +137,7 @@ export default function AdminCashoutsPage() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
-      <nav className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 px-6 py-4 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
-        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto" /></Link>
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>Admin</p>
-      </nav>
+      <AdminNav />
 
       <div className="px-6 pb-8 pt-7 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
         <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>Cashout Requests</p>
