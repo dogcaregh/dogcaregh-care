@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
@@ -439,6 +439,12 @@ export default function ProviderDashboard() {
   const [loading,      setLoading]      = useState(true);
   const [tab,          setTab]          = useState<TabKey>("requests");
   const [updating,     setUpdating]     = useState<string | null>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  function goToTab(t: TabKey) {
+    setTab(t);
+    setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -618,7 +624,7 @@ export default function ProviderDashboard() {
             ].map(s => (
               <button
                 key={s.label}
-                onClick={() => setTab(s.dest)}
+                onClick={() => goToTab(s.dest)}
                 className="rounded-2xl p-4 sm:p-5 text-left transition hover:opacity-80 active:scale-95"
                 style={{ backgroundColor: "rgba(255,255,255,.06)" }}
               >
@@ -712,7 +718,7 @@ export default function ProviderDashboard() {
         </div>
 
         {/* ── Tab bar ── */}
-        <div className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm">
+        <div ref={tabsRef} className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm">
           {TABS.map(t => (
             <button
               key={t.key}
