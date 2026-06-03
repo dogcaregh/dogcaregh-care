@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import { StarRating, RatingBadge } from "@/components/star-rating";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -95,15 +96,6 @@ function lowestPrice(svcs: ProviderService[]): number | null {
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function Stars({ v, lg }: { v: number; lg?: boolean }) {
-  return (
-    <span className={`inline-flex gap-px leading-none ${lg ? "text-2xl" : "text-sm"}`}>
-      {[1, 2, 3, 4, 5].map(n => (
-        <span key={n} style={{ color: n <= Math.round(v) ? "#f59e0b" : "#e5e7eb" }}>★</span>
-      ))}
-    </span>
-  );
-}
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -346,15 +338,11 @@ export default function ProviderPage() {
               )}
 
               <div className="mt-3 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-                <Stars v={avgRating} lg />
+                <StarRating value={avgRating} size="lg" />
                 <span className="text-2xl font-extrabold text-white">
                   {avgRating > 0 ? avgRating.toFixed(1) : "New"}
                 </span>
-                <span className="text-sm text-white/50">
-                  {provider.review_count > 0
-                    ? `${provider.review_count} review${provider.review_count !== 1 ? "s" : ""}`
-                    : "No reviews yet"}
-                </span>
+                <RatingBadge avg={avgRating} count={provider.review_count} />
               </div>
 
               {provider.years_experience != null && (
@@ -438,16 +426,18 @@ export default function ProviderPage() {
         <SectionCard title={`Reviews${provider.review_count > 0 ? ` (${provider.review_count})` : ""}`}>
           {avgRating > 0 && (
             <div
-              className="mb-5 flex items-center gap-3 rounded-xl px-4 py-3"
+              className="mb-5 flex items-center gap-4 rounded-xl px-4 py-3"
               style={{ backgroundColor: "rgba(0,176,150,.07)" }}
             >
-              <Stars v={avgRating} lg />
-              <span className="text-2xl font-extrabold" style={{ color: "#0a2e30" }}>
-                {avgRating.toFixed(1)}
-              </span>
-              <span className="text-sm text-gray-500">
-                average across {provider.review_count} review{provider.review_count !== 1 ? "s" : ""}
-              </span>
+              <StarRating value={avgRating} size="md" />
+              <div>
+                <span className="text-2xl font-extrabold" style={{ color: "#0a2e30" }}>
+                  {avgRating.toFixed(1)}
+                </span>
+                <span className="ml-2 text-sm text-gray-500">
+                  / 5 · {provider.review_count} review{provider.review_count !== 1 ? "s" : ""}
+                </span>
+              </div>
             </div>
           )}
 
@@ -479,7 +469,7 @@ export default function ProviderPage() {
                           <p className="shrink-0 text-xs text-gray-400">{fmt(r.created_at)}</p>
                         </div>
                         <div className="mt-0.5">
-                          <Stars v={r.rating} />
+                          <StarRating value={r.rating} />
                         </div>
                         {r.body && (
                           <p className="mt-2 text-sm leading-relaxed text-gray-600">{r.body}</p>

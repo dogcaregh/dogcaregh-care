@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { StarRating } from "@/components/star-rating";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
@@ -95,7 +96,15 @@ const TRACK_STEPS: BookingStatus[] = [
   "pending", "confirmed", "paid", "in_progress", "completed_pending", "closed",
 ];
 
-type TabKey = "all" | "requests" | "upcoming" | "active" | "history" | "earnings";
+type TabKey = "all" | "requests" | "upcoming" | "active" | "history" | "earnings" | "reviews";
+
+type Review = {
+  id: string;
+  rating: number;
+  body: string | null;
+  created_at: string;
+  users: { name: string } | { name: string }[] | null;
+};
 
 const TABS: Array<{ key: TabKey; label: string; statuses: BookingStatus[] }> = [
   { key: "all",      label: "All",       statuses: ["pending","confirmed","paid","in_progress","completed_pending","closed","cancelled"] },
@@ -417,6 +426,90 @@ function EarningsView({
   );
 }
 
+function ReviewsView({ reviews, ratingAvg, reviewCount }: { reviews: Review[]; ratingAvg: number; reviewCount: number }) {
+  const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
+  const bg = (s: string) => PALETTE[s.charCodeAt(0) % PALETTE.length];
+  const ini = (name?: string | null) => name ? name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase() : "?";
+
+  const dist = [5,4,3,2,1].map(n => ({
+    star: n,
+    count: reviews.filter(r => r.rating === n).length,
+    pct: reviews.length ? Math.round((reviews.filter(r => r.rating === n).length / reviews.length) * 100) : 0,
+  }));
+
+  return (
+    <div className="space-y-5">
+      {/* Rating summary */}
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        {reviews.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <span className="mb-2 text-4xl">⭐</span>
+            <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>No reviews yet</p>
+            <p className="mt-1 text-xs text-gray-400">Complete bookings and ask owners to leave a review.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="text-center">
+              <p className="text-5xl font-extrabold" style={{ color: "#0a2e30" }}>{ratingAvg.toFixed(1)}</p>
+              <StarRating value={ratingAvg} size="md" />
+              <p className="mt-1 text-xs text-gray-400">{reviewCount} review{reviewCount !== 1 ? "s" : ""}</p>
+            </div>
+            <div className="flex-1 space-y-1.5">
+              {dist.map(d => (
+                <div key={d.star} className="flex items-center gap-2">
+                  <span className="w-4 text-right text-xs text-gray-500">{d.star}</span>
+                  <span className="text-xs" style={{ color: "#f59e0b" }}>★</span>
+                  <div className="flex-1 rounded-full bg-gray-100 h-2 overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${d.pct}%`, backgroundColor: "#f59e0b" }} />
+                  </div>
+                  <span className="w-6 text-right text-xs text-gray-400">{d.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Review list */}
+      {reviews.length > 0 && (
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-50">
+            <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>All Reviews</p>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {reviews.map(r => {
+              const reviewer = Array.isArray(r.users) ? r.users[0] : r.users;
+              const name = (reviewer as { name: string } | null)?.name ?? "Owner";
+              return (
+                <div key={r.id} className="px-5 py-4">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                      style={{ backgroundColor: bg(r.id) }}
+                    >
+                      {ini(name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{name}</p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(r.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        </p>
+                      </div>
+                      <StarRating value={r.rating} />
+                      {r.body && <p className="mt-1.5 text-sm leading-relaxed text-gray-600">{r.body}</p>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ProviderDashboard() {
@@ -434,6 +527,7 @@ export default function ProviderDashboard() {
   const [momoNetwork,    setMomoNetwork]    = useState<string | null>(null);
   const [momoNumber,     setMomoNumber]     = useState<string | null>(null);
   const [cashouts,       setCashouts]       = useState<CashoutRequest[]>([]);
+  const [reviews,        setReviews]        = useState<Review[]>([]);
   const [services,     setServices]     = useState<ProviderService[]>([]);
   const [bookings,     setBookings]     = useState<Booking[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -475,7 +569,7 @@ export default function ProviderDashboard() {
       setMomoNetwork((pAny.momo_network as string | null) ?? null);
       setMomoNumber((pAny.momo_number as string | null) ?? null);
 
-      const [{ data: bks }, { data: svcs }, { data: stData }, { data: cos }] = await Promise.all([
+      const [{ data: bks }, { data: svcs }, { data: stData }, { data: cos }, { data: rvws }] = await Promise.all([
         sb
           .from("bookings")
           .select(`
@@ -495,11 +589,17 @@ export default function ProviderDashboard() {
           .select("id, amount, momo_network, momo_number, status, note, created_at, paid_at")
           .eq("provider_id", pAny.id as string)
           .order("created_at", { ascending: false }),
+        sb.from("reviews")
+          .select("id, rating, body, created_at, users!from_user_id(name)")
+          .eq("to_user_id", user.id)
+          .eq("from_role", "owner")
+          .order("created_at", { ascending: false }),
       ]);
 
       if (cancelled) return;
       setBookings((bks ?? []) as unknown as Booking[]);
       setCashouts((cos ?? []) as unknown as CashoutRequest[]);
+      setReviews((rvws ?? []) as unknown as Review[]);
       const activeRows = (svcs ?? []).filter(s => (s as Record<string, unknown>).is_active);
       const svcsMapped = activeRows.map(s => {
         const sid = (s as Record<string, unknown>).service_type_id as string;
@@ -531,7 +631,7 @@ export default function ProviderDashboard() {
   // ── Derived ──────────────────────────────────────────────────────────────
 
   const counts = useMemo(() => {
-    const map: Record<TabKey, number> = { all: 0, requests: 0, upcoming: 0, active: 0, history: 0, earnings: 0 };
+    const map: Record<TabKey, number> = { all: 0, requests: 0, upcoming: 0, active: 0, history: 0, earnings: 0, reviews: 0 };
     for (const b of bookings) {
       map.all++;
       for (const t of TABS) {
@@ -741,17 +841,44 @@ export default function ProviderDashboard() {
             </button>
           ))}
           <button
-            onClick={() => setTab("earnings")}
+            onClick={() => goToTab("earnings")}
             className="flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition"
             style={tab === "earnings" ? { backgroundColor: "#0a2e30", color: "#fff" } : { color: "#9ca3af" }}
           >
             Earnings
+          </button>
+          <button
+            onClick={() => goToTab("reviews")}
+            className="flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition"
+            style={tab === "reviews" ? { backgroundColor: "#0a2e30", color: "#fff" } : { color: "#9ca3af" }}
+          >
+            Reviews
+            {reviews.length > 0 && (
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none"
+                style={tab === "reviews"
+                  ? { backgroundColor: "rgba(255,255,255,.18)", color: "#fff" }
+                  : { backgroundColor: "#f3f4f6", color: "#6b7280" }
+                }
+              >
+                {reviews.length}
+              </span>
+            )}
           </button>
         </div>
 
         {/* ── Earnings view ── */}
         {tab === "earnings" && (
           <EarningsView bookings={bookings} cashouts={cashouts} providerId={providerId} momoNetwork={momoNetwork} momoNumber={momoNumber} />
+        )}
+
+        {/* ── Reviews view ── */}
+        {tab === "reviews" && (
+          <ReviewsView
+            reviews={reviews}
+            ratingAvg={reviews.length > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0}
+            reviewCount={reviews.length}
+          />
         )}
 
         {/* ── Booking list ── */}

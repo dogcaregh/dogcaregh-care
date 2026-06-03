@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import { RatingBadge } from "@/components/star-rating";
 import { lookupCoords, haversine, rankScore, ACCRA_AREAS } from "@/lib/geocode";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -105,7 +106,7 @@ function fmtDist(km: number): string {
 
 function Stars({ value }: { value: number }) {
   return (
-    <span className="inline-flex gap-px leading-none">
+    <span className="inline-flex gap-px leading-none text-sm">
       {[1, 2, 3, 4, 5].map(n => (
         <span key={n} style={{ color: n <= Math.round(value) ? "#f59e0b" : "#e5e7eb" }}>★</span>
       ))}
@@ -156,14 +157,9 @@ function ProviderCard({ p, highlightTypeId, serviceTypes }: { p: RankedProvider;
                 </span>
               </div>
 
-              <div className="mt-0.5 flex items-center gap-1.5">
+              <div className="mt-0.5 flex items-center gap-2">
                 <Stars value={Number(p.rating_avg)} />
-                <span className="text-xs font-semibold text-gray-700">
-                  {Number(p.rating_avg) > 0 ? Number(p.rating_avg).toFixed(1) : "New"}
-                </span>
-                {p.review_count > 0 && (
-                  <span className="text-xs text-gray-400">({p.review_count} reviews)</span>
-                )}
+                <RatingBadge avg={Number(p.rating_avg)} count={p.review_count} />
               </div>
 
               {p.neighbourhood && (
