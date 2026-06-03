@@ -1,7 +1,8 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useAdminGuard } from "@/lib/use-admin-guard";
 import { AdminNav } from "@/components/admin-nav";
@@ -48,10 +49,9 @@ type FilterKey = "all" | "pending" | "confirmed" | "paid" | "in_progress" | "com
 export default function AdminBookingsPage() {
   const ready   = useAdminGuard();
   const router  = useRouter();
-  const params  = useSearchParams();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading,  setLoading]  = useState(true);
-  const [filter,   setFilter]   = useState<FilterKey>((params.get("status") as FilterKey) ?? "all");
+  const [filter,   setFilter]   = useState<FilterKey>("all");
 
   useEffect(() => {
     if (!ready) return;

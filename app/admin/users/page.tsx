@@ -1,7 +1,8 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { useAdminGuard } from "@/lib/use-admin-guard";
 import { AdminNav } from "@/components/admin-nav";
 import { createClient } from "@/lib/supabase";
@@ -31,11 +32,10 @@ type FilterKey = "all" | "owner" | "provider";
 
 export default function AdminUsersPage() {
   const ready      = useAdminGuard();
-  const params     = useSearchParams();
   const [users,    setUsers]   = useState<UserRow[]>([]);
   const [loading,  setLoading] = useState(true);
   const [acting,   setActing]  = useState<string | null>(null);
-  const [filter,   setFilter]  = useState<FilterKey>((params.get("role") as FilterKey) ?? "all");
+  const [filter,   setFilter]  = useState<FilterKey>("all");
 
   useEffect(() => {
     if (!ready) return;
