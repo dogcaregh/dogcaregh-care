@@ -84,7 +84,7 @@ const TRACK_STEPS: BookingStatus[] = [
   "pending", "confirmed", "paid", "in_progress", "completed_pending", "closed",
 ];
 
-type TabKey = "all" | "requests" | "upcoming" | "active" | "history";
+type TabKey = "all" | "requests" | "upcoming" | "active" | "history" | "earnings";
 
 const TABS: Array<{ key: TabKey; label: string; statuses: BookingStatus[] }> = [
   { key: "all",      label: "All",       statuses: ["pending","confirmed","paid","in_progress","completed_pending","closed","cancelled"] },
@@ -131,6 +131,12 @@ function shortRef(id: string) {
   return id.replace(/-/g, "").slice(0, 8).toUpperCase();
 }
 
+const MOMO_LABELS: Record<string, string> = {
+  mtn:        "MTN Mobile Money",
+  vodafone:   "Telecel Cash",
+  airtel_tigo:"AirtelTigo Money",
+};
+
 // ── Sub-components ─────────────────────────────────────────────────────────
 
 function StatusTrack({ status }: { status: BookingStatus }) {
@@ -159,6 +165,155 @@ function StatusTrack({ status }: { status: BookingStatus }) {
   );
 }
 
+function EarningsView({
+  bookings,
+  momoNetwork,
+  momoNumber,
+}: {
+  bookings: Booking[];
+  momoNetwork: string | null;
+  momoNumber: string | null;
+}) {
+  const closed  = bookings.filter(b => b.status === "closed");
+  const pending = bookings.filter(b =>
+    ["confirmed","paid","in_progress","completed_pending"].includes(b.status)
+  );
+
+  const totalEarned   = closed.reduce((s, b) => s + Number(b.provider_payout), 0);
+  const thisMonth     = closed.filter(b => isThisMonth(b.created_at)).reduce((s, b) => s + Number(b.provider_payout), 0);
+  const pendingAmount = pending.reduce((s, b) => s + Number(b.provider_payout), 0);
+
+  return (
+    <div className="space-y-5">
+      {/* Summary stats */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Total Paid Out",  value: `GHS ${totalEarned.toFixed(2)}`,   color: "#10b981" },
+          { label: "This Month",      value: `GHS ${thisMonth.toFixed(2)}`,      color: "#6366f1" },
+          { label: "Pending Payout",  value: `GHS ${pendingAmount.toFixed(2)}`,  color: "#f59e0b" },
+        ].map(s => (
+          <div key={s.label} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm text-center">
+            <p className="text-[11px] font-medium text-gray-400">{s.label}</p>
+            <p className="mt-1 text-lg font-extrabold" style={{ color: s.color }}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Payout method */}
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>Payout Method</p>
+            {momoNetwork && momoNumber ? (
+              <p className="mt-1 text-sm text-gray-500">
+                {MOMO_LABELS[momoNetwork] ?? momoNetwork} · <span className="font-mono">{momoNumber}</span>
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-gray-400">
+                No payout method set up — add your mobile money details so you can receive payments.
+              </p>
+            )}
+          </div>
+          <Link
+            href="/dashboard/provider/edit#payout"
+            className="shrink-0 rounded-xl px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+            style={{ backgroundColor: "#00b096" }}
+          >
+            {momoNetwork ? "Edit" : "Add Details"}
+          </Link>
+        </div>
+      </div>
+
+      {/* Earnings history */}
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-50">
+          <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>
+            Earnings History
+            {closed.length > 0 && <span className="ml-2 text-xs font-normal text-gray-400">({closed.length} completed booking{closed.length !== 1 ? "s" : ""})</span>}
+          </p>
+        </div>
+
+        {closed.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-8 py-16 text-center">
+            <span className="mb-3 text-4xl">💰</span>
+            <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>No earnings yet</p>
+            <p className="mt-1 text-xs text-gray-400">Completed bookings will appear here.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {closed.map(b => {
+              const owner = resolveArr(b.users);
+              const svc   = SERVICES[b.service_type];
+              return (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between px-5 py-3.5 transition hover:bg-gray-50 cursor-pointer"
+                  onClick={() => window.location.href = `/booking/${b.id}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold text-white"
+                      style={{ backgroundColor: avatarBg(b.owner_id) }}
+                    >
+                      {ini(owner?.name)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>
+                        {owner?.name?.split(" ")[0] ?? "Owner"}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {svc?.emoji} {svc?.label} · {fmtDate(b.end_date)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-extrabold" style={{ color: "#10b981" }}>
+                      GHS {Number(b.provider_payout).toFixed(2)}
+                    </p>
+                    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: "rgba(16,185,129,.10)", color: "#10b981" }}>
+                      Paid
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Pending earnings breakdown */}
+      {pending.length > 0 && (
+        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
+          <p className="text-sm font-bold text-amber-800">Pending Earnings</p>
+          <p className="mt-0.5 text-xs text-amber-600 mb-4">
+            These bookings are in progress — earnings will be confirmed when owners confirm completion.
+          </p>
+          <div className="space-y-2">
+            {pending.map(b => {
+              const owner = resolveArr(b.users);
+              const svc   = SERVICES[b.service_type];
+              const st    = STATUS_META[b.status];
+              return (
+                <div key={b.id} className="flex items-center justify-between rounded-xl bg-white px-4 py-3">
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: "#0a2e30" }}>
+                      {owner?.name?.split(" ")[0] ?? "Owner"} · {svc?.label}
+                    </p>
+                    <span className="text-[10px] font-bold" style={{ color: st.color }}>{st.label}</span>
+                  </div>
+                  <p className="text-sm font-bold text-amber-700">
+                    GHS {Number(b.provider_payout).toFixed(2)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ProviderDashboard() {
@@ -173,6 +328,8 @@ export default function ProviderDashboard() {
   const [providerId,     setProviderId]     = useState("");
   const [providerAvatar, setProviderAvatar] = useState<string | null>(null);
   const [providerActive, setProviderActive] = useState(true);
+  const [momoNetwork,    setMomoNetwork]    = useState<string | null>(null);
+  const [momoNumber,     setMomoNumber]     = useState<string | null>(null);
   const [services,     setServices]     = useState<ProviderService[]>([]);
   const [bookings,     setBookings]     = useState<Booking[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -188,7 +345,7 @@ export default function ProviderDashboard() {
 
       const { data: p } = await sb
         .from("providers")
-        .select("id, active, avatar_url, users!user_id(name)")
+        .select("id, active, avatar_url, momo_network, momo_number, users!user_id(name)")
         .eq("user_id", user.id)
         .single();
 
@@ -201,6 +358,8 @@ export default function ProviderDashboard() {
       setProviderId(pAny.id as string);
       setProviderAvatar((pAny.avatar_url as string | null) ?? null);
       setProviderActive(pAny.active as boolean);
+      setMomoNetwork((pAny.momo_network as string | null) ?? null);
+      setMomoNumber((pAny.momo_number as string | null) ?? null);
 
       const [{ data: bks }, { data: svcs }, { data: stData }] = await Promise.all([
         sb
@@ -253,7 +412,7 @@ export default function ProviderDashboard() {
   // ── Derived ──────────────────────────────────────────────────────────────
 
   const counts = useMemo(() => {
-    const map: Record<TabKey, number> = { all: 0, requests: 0, upcoming: 0, active: 0, history: 0 };
+    const map: Record<TabKey, number> = { all: 0, requests: 0, upcoming: 0, active: 0, history: 0, earnings: 0 };
     for (const b of bookings) {
       map.all++;
       for (const t of TABS) {
@@ -462,10 +621,22 @@ export default function ProviderDashboard() {
               )}
             </button>
           ))}
+          <button
+            onClick={() => setTab("earnings")}
+            className="flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition"
+            style={tab === "earnings" ? { backgroundColor: "#0a2e30", color: "#fff" } : { color: "#9ca3af" }}
+          >
+            Earnings
+          </button>
         </div>
 
+        {/* ── Earnings view ── */}
+        {tab === "earnings" && (
+          <EarningsView bookings={bookings} momoNetwork={momoNetwork} momoNumber={momoNumber} />
+        )}
+
         {/* ── Booking list ── */}
-        {visible.length === 0 ? (
+        {tab !== "earnings" && visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-8 py-20 text-center">
             <span className="mb-3 text-5xl">📋</span>
             <p className="text-base font-bold" style={{ color: "#0a2e30" }}>No bookings here yet</p>
@@ -473,7 +644,7 @@ export default function ProviderDashboard() {
               {tab === "requests" ? "New booking requests from dog owners will appear here." : "Nothing to show for this category."}
             </p>
           </div>
-        ) : (
+        ) : tab !== "earnings" && (
           <div className="space-y-3">
             {visible.map(b => {
               const owner   = resolveArr(b.users);

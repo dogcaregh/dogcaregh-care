@@ -31,11 +31,11 @@ const LABEL = "block text-xs font-semibold text-gray-600 mb-1.5";
 
 // ─── Section card ─────────────────────────────────────────────────────────────
 
-function Section({ title, subtitle, children }: {
-  title: string; subtitle?: string; children: React.ReactNode;
+function Section({ id, title, subtitle, children }: {
+  id?: string; title: string; subtitle?: string; children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+    <div id={id} className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
       <div className="mb-5">
         <h2 className="text-base font-extrabold" style={{ color: "#0a2e30" }}>{title}</h2>
         {subtitle && <p className="mt-0.5 text-xs text-gray-400">{subtitle}</p>}
@@ -84,6 +84,10 @@ export default function EditProfilePage() {
   const [yearsExp,     setYearsExp]     = useState<number | "">("");
   const [active,       setActive]       = useState(true);
 
+  // Payout
+  const [momoNetwork, setMomoNetwork] = useState("");
+  const [momoNumber,  setMomoNumber]  = useState("");
+
   // Photos
   const [avatarUrl,        setAvatarUrl]        = useState<string | null>(null);
   const [avatarPreview,    setAvatarPreview]    = useState<string | null>(null);
@@ -111,7 +115,7 @@ export default function EditProfilePage() {
       const [uRes, pRes] = await Promise.all([
         sb.from("users").select("name, phone").eq("id", user.id).single(),
         sb.from("providers")
-          .select("id, bio, years_experience, neighbourhood, active, avatar_url, gallery_photos")
+          .select("id, bio, years_experience, neighbourhood, active, avatar_url, gallery_photos, momo_network, momo_number")
           .eq("user_id", user.id)
           .single(),
       ]);
@@ -123,6 +127,7 @@ export default function EditProfilePage() {
         id: string; bio: string | null; years_experience: number | null;
         neighbourhood: string | null; active: boolean;
         avatar_url: string | null; gallery_photos: string[];
+        momo_network: string | null; momo_number: string | null;
       };
 
       setUserId(user.id);
@@ -133,6 +138,8 @@ export default function EditProfilePage() {
       setNeighbourhood(p.neighbourhood ?? "");
       setYearsExp(p.years_experience ?? "");
       setActive(p.active);
+      setMomoNetwork(p.momo_network ?? "");
+      setMomoNumber(p.momo_number ?? "");
       setAvatarUrl(p.avatar_url);
       setGallery(p.gallery_photos ?? []);
       setLoading(false);
@@ -234,6 +241,8 @@ export default function EditProfilePage() {
           neighbourhood:    neighbourhood.trim() || null,
           location:         neighbourhood.trim() || null,
           active,
+          momo_network:     momoNetwork || null,
+          momo_number:      momoNumber.trim() || null,
           avatar_url:       avatarUrl,
           gallery_photos:   gallery,
           lat:              coords?.lat ?? null,
@@ -455,7 +464,46 @@ export default function EditProfilePage() {
             </div>
           </Section>
 
-          {/* ── 3. Gallery Photos ── */}
+          {/* ── 3. Payout Details ── */}
+          <Section
+            id="payout"
+            title="Payout Details"
+            subtitle="Where we send your earnings. DogCareGH pays out via mobile money."
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={LABEL}>Mobile Money Network</label>
+                <select
+                  className={INPUT}
+                  value={momoNetwork}
+                  onChange={e => setMomoNetwork(e.target.value)}
+                >
+                  <option value="">Select network…</option>
+                  <option value="mtn">MTN Mobile Money</option>
+                  <option value="vodafone">Telecel Cash (Vodafone)</option>
+                  <option value="airtel_tigo">AirtelTigo Money</option>
+                </select>
+              </div>
+              <div>
+                <label className={LABEL}>Mobile Money Number</label>
+                <input
+                  className={INPUT}
+                  type="tel"
+                  placeholder="024 000 0000"
+                  value={momoNumber}
+                  onChange={e => setMomoNumber(e.target.value)}
+                />
+              </div>
+            </div>
+            {momoNetwork && momoNumber && (
+              <p className="mt-3 text-xs text-gray-400">
+                Payouts will be sent to <strong className="text-gray-600">{momoNumber}</strong> via{" "}
+                {{ mtn: "MTN Mobile Money", vodafone: "Telecel Cash", airtel_tigo: "AirtelTigo Money" }[momoNetwork] ?? momoNetwork}.
+              </p>
+            )}
+          </Section>
+
+          {/* ── 4. Gallery Photos ── */}
           <Section
             title="Photo Gallery"
             subtitle={`Show owners your home, yard, or previous happy clients. Up to ${MAX_GALLERY} photos.`}
