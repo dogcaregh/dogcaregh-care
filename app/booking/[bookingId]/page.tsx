@@ -289,7 +289,8 @@ export default function BookingPage() {
   const [text,     setText]     = useState("");
   const [sending,  setSending]  = useState(false);
   const [uploading,setUploading]= useState(false);
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightbox,       setLightbox]       = useState<string | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   // Review state
   const [existingReview,   setExistingReview]   = useState<{ rating: number; body: string | null } | null>(null);
@@ -389,7 +390,12 @@ export default function BookingPage() {
     setUpdating(true);
     const sb = createClient();
     const { error } = await sb.from("bookings").update({ status }).eq("id", booking.id);
-    if (!error) setBooking(prev => prev ? { ...prev, status } : prev);
+    if (!error) {
+      setBooking(prev => prev ? { ...prev, status } : prev);
+      if (status === "closed" && me?.role === "owner" && !existingReview) {
+        setShowReviewModal(true);
+      }
+    }
     setUpdating(false);
   }
 
@@ -513,6 +519,41 @@ export default function BookingPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4" onClick={() => setLightbox(null)}>
           <img src={lightbox} alt="Photo update" className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl" />
           <button className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20" onClick={() => setLightbox(null)}>✕</button>
+        </div>
+      )}
+
+      {/* Review modal — pops up after owner confirms service complete */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setShowReviewModal(false)}>
+          <div
+            className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-lg font-extrabold" style={{ color: "#0a2e30" }}>Rate Your Provider</p>
+                <p className="mt-0.5 text-sm text-gray-500">How was your experience with {providerFullName.split(" ")[0]}?</p>
+              </div>
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200"
+              >✕</button>
+            </div>
+            <ReviewCard
+              title=""
+              prompt=""
+              existingReview={existingReview}
+              starPick={starPick}
+              starHover={starHover}
+              reviewBody={reviewBody}
+              submitting={submittingReview}
+              error={reviewError}
+              onStarPick={setStarPick}
+              onStarHover={setStarHover}
+              onBodyChange={setReviewBody}
+              onSubmit={async () => { await submitReview(); setShowReviewModal(false); }}
+            />
+          </div>
         </div>
       )}
 
