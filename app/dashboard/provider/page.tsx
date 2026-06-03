@@ -551,12 +551,9 @@ export default function ProviderDashboard() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { router.replace("/login?redirect=/dashboard/provider"); return; }
 
-      const { data: p } = await sb
-        .from("providers")
-        .select("id, active, avatar_url, momo_network, momo_number, users!user_id(name)")
-        .eq("user_id", user.id)
-        .single();
-
+      const provRes = await fetch("/api/dashboard/provider");
+      if (!provRes.ok) { router.replace("/register/provider"); return; }
+      const { provider: p } = await provRes.json();
       if (!p) { router.replace("/register/provider"); return; }
       if (cancelled) return;
 
