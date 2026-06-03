@@ -10,6 +10,17 @@ import { useNotifications } from "@/lib/notifications-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+type CashoutRequest = {
+  id: string;
+  amount: number;
+  momo_network: string;
+  momo_number: string;
+  status: "pending" | "paid" | "rejected";
+  note: string | null;
+  created_at: string;
+  paid_at: string | null;
+};
+
 const SLUG_EMOJI: Record<string, string> = {
   dog_walking: "🦮", dog_sitting: "🐾", dog_daycare: "🏡",
   dog_boarding: "🛏️", dog_grooming: "✂️",
@@ -167,30 +178,73 @@ function StatusTrack({ status }: { status: BookingStatus }) {
 
 function EarningsView({
   bookings,
+  cashouts,
+  providerId,
   momoNetwork,
   momoNumber,
 }: {
   bookings: Booking[];
+  cashouts: CashoutRequest[];
+  providerId: string;
   momoNetwork: string | null;
   momoNumber: string | null;
 }) {
+  const [requesting,   setRequesting]   = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [localCashouts, setLocalCashouts] = useState(cashouts);
+
   const closed  = bookings.filter(b => b.status === "closed");
   const pending = bookings.filter(b =>
     ["confirmed","paid","in_progress","completed_pending"].includes(b.status)
   );
 
-  const totalEarned   = closed.reduce((s, b) => s + Number(b.provider_payout), 0);
-  const thisMonth     = closed.filter(b => isThisMonth(b.created_at)).reduce((s, b) => s + Number(b.provider_payout), 0);
-  const pendingAmount = pending.reduce((s, b) => s + Number(b.provider_payout), 0);
+  const totalEarned    = closed.reduce((s, b) => s + Number(b.provider_payout), 0);
+  const thisMonth      = closed.filter(b => isThisMonth(b.created_at)).reduce((s, b) => s + Number(b.provider_payout), 0);
+  const pendingAmount  = pending.reduce((s, b) => s + Number(b.provider_payout), 0);
+  const totalCashedOut = localCashouts.filter(c => c.status === "paid").reduce((s, c) => s + Number(c.amount), 0);
+  const pendingCashout = localCashouts.filter(c => c.status === "pending").reduce((s, c) => s + Number(c.amount), 0);
+  const available      = Math.max(0, totalEarned - totalCashedOut - pendingCashout);
+
+  const hasMomo = !!(momoNetwork && momoNumber);
+
+  async function requestWithdrawal() {
+    if (!hasMomo || available <= 0) return;
+    setRequesting(true);
+    setRequestError(null);
+    const sb = createClient();
+    const { data, error } = await sb
+      .from("cashout_requests")
+      .insert({
+        provider_id:  providerId,
+        amount:       available,
+        momo_network: momoNetwork!,
+        momo_number:  momoNumber!,
+      })
+      .select("id, amount, momo_network, momo_number, status, note, created_at, paid_at")
+      .single();
+    if (error) {
+      setRequestError(error.message);
+    } else if (data) {
+      setLocalCashouts(prev => [data as CashoutRequest, ...prev]);
+    }
+    setRequesting(false);
+  }
+
+  const CASHOUT_STATUS: Record<string, { label: string; color: string; bg: string }> = {
+    pending:  { label: "Pending",   color: "#d97706", bg: "rgba(251,191,36,.12)" },
+    paid:     { label: "Paid",      color: "#10b981", bg: "rgba(16,185,129,.10)" },
+    rejected: { label: "Rejected",  color: "#dc2626", bg: "rgba(220,38,38,.08)"  },
+  };
 
   return (
     <div className="space-y-5">
       {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Total Paid Out",  value: `GHS ${totalEarned.toFixed(2)}`,   color: "#10b981" },
-          { label: "This Month",      value: `GHS ${thisMonth.toFixed(2)}`,      color: "#6366f1" },
-          { label: "Pending Payout",  value: `GHS ${pendingAmount.toFixed(2)}`,  color: "#f59e0b" },
+          { label: "Total Earned",    value: `GHS ${totalEarned.toFixed(2)}`,    color: "#10b981" },
+          { label: "Available",       value: `GHS ${available.toFixed(2)}`,       color: "#00b096" },
+          { label: "In Bookings",     value: `GHS ${pendingAmount.toFixed(2)}`,   color: "#f59e0b" },
+          { label: "This Month",      value: `GHS ${thisMonth.toFixed(2)}`,        color: "#6366f1" },
         ].map(s => (
           <div key={s.label} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm text-center">
             <p className="text-[11px] font-medium text-gray-400">{s.label}</p>
@@ -199,40 +253,94 @@ function EarningsView({
         ))}
       </div>
 
-      {/* Payout method */}
+      {/* Withdraw */}
       <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>Payout Method</p>
-            {momoNetwork && momoNumber ? (
-              <p className="mt-1 text-sm text-gray-500">
-                {MOMO_LABELS[momoNetwork] ?? momoNetwork} · <span className="font-mono">{momoNumber}</span>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>Request Withdrawal</p>
+            {hasMomo ? (
+              <p className="mt-0.5 text-xs text-gray-500">
+                Will be sent to {MOMO_LABELS[momoNetwork!] ?? momoNetwork} · <span className="font-mono">{momoNumber}</span>
               </p>
             ) : (
-              <p className="mt-1 text-sm text-gray-400">
-                No payout method set up — add your mobile money details so you can receive payments.
+              <p className="mt-0.5 text-xs text-gray-400">Add your mobile money details first.</p>
+            )}
+            {requestError && (
+              <p className="mt-2 text-xs text-red-500">{requestError}</p>
+            )}
+            {pendingCashout > 0 && (
+              <p className="mt-2 text-xs text-amber-600">
+                You have a pending withdrawal of GHS {pendingCashout.toFixed(2)} — wait for it to be processed before requesting another.
               </p>
             )}
           </div>
-          <Link
-            href="/dashboard/provider/edit#payout"
-            className="shrink-0 rounded-xl px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90"
-            style={{ backgroundColor: "#00b096" }}
-          >
-            {momoNetwork ? "Edit" : "Add Details"}
-          </Link>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            {hasMomo ? (
+              <button
+                onClick={requestWithdrawal}
+                disabled={requesting || available <= 0 || pendingCashout > 0}
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+                style={{ backgroundColor: "#00b096" }}
+              >
+                {requesting ? "Requesting…" : available > 0 ? `Withdraw GHS ${available.toFixed(2)}` : "Nothing to withdraw"}
+              </button>
+            ) : (
+              <Link
+                href="/dashboard/provider/edit#payout"
+                className="rounded-xl px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+                style={{ backgroundColor: "#00b096" }}
+              >
+                Add MoMo Details
+              </Link>
+            )}
+            <Link
+              href="/dashboard/provider/edit#payout"
+              className="text-[11px] text-gray-400 hover:underline"
+            >
+              {hasMomo ? "Change payout method" : ""}
+            </Link>
+          </div>
         </div>
       </div>
+
+      {/* Withdrawal history */}
+      {localCashouts.length > 0 && (
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-50">
+            <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>Withdrawal History</p>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {localCashouts.map(c => {
+              const st = CASHOUT_STATUS[c.status] ?? CASHOUT_STATUS.pending;
+              return (
+                <div key={c.id} className="flex items-center justify-between px-5 py-3.5">
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>
+                      GHS {Number(c.amount).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {MOMO_LABELS[c.momo_network] ?? c.momo_network} · {c.momo_number} · {fmtDate(c.created_at)}
+                    </p>
+                    {c.note && <p className="mt-0.5 text-xs text-gray-500 italic">{c.note}</p>}
+                  </div>
+                  <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: st.bg, color: st.color }}>
+                    {st.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Earnings history */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-50">
           <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>
-            Earnings History
-            {closed.length > 0 && <span className="ml-2 text-xs font-normal text-gray-400">({closed.length} completed booking{closed.length !== 1 ? "s" : ""})</span>}
+            Completed Bookings
+            {closed.length > 0 && <span className="ml-2 text-xs font-normal text-gray-400">({closed.length})</span>}
           </p>
         </div>
-
         {closed.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-8 py-16 text-center">
             <span className="mb-3 text-4xl">💰</span>
@@ -266,14 +374,9 @@ function EarningsView({
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-extrabold" style={{ color: "#10b981" }}>
-                      GHS {Number(b.provider_payout).toFixed(2)}
-                    </p>
-                    <span className="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ backgroundColor: "rgba(16,185,129,.10)", color: "#10b981" }}>
-                      Paid
-                    </span>
-                  </div>
+                  <p className="text-sm font-extrabold" style={{ color: "#10b981" }}>
+                    GHS {Number(b.provider_payout).toFixed(2)}
+                  </p>
                 </div>
               );
             })}
@@ -281,12 +384,12 @@ function EarningsView({
         )}
       </div>
 
-      {/* Pending earnings breakdown */}
+      {/* Pending earnings */}
       {pending.length > 0 && (
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
-          <p className="text-sm font-bold text-amber-800">Pending Earnings</p>
+          <p className="text-sm font-bold text-amber-800">In-Progress Bookings</p>
           <p className="mt-0.5 text-xs text-amber-600 mb-4">
-            These bookings are in progress — earnings will be confirmed when owners confirm completion.
+            Earnings from these bookings will be available once owners confirm completion.
           </p>
           <div className="space-y-2">
             {pending.map(b => {
@@ -330,6 +433,7 @@ export default function ProviderDashboard() {
   const [providerActive, setProviderActive] = useState(true);
   const [momoNetwork,    setMomoNetwork]    = useState<string | null>(null);
   const [momoNumber,     setMomoNumber]     = useState<string | null>(null);
+  const [cashouts,       setCashouts]       = useState<CashoutRequest[]>([]);
   const [services,     setServices]     = useState<ProviderService[]>([]);
   const [bookings,     setBookings]     = useState<Booking[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -361,7 +465,7 @@ export default function ProviderDashboard() {
       setMomoNetwork((pAny.momo_network as string | null) ?? null);
       setMomoNumber((pAny.momo_number as string | null) ?? null);
 
-      const [{ data: bks }, { data: svcs }, { data: stData }] = await Promise.all([
+      const [{ data: bks }, { data: svcs }, { data: stData }, { data: cos }] = await Promise.all([
         sb
           .from("bookings")
           .select(`
@@ -377,10 +481,15 @@ export default function ProviderDashboard() {
           .select("id, service_type_id, rate_small, rate_medium, rate_large, availability, description, is_active")
           .eq("provider_id", pAny.id as string),
         sb.from("service_types").select("id, slug, name"),
+        sb.from("cashout_requests")
+          .select("id, amount, momo_network, momo_number, status, note, created_at, paid_at")
+          .eq("provider_id", pAny.id as string)
+          .order("created_at", { ascending: false }),
       ]);
 
       if (cancelled) return;
       setBookings((bks ?? []) as unknown as Booking[]);
+      setCashouts((cos ?? []) as unknown as CashoutRequest[]);
       const activeRows = (svcs ?? []).filter(s => (s as Record<string, unknown>).is_active);
       const svcsMapped = activeRows.map(s => {
         const sid = (s as Record<string, unknown>).service_type_id as string;
@@ -632,7 +741,7 @@ export default function ProviderDashboard() {
 
         {/* ── Earnings view ── */}
         {tab === "earnings" && (
-          <EarningsView bookings={bookings} momoNetwork={momoNetwork} momoNumber={momoNumber} />
+          <EarningsView bookings={bookings} cashouts={cashouts} providerId={providerId} momoNetwork={momoNetwork} momoNumber={momoNumber} />
         )}
 
         {/* ── Booking list ── */}

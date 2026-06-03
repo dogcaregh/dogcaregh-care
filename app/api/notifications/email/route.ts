@@ -34,6 +34,7 @@ type NotificationType =
   | "service_started"
   | "awaiting_confirmation"
   | "payout_triggered"
+  | "cashout_paid"
   | "new_message";
 
 interface EmailContent {
@@ -127,6 +128,15 @@ function buildContent(
         body: `Your payout of <strong>GHS ${payoutAmount}</strong> for the ${service} booking with <strong>${ownerName}</strong> has been triggered. Funds will arrive shortly.`,
         ctaLabel: "View Booking",
         ctaUrl: bookingUrl,
+      };
+
+    case "cashout_paid":
+      return {
+        subject: "Your withdrawal has been sent",
+        heading: "Withdrawal Sent!",
+        body: message,
+        ctaLabel: "View Earnings",
+        ctaUrl: `${BASE_URL}/dashboard/provider`,
       };
 
     case "new_message":

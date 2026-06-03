@@ -12,6 +12,7 @@ const TYPE_EMOJI: Record<string, string> = {
   service_started:      "▶️",
   awaiting_confirmation:"⏳",
   payout_triggered:     "💰",
+  cashout_paid:         "🏦",
   new_message:          "💬",
 };
 
