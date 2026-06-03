@@ -543,10 +543,10 @@ export default function ProviderDashboard() {
 
   const stats = useMemo(() => {
     const needsAction = bookings.filter(b =>
-      b.status === "pending" || b.status === "paid" || b.status === "in_progress"
+      b.status === "pending"
     ).length;
     const active = bookings.filter(b =>
-      b.status === "confirmed" || b.status === "paid" || b.status === "in_progress" || b.status === "completed_pending"
+      b.status === "in_progress" || b.status === "completed_pending"
     ).length;
     const monthEarnings = bookings
       .filter(b => b.status === "closed" && isThisMonth(b.created_at))

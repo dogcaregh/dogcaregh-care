@@ -357,8 +357,8 @@ export default function OwnerDashboard() {
   const stats = useMemo(() => ({
     action:    bookings.filter(b => ["confirmed","completed_pending"].includes(b.status)).length,
     pending:   bookings.filter(b => b.status === "pending").length,
-    active:    bookings.filter(b => ["paid","in_progress"].includes(b.status)).length,
-    completed: bookings.filter(b => b.status === "closed").length,
+    active:    bookings.filter(b => ["pending","paid","in_progress"].includes(b.status)).length,
+    history:   bookings.filter(b => ["closed","cancelled"].includes(b.status)).length,
   }), [bookings]);
 
   const visible = useMemo(() => {
@@ -419,10 +419,10 @@ export default function OwnerDashboard() {
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[
-              { label: "Action Needed", value: stats.action,    accent: "#f59e0b", dest: "action"  as TabKey },
-              { label: "Pending",       value: stats.pending,   accent: "#60a5fa", dest: "active"  as TabKey },
-              { label: "Active",        value: stats.active,    accent: "#00b096", dest: "active"  as TabKey },
-              { label: "Completed",     value: stats.completed, accent: "#a78bfa", dest: "history" as TabKey },
+              { label: "Action Needed", value: stats.action,  accent: "#f59e0b", dest: "action"  as TabKey },
+              { label: "Pending",       value: stats.pending, accent: "#60a5fa", dest: "all"     as TabKey },
+              { label: "Active",        value: stats.active,  accent: "#00b096", dest: "active"  as TabKey },
+              { label: "History",       value: stats.history, accent: "#a78bfa", dest: "history" as TabKey },
             ].map(s => (
               <button
                 key={s.label}
