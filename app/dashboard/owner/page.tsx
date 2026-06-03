@@ -745,7 +745,7 @@ export default function OwnerDashboard() {
                               <p className="text-xs font-semibold text-emerald-700">Service complete!</p>
                               <p className="text-xs text-emerald-600">How was your experience with {providerName}?</p>
                             </div>
-                            <Link href={`/provider/${provider.id}`}
+                            <Link href={`/booking/${b.id}?review=1`}
                               className="shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
                               style={{ backgroundColor: "#00b096" }}>
                               Review

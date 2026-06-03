@@ -302,6 +302,7 @@ export default function BookingPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
+  const reviewRef      = useRef<HTMLDivElement>(null);
 
   // ── Load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -374,6 +375,13 @@ export default function BookingPage() {
   useEffect(() => {
     if (tab === "messages") messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, tab]);
+
+  // Scroll to review form when arriving via ?review=1
+  useEffect(() => {
+    if (!loading && searchParams.get("review") === "1" && reviewRef.current) {
+      setTimeout(() => reviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+    }
+  }, [loading, searchParams]);
 
   // ── Actions ───────────────────────────────────────────────────────────────
   async function updateStatus(status: BookingStatus) {
@@ -740,6 +748,7 @@ export default function BookingPage() {
 
                 {/* Review form — owner rates provider */}
                 {booking.status === "closed" && isOwner && reviewLoaded && (
+                  <div ref={reviewRef}>
                   <ReviewCard
                     title="Rate Your Provider"
                     prompt={`How was your experience with ${providerFullName.split(" ")[0]}?`}
@@ -754,6 +763,7 @@ export default function BookingPage() {
                     onBodyChange={setReviewBody}
                     onSubmit={submitReview}
                   />
+                  </div>
                 )}
 
                 {/* Review form — provider rates owner */}
