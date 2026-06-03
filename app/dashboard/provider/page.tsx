@@ -616,10 +616,10 @@ export default function ProviderDashboard() {
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[
-              { label: "Needs Action",      value: stats.needsAction,                       accent: "#f59e0b", dest: "upcoming" as TabKey },
+              { label: "Needs Action",      value: stats.needsAction,                       accent: "#ef4444", dest: "upcoming" as TabKey },
               { label: "Active Bookings",   value: stats.active,                            accent: "#00b096", dest: "active"   as TabKey },
-              { label: "New Requests",      value: stats.newRequests,                       accent: "#8b5cf6", dest: "requests" as TabKey },
-              { label: "Earned This Month", value: `GHS ${stats.monthEarnings.toFixed(0)}`, accent: "#6366f1", dest: "earnings" as TabKey },
+              { label: "New Requests",      value: stats.newRequests,                       accent: "#eab308", dest: "requests" as TabKey },
+              { label: "Earned This Month", value: `GHS ${stats.monthEarnings.toFixed(0)}`, accent: "#f59e0b", dest: "earnings" as TabKey },
             ].map(s => (
               <button
                 key={s.label}
