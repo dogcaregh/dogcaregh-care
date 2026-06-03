@@ -299,25 +299,21 @@ function SearchResults() {
     let cancelled = false;
     async function load() {
       setLoading(true);
-      const sb = createClient();
-
-      const [{ data: stData, error: stErr }, { data: pvData, error: pvErr }] = await Promise.all([
-        sb.from("service_types").select("id, slug, name").order("name"),
-        sb.from("providers")
-          .select(`id, user_id, rating_avg, review_count, active, neighbourhood, avatar_url, lat, lng,
-                   users!user_id(name),
-                   provider_services(service_type_id, rate_small, rate_medium, rate_large, is_active, availability)`)
-          .order("rating_avg", { ascending: false }),
-      ]);
-
-      if (stErr) console.error("[search] service_types error:", stErr);
-      if (pvErr) console.error("[search] providers error:", pvErr);
-
-      if (!cancelled) {
-        const enriched = (stData ?? []).map(st => ({ ...st, emoji: SLUG_EMOJI[st.slug] ?? "🐾" }));
-        setServiceTypes(enriched as ServiceType[]);
-        setProviders((pvData ?? []) as unknown as Provider[]);
-        setLoading(false);
+      try {
+        const res = await fetch("/api/providers");
+        if (!res.ok) throw new Error(`providers API ${res.status}`);
+        const { providers: pvData, serviceTypes: stData } = await res.json();
+        if (!cancelled) {
+          const enriched = (stData ?? []).map((st: { id: string; slug: string; name: string }) => ({
+            ...st, emoji: SLUG_EMOJI[st.slug] ?? "🐾",
+          }));
+          setServiceTypes(enriched as ServiceType[]);
+          setProviders((pvData ?? []) as unknown as Provider[]);
+        }
+      } catch (err) {
+        console.error("[search] load error:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
     load();
