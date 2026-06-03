@@ -443,7 +443,11 @@ export default function ProviderDashboard() {
 
   function goToTab(t: TabKey) {
     setTab(t);
-    setTimeout(() => tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    setTimeout(() => {
+      if (!tabsRef.current) return;
+      const top = tabsRef.current.getBoundingClientRect().top + window.scrollY - 72;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    }, 50);
   }
 
   useEffect(() => {
