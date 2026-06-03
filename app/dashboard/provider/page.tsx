@@ -543,19 +543,13 @@ export default function ProviderDashboard() {
   }, [bookings]);
 
   const stats = useMemo(() => {
-    const needsAction = bookings.filter(b =>
-      b.status === "pending"
-    ).length;
-    const active = bookings.filter(b =>
-      b.status === "in_progress" || b.status === "completed_pending"
-    ).length;
-    const monthEarnings = bookings
+    const needsAction     = bookings.filter(b => b.status === "pending").length;
+    const active          = bookings.filter(b => b.status === "in_progress" || b.status === "completed_pending").length;
+    const awaitingOwner   = bookings.filter(b => b.status === "completed_pending").length;
+    const monthEarnings   = bookings
       .filter(b => b.status === "closed" && isThisMonth(b.created_at))
       .reduce((s, b) => s + Number(b.provider_payout), 0);
-    const totalEarnings = bookings
-      .filter(b => b.status === "closed")
-      .reduce((s, b) => s + Number(b.provider_payout), 0);
-    return { needsAction, active, monthEarnings, totalEarnings };
+    return { needsAction, active, awaitingOwner, monthEarnings };
   }, [bookings]);
 
   const visible = useMemo(() => {
@@ -622,10 +616,10 @@ export default function ProviderDashboard() {
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
             {[
-              { label: "Needs Action",      value: stats.needsAction,                       accent: "#f59e0b", dest: "requests"  as TabKey },
-              { label: "Active Bookings",   value: stats.active,                            accent: "#00b096", dest: "active"    as TabKey },
-              { label: "Earned This Month", value: `GHS ${stats.monthEarnings.toFixed(0)}`, accent: "#a78bfa", dest: "earnings"  as TabKey },
-              { label: "Total Earned",      value: `GHS ${stats.totalEarnings.toFixed(0)}`, accent: "#6366f1", dest: "earnings"  as TabKey },
+              { label: "Needs Action",      value: stats.needsAction,                       accent: "#f59e0b", dest: "requests" as TabKey },
+              { label: "Active Bookings",   value: stats.active,                            accent: "#00b096", dest: "active"   as TabKey },
+              { label: "Awaiting Owner",    value: stats.awaitingOwner,                     accent: "#8b5cf6", dest: "active"   as TabKey },
+              { label: "Earned This Month", value: `GHS ${stats.monthEarnings.toFixed(0)}`, accent: "#6366f1", dest: "earnings" as TabKey },
             ].map(s => (
               <button
                 key={s.label}
