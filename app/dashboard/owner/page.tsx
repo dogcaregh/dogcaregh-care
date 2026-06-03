@@ -259,6 +259,14 @@ export default function OwnerDashboard() {
   const [updating,   setUpdating]   = useState<string | null>(null);
   const [addingDog,  setAddingDog]  = useState(false);
 
+  // Review modal state
+  const [reviewModal,    setReviewModal]    = useState<{ bookingId: string; providerUserId: string; providerName: string } | null>(null);
+  const [starPick,       setStarPick]       = useState(0);
+  const [starHover,      setStarHover]      = useState(0);
+  const [reviewBody,     setReviewBody]     = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError,    setReviewError]    = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -301,8 +309,40 @@ export default function OwnerDashboard() {
     setUpdating(bookingId);
     const sb = createClient();
     const { error } = await sb.from("bookings").update({ status }).eq("id", bookingId);
-    if (!error) setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
+    if (error) console.error("[updateStatus] error:", error);
+    else setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
+
+    if (status === "closed") {
+      const bk = bookings.find(b => b.id === bookingId);
+      const prov = bk ? (Array.isArray(bk.providers) ? bk.providers[0] : bk.providers) : null;
+      if (prov) {
+        const provUser = Array.isArray(prov.users) ? prov.users[0] : prov.users;
+        setStarPick(0); setStarHover(0); setReviewBody(""); setReviewError(null);
+        setReviewModal({ bookingId, providerUserId: prov.user_id, providerName: provUser?.name ?? "the provider" });
+      }
+    }
     setUpdating(null);
+  }
+
+  async function submitReview() {
+    if (!reviewModal || starPick === 0) return;
+    setSubmittingReview(true);
+    setReviewError(null);
+    const sb = createClient();
+    const { error } = await sb.from("reviews").insert({
+      booking_id:   reviewModal.bookingId,
+      from_user_id: ownerId,
+      to_user_id:   reviewModal.providerUserId,
+      from_role:    "owner",
+      rating:       starPick,
+      body:         reviewBody.trim() || null,
+    });
+    if (error) {
+      setReviewError(error.message);
+    } else {
+      setReviewModal(null);
+    }
+    setSubmittingReview(false);
   }
 
   async function handlePayment(bookingId: string) {
@@ -372,6 +412,51 @@ export default function OwnerDashboard() {
   const firstName = ownerName.split(" ")[0];
 
   return (
+    <>
+    {/* Review modal — appears after confirming service complete */}
+    {reviewModal && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setReviewModal(null)}>
+        <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-lg font-extrabold" style={{ color: "#0a2e30" }}>Rate Your Provider</p>
+              <p className="mt-0.5 text-sm text-gray-500">How was your experience with {reviewModal.providerName.split(" ")[0]}?</p>
+            </div>
+            <button onClick={() => setReviewModal(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200">✕</button>
+          </div>
+          <div className="mb-4 flex gap-1.5">
+            {[1,2,3,4,5].map(n => (
+              <button key={n} type="button"
+                onMouseEnter={() => setStarHover(n)}
+                onMouseLeave={() => setStarHover(0)}
+                onClick={() => setStarPick(n)}
+                className="text-4xl leading-none transition-transform hover:scale-110"
+                style={{ color: (starHover || starPick) >= n ? "#f59e0b" : "#e5e7eb" }}>★</button>
+            ))}
+          </div>
+          <textarea
+            value={reviewBody}
+            onChange={e => setReviewBody(e.target.value)}
+            maxLength={500}
+            placeholder="Share your experience (optional)…"
+            rows={3}
+            className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
+          />
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-[10px] text-gray-400">{reviewBody.length}/500</span>
+          </div>
+          {reviewError && <p className="mt-2 text-xs text-red-500">{reviewError}</p>}
+          <button
+            onClick={submitReview}
+            disabled={starPick === 0 || submittingReview}
+            className="mt-3 w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: "#00b096" }}>
+            {submittingReview ? "Submitting…" : "Submit Review"}
+          </button>
+        </div>
+      </div>
+    )}
+
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
 
       {/* ── Nav ── */}
@@ -762,5 +847,6 @@ export default function OwnerDashboard() {
         </section>
       </div>
     </div>
+    </>
   );
 }
