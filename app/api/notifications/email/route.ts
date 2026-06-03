@@ -2,16 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+export const dynamic = "force-dynamic";
 
 const FROM = "DogCareGH <onboarding@resend.dev>";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
+
+function getClients() {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  return { resend, admin };
+}
 
 const SERVICE_LABELS: Record<string, string> = {
   dog_walking:    "Dog Walking",
@@ -189,6 +193,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { resend, admin } = getClients();
+
   const payload = await req.json();
   if (payload.type !== "INSERT" || !payload.record) {
     return NextResponse.json({ ok: true });
@@ -227,8 +233,8 @@ export async function POST(req: NextRequest) {
       service = SERVICE_LABELS[booking.service_type] ?? booking.service_type;
       providerPayout = Number(booking.provider_payout).toFixed(2);
       grossAmount = Number(booking.gross_amount).toFixed(2);
-      ownerName = (booking.owner as any)?.name ?? ownerName;
-      providerName = (booking.provider as any)?.user?.name ?? providerName;
+      ownerName = ((booking.owner as unknown) as { name: string } | null)?.name ?? ownerName;
+      providerName = ((booking.provider as unknown) as { user: { name: string } | null } | null)?.user?.name ?? providerName;
     }
   }
 
