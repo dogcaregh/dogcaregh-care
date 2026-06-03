@@ -40,16 +40,13 @@ export default function AdminUsersPage() {
   useEffect(() => {
     if (!ready) return;
     async function load() {
-      const sb = createClient();
-      const [{ data: usersRaw }, { data: providers }] = await Promise.all([
-        sb.from("users").select("id, name, email, role, phone, created_at").neq("role", "admin").order("created_at", { ascending: false }),
-        sb.from("providers").select("id, user_id, verified, active, rating_avg, review_count"),
-      ]);
+      const res = await fetch("/api/admin/users");
+      if (!res.ok) { setLoading(false); return; }
+      const { users: usersRaw, providers } = await res.json();
 
-      const providerMap = new Map((providers ?? []).map(p => [p.user_id, p]));
-      const merged = (usersRaw ?? []).map(u => ({
+      const providerMap = new Map((providers ?? []).map((p: { user_id: string; id: string; verified: boolean; active: boolean; rating_avg: number; review_count: number }) => [p.user_id, p]));
+      const merged = (usersRaw ?? []).map((u: UserRow) => ({
         ...u,
-        role: u.role as UserRow["role"],
         provider: u.role === "provider" ? (providerMap.get(u.id) ?? null) : null,
       }));
       setUsers(merged);
