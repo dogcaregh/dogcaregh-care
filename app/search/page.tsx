@@ -356,10 +356,13 @@ function SearchResults() {
         if (price !== null && price < range.min) return false;
         return true;
       })
-      .sort((a, b) =>
-        rankScore(b.distKm, Number(b.rating_avg), b.review_count) -
-        rankScore(a.distKm, Number(a.rating_avg), a.review_count)
-      );
+      .sort((a, b) => {
+        if (a.verified !== b.verified) return a.verified ? -1 : 1;
+        return (
+          rankScore(b.distKm, Number(b.rating_avg), b.review_count) -
+          rankScore(a.distKm, Number(a.rating_avg), a.review_count)
+        );
+      });
   }, [providers, selectedTypeId, priceIdx, avail, location, userCoords]);
 
   const selectedST  = serviceTypes.find(st => st.slug === selectedSlug);
