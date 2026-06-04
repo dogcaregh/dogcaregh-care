@@ -524,8 +524,10 @@ export default function ProviderDashboard() {
   const [providerId,     setProviderId]     = useState("");
   const [providerAvatar, setProviderAvatar] = useState<string | null>(null);
   const [providerActive, setProviderActive] = useState(true);
-  const [momoNetwork,    setMomoNetwork]    = useState<string | null>(null);
-  const [momoNumber,     setMomoNumber]     = useState<string | null>(null);
+  const [momoNetwork,        setMomoNetwork]        = useState<string | null>(null);
+  const [momoNumber,         setMomoNumber]         = useState<string | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<string>("unsubmitted");
+  const [providerLevel,      setProviderLevel]      = useState<number>(1);
   const [cashouts,       setCashouts]       = useState<CashoutRequest[]>([]);
   const [reviews,        setReviews]        = useState<Review[]>([]);
   const [services,     setServices]     = useState<ProviderService[]>([]);
@@ -565,6 +567,8 @@ export default function ProviderDashboard() {
       setProviderActive(pAny.active as boolean);
       setMomoNetwork((pAny.momo_network as string | null) ?? null);
       setMomoNumber((pAny.momo_number as string | null) ?? null);
+      setVerificationStatus((pAny.verification_status as string | null) ?? "unsubmitted");
+      setProviderLevel((pAny.provider_level as number | null) ?? 1);
 
       const [{ data: bks }, { data: svcs }, { data: stData }, { data: cos }, { data: rvws }] = await Promise.all([
         sb
@@ -738,6 +742,42 @@ export default function ProviderDashboard() {
               <p className="text-sm text-red-300">
                 Your profile is set to <strong>unavailable</strong> — dog owners can&apos;t find or book you on the marketplace.
               </p>
+            </div>
+          )}
+
+          {/* Verification status banner */}
+          {verificationStatus === "unsubmitted" && (
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3">
+              <div className="flex items-start gap-2">
+                <span>📋</span>
+                <p className="text-sm text-amber-200">Complete your verification to unlock full access and appear as a trusted carer.</p>
+              </div>
+              <Link href="/dashboard/provider/verify" className="shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90" style={{ backgroundColor: "#d97706" }}>
+                Apply Now
+              </Link>
+            </div>
+          )}
+          {verificationStatus === "pending" && (
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-3">
+              <span>🕐</span>
+              <p className="text-sm text-blue-200">Your verification is <strong>under review</strong>. We&apos;ll notify you once it&apos;s processed.</p>
+            </div>
+          )}
+          {verificationStatus === "approved" && (
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3">
+              <span>✅</span>
+              <p className="text-sm text-emerald-200"><strong>Verified</strong> — Level {providerLevel} Carer</p>
+            </div>
+          )}
+          {verificationStatus === "rejected" && (
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3">
+              <div className="flex items-start gap-2">
+                <span>❌</span>
+                <p className="text-sm text-red-200">Your verification was not approved. Please review the feedback and reapply.</p>
+              </div>
+              <Link href="/dashboard/provider/verify" className="shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90" style={{ backgroundColor: "#dc2626" }}>
+                Reapply
+              </Link>
             </div>
           )}
         </div>

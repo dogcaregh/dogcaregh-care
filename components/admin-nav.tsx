@@ -14,6 +14,7 @@ const LINKS = [
   { href: "/admin/cashouts",      label: "Cashouts"     },
   { href: "/admin/refunds",       label: "Refunds"      },
   { href: "/admin/disputes",      label: "Disputes"     },
+  { href: "/admin/verification",  label: "Applicants"   },
 ];
 
 export function AdminNav() {

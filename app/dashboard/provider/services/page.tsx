@@ -68,6 +68,9 @@ const SERVICES: {
   { slug: "dog_grooming", emoji: "✂️", label: "Dog Grooming", unit: "per session" },
 ];
 
+// Services that require Level 2 verification (home-based services)
+const LEVEL_2_SLUGS = new Set<ServiceSlug>(["dog_sitting", "dog_daycare", "dog_boarding"]);
+
 const GROOMING_SUBS = [
   { slug: "bath_brush",     label: "Bath & Brush"    },
   { slug: "full_groom",     label: "Full Groom"       },
@@ -285,6 +288,7 @@ export default function ProviderServicesPage() {
   const [discountTiers,  setDiscountTiers]  = useState<DiscountTier[]>([]);
   const [serviceAreas,   setServiceAreas]   = useState<string[]>([]);
 
+  const [providerLevel, setProviderLevel] = useState<number>(1);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState(false);
@@ -317,8 +321,9 @@ export default function ProviderServicesPage() {
         return;
       }
 
-      const pid = (pData as { id: string }).id;
+      const pid = (pData as { id: string; provider_level?: number }).id;
       setProviderId(pid);
+      setProviderLevel((pData as { provider_level?: number }).provider_level ?? 1);
 
       const stMap: Record<string, string> = {};
       for (const st of stRes.data ?? []) stMap[st.slug] = st.id;
@@ -722,6 +727,28 @@ export default function ProviderServicesPage() {
                 const cfg       = configs[svc.slug];
                 const isGrooming = svc.slug === "dog_grooming";
                 const itemised  = isGrooming && cfg.groomingMode === "itemised";
+                const isLocked  = LEVEL_2_SLUGS.has(svc.slug) && providerLevel < 2;
+
+                if (isLocked) {
+                  return (
+                    <div key={svc.slug} className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4 opacity-60">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{svc.emoji}</span>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-500">{svc.label}</p>
+                          <p className="text-xs text-gray-400">Requires Level 2 verification</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/dashboard/provider/verify"
+                        className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition hover:opacity-90"
+                        style={{ backgroundColor: "rgba(0,176,150,.12)", color: "#00b096" }}
+                      >
+                        Apply for Level 2
+                      </Link>
+                    </div>
+                  );
+                }
 
                 return (
                   <div

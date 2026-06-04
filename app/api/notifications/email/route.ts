@@ -37,6 +37,8 @@ type NotificationType =
   | "cashout_paid"
   | "cashout_rejected"
   | "booking_cancelled"
+  | "verification_approved"
+  | "verification_rejected"
   | "new_message";
 
 interface EmailContent {
@@ -157,6 +159,24 @@ function buildContent(
         body: message,
         ctaLabel: "View Dashboard",
         ctaUrl: `${BASE_URL}/dashboard/owner`,
+      };
+
+    case "verification_approved":
+      return {
+        subject: "You're verified on DogCareGH!",
+        heading: "Verification Approved 🎉",
+        body: message,
+        ctaLabel: "Go to Dashboard",
+        ctaUrl: `${BASE_URL}/dashboard/provider`,
+      };
+
+    case "verification_rejected":
+      return {
+        subject: "Update on your DogCareGH application",
+        heading: "Application Update",
+        body: message,
+        ctaLabel: "Reapply",
+        ctaUrl: `${BASE_URL}/dashboard/provider/verify`,
       };
 
     case "new_message":
