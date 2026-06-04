@@ -291,6 +291,7 @@ export default function BookingPage() {
   const [uploading,setUploading]= useState(false);
   const [lightbox,       setLightbox]       = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [bookingAddons,  setBookingAddons]  = useState<{ id: string; name: string; description: string | null; price: number }[]>([]);
 
   // Dispute state
   const [disputeRaised,      setDisputeRaised]      = useState(false);
@@ -326,7 +327,7 @@ export default function BookingPage() {
       ]);
 
       if (!apiRes.ok) { setLoading(false); return; }
-      const { booking: bk, review: rvData } = await apiRes.json();
+      const { booking: bk, review: rvData, addons: addonData } = await apiRes.json();
       if (!bk) { setLoading(false); return; }
 
       const typedBk  = bk as unknown as BookingDetail;
@@ -359,6 +360,7 @@ export default function BookingPage() {
       setBooking(typedBk);
       setMessages((msgsRes.data ?? []) as Message[]);
       setExistingReview(rvData ? { rating: rvData.rating, body: rvData.body } : null);
+      setBookingAddons(addonData ?? []);
       setReviewLoaded(true);
       setLoading(false);
     }
@@ -832,6 +834,24 @@ export default function BookingPage() {
                           </div>
                         )}
                       </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Add-ons */}
+              {bookingAddons.length > 0 && (
+                <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Add-ons</p>
+                  <div className="space-y-2">
+                    {bookingAddons.map(a => (
+                      <div key={a.id} className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{a.name}</p>
+                          {a.description && <p className="text-xs text-gray-400">{a.description}</p>}
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: "#0a2e30" }}>GHS {Number(a.price).toFixed(2)}</span>
+                      </div>
                     ))}
                   </div>
                 </div>

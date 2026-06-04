@@ -27,7 +27,7 @@ export async function GET(
     .select(
       `id, service_type, start_date, end_date, selected_dates, additional_dog_ids,
        preferred_time, preferred_end_time, duration_hours,
-       gross_amount, provider_payout, status, owner_id, created_at,
+       gross_amount, provider_payout, status, owner_id, created_at, addon_ids,
        providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
        dogs!dog_id(id, name, breed, size, age, vaccination_status, leash_trained),
        users!owner_id(name, avatar_url, location)`
@@ -48,13 +48,17 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Also fetch existing review for this user on this booking
-  const { data: review } = await service
-    .from("reviews")
-    .select("rating, body")
-    .eq("booking_id", bookingId)
-    .eq("from_user_id", user.id)
-    .maybeSingle();
+  const [{ data: review }, { data: addonDetails }] = await Promise.all([
+    service
+      .from("reviews")
+      .select("rating, body")
+      .eq("booking_id", bookingId)
+      .eq("from_user_id", user.id)
+      .maybeSingle(),
+    (bk.addon_ids as string[] | null)?.length
+      ? service.from("provider_addons").select("id, name, description, price").in("id", bk.addon_ids as string[])
+      : Promise.resolve({ data: [] }),
+  ]);
 
-  return NextResponse.json({ booking, review: review ?? null });
+  return NextResponse.json({ booking, review: review ?? null, addons: addonDetails ?? [] });
 }

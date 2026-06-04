@@ -41,6 +41,7 @@ type Slot = {
   id: string;
   svcId: string;
   dogIds: string[];
+  addonIds: string[];
   selectedDates: string[];
   startDate: string;
   endDate: string;
@@ -57,11 +58,19 @@ type DiscountTier = {
   percentage: number;
 };
 
+type ProviderAddon = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+};
+
 type Pricing = {
   base: number;
   gross: number;
   discountPct: number;
   discountAmt: number;
+  addonTotal: number;
 };
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -101,7 +110,7 @@ function resolveUser(u: ProviderInfo["users"]): { name: string } | null {
 function uid() { return Math.random().toString(36).slice(2); }
 
 function emptySlot(): Slot {
-  return { id: uid(), svcId: "", dogIds: [], selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" };
+  return { id: uid(), svcId: "", dogIds: [], addonIds: [], selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" };
 }
 
 function daysBetween(start: string, end: string) {
@@ -184,6 +193,7 @@ function slotPricing(
   services: ProviderService[],
   dogs: Dog[],
   discountTiers: DiscountTier[],
+  addons: ProviderAddon[],
 ): Pricing | null {
   const base = slotGross(slot, services, dogs);
   if (base === null) return null;
@@ -195,7 +205,6 @@ function slotPricing(
   const isRange  = RANGE_SLUGS.has(slug);
   const isHourly = HOURLY_SLUGS.has(slug);
 
-  // Duration count — same unit used as multiplier in slotGross
   let durationCount = 0;
   if (isRange) {
     durationCount = slot.startDate && slot.endDate ? daysBetween(slot.startDate, slot.endDate) : 0;
@@ -218,14 +227,20 @@ function slotPricing(
     .filter(t => t.discount_type === "bulk" && dogCount >= Number(t.threshold))
     .reduce((best, t) => Math.max(best, Number(t.percentage)), 0);
 
-  const totalPct   = Math.min(durPct + bulkPct, 50);
+  const totalPct    = Math.min(durPct + bulkPct, 50);
   const discountAmt = Math.round(base * totalPct / 100 * 100) / 100;
+
+  const addonTotal = Math.round(
+    addons.filter(a => slot.addonIds.includes(a.id))
+      .reduce((sum, a) => sum + Number(a.price), 0) * 100
+  ) / 100;
 
   return {
     base,
-    gross:       Math.round((base - discountAmt) * 100) / 100,
+    gross:       Math.round((base - discountAmt + addonTotal) * 100) / 100,
     discountPct: totalPct,
     discountAmt,
+    addonTotal,
   };
 }
 
@@ -330,12 +345,13 @@ function CalendarPicker({ selected, onChange }: { selected: string[]; onChange: 
 // ── SlotPanel ──────────────────────────────────────────────────────────────
 
 function SlotPanel({
-  slot, index, canRemove, services, dogs, discountTiers,
+  slot, index, canRemove, services, dogs, discountTiers, addons,
   onChange, onRemove,
 }: {
   slot: Slot; index: number; canRemove: boolean;
   services: ProviderService[]; dogs: Dog[];
   discountTiers: DiscountTier[];
+  addons: ProviderAddon[];
   onChange: (patch: Partial<Slot>) => void;
   onRemove: () => void;
 }) {
@@ -365,7 +381,7 @@ function SlotPanel({
     (!slot.endTime   || slot.endTime   <= availWindow.end)
   );
 
-  const pricing    = slotPricing(slot, services, dogs, discountTiers);
+  const pricing    = slotPricing(slot, services, dogs, discountTiers, addons);
   const gross      = pricing?.gross ?? null;
   const commission = gross !== null ? Math.round(gross * COMMISSION_RATE * 100) / 100 : null;
 
@@ -616,6 +632,44 @@ function SlotPanel({
           </div>
         )}
 
+        {/* ── Add-ons ── */}
+        {addons.length > 0 && (
+          <div>
+            <p className="mb-2 text-sm font-bold" style={{ color: "#0a2e30" }}>Optional Add-ons</p>
+            <div className="space-y-2">
+              {addons.map(addon => {
+                const checked = slot.addonIds.includes(addon.id);
+                return (
+                  <button
+                    key={addon.id}
+                    type="button"
+                    onClick={() => onChange({
+                      addonIds: checked
+                        ? slot.addonIds.filter(id => id !== addon.id)
+                        : [...slot.addonIds, addon.id],
+                    })}
+                    className="flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition"
+                    style={checked
+                      ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" }
+                      : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }}
+                  >
+                    <div className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition ${checked ? "bg-[#00b096] border-[#00b096]" : "border-gray-300"}`}>
+                      {checked && <span className="text-[10px] font-bold leading-none text-white">✓</span>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{addon.name}</p>
+                      {addon.description && <p className="mt-0.5 text-xs text-gray-400">{addon.description}</p>}
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold" style={{ color: "#0a2e30" }}>
+                      + GHS {Number(addon.price).toFixed(2)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ── Mini price for this slot ── */}
         {pricing !== null && (
           <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
@@ -639,6 +693,11 @@ function SlotPanel({
                 GHS {pricing.gross.toFixed(2)}
               </p>
             </div>
+            {pricing.addonTotal > 0 && (
+              <p className="mt-0.5 text-[10px] text-gray-400">
+                incl. GHS {pricing.addonTotal.toFixed(2)} add-ons
+              </p>
+            )}
             <p className="mt-0.5 text-[10px] text-gray-400">
               + GHS {commission?.toFixed(2)} platform fee
             </p>
@@ -660,6 +719,7 @@ export default function BookPage() {
   const [services,       setServices]       = useState<ProviderService[]>([]);
   const [dogs,           setDogs]           = useState<Dog[]>([]);
   const [discountTiers,  setDiscountTiers]  = useState<DiscountTier[]>([]);
+  const [addons,         setAddons]         = useState<ProviderAddon[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [submitting,  setSubmitting]  = useState(false);
   const [error,       setError]       = useState<string | null>(null);
@@ -682,7 +742,7 @@ export default function BookPage() {
       if (cancelled) return;
       if (!apiRes.ok) { router.replace("/search"); return; }
 
-      const { provider: p, services: activeSvcs, discountTiers: tiers } = await apiRes.json();
+      const { provider: p, services: activeSvcs, discountTiers: tiers, addons: addonRows } = await apiRes.json();
       if (!p) { router.replace("/search"); return; }
 
       // Pre-select service from ?service= param, or auto-select if only one
@@ -698,6 +758,7 @@ export default function BookPage() {
       setServices((activeSvcs ?? []) as unknown as ProviderService[]);
       setDogs((d ?? []) as Dog[]);
       setDiscountTiers((tiers ?? []) as DiscountTier[]);
+      setAddons((addonRows ?? []) as ProviderAddon[]);
       setLoading(false);
     }
     load();
@@ -717,10 +778,9 @@ export default function BookPage() {
   }
 
   const validSlots = slots.filter(s => slotValid(s, services));
-  const totalGross = validSlots.reduce((sum, s) => sum + (slotPricing(s, services, dogs, discountTiers)?.gross ?? 0), 0);
-  const totalBase  = validSlots.reduce((sum, s) => sum + (slotPricing(s, services, dogs, discountTiers)?.base ?? 0), 0);
+  const totalGross = validSlots.reduce((sum, s) => sum + (slotPricing(s, services, dogs, discountTiers, addons)?.gross ?? 0), 0);
   const totalComm  = Math.round(totalGross * COMMISSION_RATE * 100) / 100;
-  const totalSaved = Math.round((totalBase - totalGross) * 100) / 100;
+  const totalSaved = validSlots.reduce((sum, s) => sum + (slotPricing(s, services, dogs, discountTiers, addons)?.discountAmt ?? 0), 0);
   const canSubmit  = validSlots.length > 0 && !submitting;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -751,7 +811,7 @@ export default function BookPage() {
         .lte("start_date", effectiveEnd).gte("end_date", effectiveStart).limit(1);
       if (conflicts && conflicts.length > 0) setDateWarning(true);
 
-      const gross    = slotPricing(slot, services, dogs, discountTiers)?.gross ?? 0;
+      const gross    = slotPricing(slot, services, dogs, discountTiers, addons)?.gross ?? 0;
       const comm     = Math.round(gross * COMMISSION_RATE * 100) / 100;
       const payout   = Math.round((gross - comm) * 100) / 100;
 
@@ -776,6 +836,7 @@ export default function BookPage() {
         gross_amount:       gross,
         commission_amount:  comm,
         provider_payout:    payout,
+        addon_ids:          slot.addonIds.length > 0 ? slot.addonIds : null,
       }).select("id").single();
 
       if (bookingErr || !booking) {
@@ -872,6 +933,7 @@ export default function BookPage() {
                 services={services}
                 dogs={dogs}
                 discountTiers={discountTiers}
+                addons={addons}
                 onChange={patch => updateSlot(slot.id, patch)}
                 onRemove={() => removeSlot(slot.id)}
               />
@@ -903,7 +965,7 @@ export default function BookPage() {
                 </p>
                 <div className="space-y-2 text-sm">
                   {validSlots.length > 1 && validSlots.map((s) => {
-                    const p = slotPricing(s, services, dogs, discountTiers);
+                    const p = slotPricing(s, services, dogs, discountTiers, addons);
                     const sv = services.find(sv => sv.id === s.svcId);
                     return p !== null ? (
                       <div key={s.id} className="flex justify-between text-gray-500 text-xs">
