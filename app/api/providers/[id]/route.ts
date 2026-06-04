@@ -38,6 +38,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     { data: serviceTypes },
     { data: svcsRaw },
     { data: reviews },
+    { data: discountTiers },
   ] = await Promise.all([
     supabase.from("service_types").select("id, slug, name, rate_unit"),
     supabase
@@ -50,6 +51,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       .eq("to_user_id", provider.user_id)
       .eq("from_role", "owner")
       .order("created_at", { ascending: false }),
+    supabase
+      .from("provider_discount_tiers")
+      .select("id, service_type_id, discount_type, threshold, percentage")
+      .eq("provider_id", id),
   ]);
 
   const activeSvcs = (svcsRaw ?? [])
@@ -72,5 +77,6 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     provider,
     services: activeSvcs,
     reviews: reviews ?? [],
+    discountTiers: discountTiers ?? [],
   });
 }

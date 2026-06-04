@@ -49,6 +49,21 @@ type Slot = {
   sittingTier: "half" | "full" | "";
 };
 
+type DiscountTier = {
+  id: string;
+  service_type_id: string;
+  discount_type: "duration" | "bulk";
+  threshold: number;
+  percentage: number;
+};
+
+type Pricing = {
+  base: number;
+  gross: number;
+  discountPct: number;
+  discountAmt: number;
+};
+
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const RANGE_SLUGS  = new Set(["dog_boarding"]);
@@ -164,6 +179,56 @@ function slotGross(slot: Slot, services: ProviderService[], dogs: Dog[]): number
   return r * days;
 }
 
+function slotPricing(
+  slot: Slot,
+  services: ProviderService[],
+  dogs: Dog[],
+  discountTiers: DiscountTier[],
+): Pricing | null {
+  const base = slotGross(slot, services, dogs);
+  if (base === null) return null;
+
+  const svc = services.find(s => s.id === slot.svcId);
+  if (!svc) return null;
+
+  const slug     = svc.service_types?.slug ?? "";
+  const isRange  = RANGE_SLUGS.has(slug);
+  const isHourly = HOURLY_SLUGS.has(slug);
+
+  // Duration count — same unit used as multiplier in slotGross
+  let durationCount = 0;
+  if (isRange) {
+    durationCount = slot.startDate && slot.endDate ? daysBetween(slot.startDate, slot.endDate) : 0;
+  } else if (isHourly) {
+    const hrs = slot.startTime && slot.endTime && slot.endTime > slot.startTime
+      ? timeDiffHours(slot.startTime, slot.endTime) : 0;
+    durationCount = hrs * (slot.selectedDates.length || 1);
+  } else {
+    durationCount = slot.selectedDates.length;
+  }
+
+  const dogCount = slot.dogIds.length;
+  const tiers    = discountTiers.filter(t => t.service_type_id === svc.service_type_id);
+
+  const durPct = tiers
+    .filter(t => t.discount_type === "duration" && durationCount >= Number(t.threshold))
+    .reduce((best, t) => Math.max(best, Number(t.percentage)), 0);
+
+  const bulkPct = tiers
+    .filter(t => t.discount_type === "bulk" && dogCount >= Number(t.threshold))
+    .reduce((best, t) => Math.max(best, Number(t.percentage)), 0);
+
+  const totalPct   = Math.min(durPct + bulkPct, 50);
+  const discountAmt = Math.round(base * totalPct / 100 * 100) / 100;
+
+  return {
+    base,
+    gross:       Math.round((base - discountAmt) * 100) / 100,
+    discountPct: totalPct,
+    discountAmt,
+  };
+}
+
 function slotValid(slot: Slot, services: ProviderService[]): boolean {
   if (!slot.svcId || slot.dogIds.length === 0) return false;
   const svc = services.find(s => s.id === slot.svcId);
@@ -265,11 +330,12 @@ function CalendarPicker({ selected, onChange }: { selected: string[]; onChange: 
 // ── SlotPanel ──────────────────────────────────────────────────────────────
 
 function SlotPanel({
-  slot, index, canRemove, services, dogs,
+  slot, index, canRemove, services, dogs, discountTiers,
   onChange, onRemove,
 }: {
   slot: Slot; index: number; canRemove: boolean;
   services: ProviderService[]; dogs: Dog[];
+  discountTiers: DiscountTier[];
   onChange: (patch: Partial<Slot>) => void;
   onRemove: () => void;
 }) {
@@ -299,7 +365,8 @@ function SlotPanel({
     (!slot.endTime   || slot.endTime   <= availWindow.end)
   );
 
-  const gross = slotGross(slot, services, dogs);
+  const pricing    = slotPricing(slot, services, dogs, discountTiers);
+  const gross      = pricing?.gross ?? null;
   const commission = gross !== null ? Math.round(gross * COMMISSION_RATE * 100) / 100 : null;
 
   const INPUT = "w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20";
@@ -550,21 +617,26 @@ function SlotPanel({
         )}
 
         {/* ── Mini price for this slot ── */}
-        {gross !== null && (
+        {pricing !== null && (
           <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+            {pricing.discountPct > 0 && (
+              <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-lg border border-green-100 bg-green-50 px-3 py-1.5">
+                <span className="text-xs font-bold text-green-600">{pricing.discountPct}% off</span>
+                <span className="text-xs text-gray-400 line-through">GHS {pricing.base.toFixed(2)}</span>
+                <span className="text-xs font-semibold text-green-600">saving GHS {pricing.discountAmt.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div className="text-xs text-gray-500">
                 {selDogs.length > 1 && <span>{selDogs.length} dogs · </span>}
                 {isTiered ? (
-                  <span>GHS {slotGross(slot, services, dogs)?.toFixed(2)} ({slot.sittingTier === "half" ? "half day" : "full day"})</span>
+                  <span>{slot.sittingTier === "half" ? "Half day" : "Full day"}</span>
                 ) : isHourly && durationHours > 0 ? (
-                  <span>GHS {gross.toFixed(2)} ({durationHours} hr{durationHours !== 1 ? "s" : ""})</span>
-                ) : (
-                  <span>GHS {gross.toFixed(2)}</span>
-                )}
+                  <span>{durationHours} hr{durationHours !== 1 ? "s" : ""}</span>
+                ) : null}
               </div>
               <p className="text-base font-extrabold" style={{ color: "#0a2e30" }}>
-                GHS {gross.toFixed(2)}
+                GHS {pricing.gross.toFixed(2)}
               </p>
             </div>
             <p className="mt-0.5 text-[10px] text-gray-400">
@@ -584,9 +656,10 @@ export default function BookPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
-  const [provider,    setProvider]    = useState<ProviderInfo | null>(null);
-  const [services,    setServices]    = useState<ProviderService[]>([]);
-  const [dogs,        setDogs]        = useState<Dog[]>([]);
+  const [provider,       setProvider]       = useState<ProviderInfo | null>(null);
+  const [services,       setServices]       = useState<ProviderService[]>([]);
+  const [dogs,           setDogs]           = useState<Dog[]>([]);
+  const [discountTiers,  setDiscountTiers]  = useState<DiscountTier[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [submitting,  setSubmitting]  = useState(false);
   const [error,       setError]       = useState<string | null>(null);
@@ -609,7 +682,7 @@ export default function BookPage() {
       if (cancelled) return;
       if (!apiRes.ok) { router.replace("/search"); return; }
 
-      const { provider: p, services: activeSvcs } = await apiRes.json();
+      const { provider: p, services: activeSvcs, discountTiers: tiers } = await apiRes.json();
       if (!p) { router.replace("/search"); return; }
 
       // Pre-select service from ?service= param, or auto-select if only one
@@ -624,6 +697,7 @@ export default function BookPage() {
       setProvider(p as unknown as ProviderInfo);
       setServices((activeSvcs ?? []) as unknown as ProviderService[]);
       setDogs((d ?? []) as Dog[]);
+      setDiscountTiers((tiers ?? []) as DiscountTier[]);
       setLoading(false);
     }
     load();
@@ -643,8 +717,10 @@ export default function BookPage() {
   }
 
   const validSlots = slots.filter(s => slotValid(s, services));
-  const totalGross = validSlots.reduce((sum, s) => sum + (slotGross(s, services, dogs) ?? 0), 0);
+  const totalGross = validSlots.reduce((sum, s) => sum + (slotPricing(s, services, dogs, discountTiers)?.gross ?? 0), 0);
+  const totalBase  = validSlots.reduce((sum, s) => sum + (slotPricing(s, services, dogs, discountTiers)?.base ?? 0), 0);
   const totalComm  = Math.round(totalGross * COMMISSION_RATE * 100) / 100;
+  const totalSaved = Math.round((totalBase - totalGross) * 100) / 100;
   const canSubmit  = validSlots.length > 0 && !submitting;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -675,7 +751,7 @@ export default function BookPage() {
         .lte("start_date", effectiveEnd).gte("end_date", effectiveStart).limit(1);
       if (conflicts && conflicts.length > 0) setDateWarning(true);
 
-      const gross    = slotGross(slot, services, dogs) ?? 0;
+      const gross    = slotPricing(slot, services, dogs, discountTiers)?.gross ?? 0;
       const comm     = Math.round(gross * COMMISSION_RATE * 100) / 100;
       const payout   = Math.round((gross - comm) * 100) / 100;
 
@@ -795,6 +871,7 @@ export default function BookPage() {
                 canRemove={slots.length > 1}
                 services={services}
                 dogs={dogs}
+                discountTiers={discountTiers}
                 onChange={patch => updateSlot(slot.id, patch)}
                 onRemove={() => removeSlot(slot.id)}
               />
@@ -826,15 +903,21 @@ export default function BookPage() {
                 </p>
                 <div className="space-y-2 text-sm">
                   {validSlots.length > 1 && validSlots.map((s) => {
-                    const g = slotGross(s, services, dogs);
+                    const p = slotPricing(s, services, dogs, discountTiers);
                     const sv = services.find(sv => sv.id === s.svcId);
-                    return g !== null ? (
+                    return p !== null ? (
                       <div key={s.id} className="flex justify-between text-gray-500 text-xs">
                         <span>{sv?.service_types?.emoji} {sv?.service_types?.name}{s.dogIds.length > 1 ? ` (${s.dogIds.length} dogs)` : ""}</span>
-                        <span>GHS {g.toFixed(2)}</span>
+                        <span>GHS {p.gross.toFixed(2)}</span>
                       </div>
                     ) : null;
                   })}
+                  {totalSaved > 0 && (
+                    <div className="flex justify-between text-xs font-semibold text-green-600">
+                      <span>Discount savings</span>
+                      <span>–GHS {totalSaved.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-xs text-gray-400">
                     <span>Platform fee (10%)</span>
                     <span>GHS {totalComm.toFixed(2)}</span>
