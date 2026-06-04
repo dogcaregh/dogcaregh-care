@@ -18,12 +18,13 @@ export async function GET() {
       db
         .from("providers")
         .select(
-          `id, user_id, rating_avg, review_count, active, neighbourhood, avatar_url, lat, lng,
+          `*,
            users!user_id(name),
            provider_services(service_type_id, rate_small, rate_medium, rate_large, is_active, availability)`
         )
         .eq("active", true)
-        .order("rating_avg", { ascending: false }),
+        .order("rating_avg", { ascending: false })
+        .limit(1000),
       db.from("service_types").select("id, slug, name").order("name"),
     ]);
 
@@ -32,12 +33,13 @@ export async function GET() {
     const { data: providers2, error: pvErr2 } = await db
       .from("providers")
       .select(
-        `id, user_id, rating_avg, review_count, active, neighbourhood, avatar_url, lat, lng,
+        `*,
          users!user_id(name),
          provider_services(service_type_id, rate_small, rate_medium, rate_large, is_active)`
       )
       .eq("active", true)
-      .order("rating_avg", { ascending: false });
+      .order("rating_avg", { ascending: false })
+      .limit(1000);
 
     if (pvErr2) {
       console.error("[providers API] error:", pvErr2);

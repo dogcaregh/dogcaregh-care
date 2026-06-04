@@ -37,6 +37,7 @@ type Provider = {
   avatar_url: string | null;
   lat: number | null;
   lng: number | null;
+  verified: boolean;
   users: { name: string } | { name: string }[] | null;
   provider_services: ProviderService[];
 };
@@ -173,6 +174,11 @@ function ProviderCard({ p, highlightTypeId, serviceTypes }: { p: RankedProvider;
                       {fmtDist(p.distKm)}
                     </span>
                   )}
+                </p>
+              )}
+              {p.verified && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold" style={{ color: "#0891b2" }}>
+                  ✓ Verified Carer
                 </p>
               )}
             </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { lookupCoords } from "@/lib/geocode";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,13 @@ export async function PATCH(req: NextRequest) {
 
   const service = db();
 
+  // Fetch neighbourhood so we can geocode if coordinates are missing
+  const { data: providerGeo } = await service
+    .from("providers")
+    .select("neighbourhood, lat, lng")
+    .eq("id", id)
+    .single();
+
   const update: Record<string, unknown> = action === "approve"
     ? {
         verification_status: "approved",
@@ -64,6 +72,15 @@ export async function PATCH(req: NextRequest) {
         verified:            false,
         verification_note:   note?.trim() || null,
       };
+
+  // Set coordinates on approval if they were never geocoded at registration
+  if (action === "approve" && providerGeo && providerGeo.lat == null && providerGeo.neighbourhood) {
+    const coords = lookupCoords(providerGeo.neighbourhood);
+    if (coords) {
+      update.lat = coords.lat;
+      update.lng = coords.lng;
+    }
+  }
 
   const { error: updateErr } = await service.from("providers").update(update).eq("id", id);
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });

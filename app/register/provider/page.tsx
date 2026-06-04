@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
-import { ACCRA_AREAS } from "@/lib/geocode";
+import { ACCRA_AREAS, lookupCoords } from "@/lib/geocode";
 
 type Step = "form" | "email-sent" | "done";
 
@@ -58,11 +58,15 @@ export default function ProviderRegisterPage() {
       .upsert({ id: uid, email, name, phone, role: "provider", location: neighbourhood })
       .eq("id", uid);
 
+    const coords = lookupCoords(neighbourhood.trim());
+
     const { error: providerError } = await supabase.from("providers").insert({
       user_id: uid,
       neighbourhood,
       location: neighbourhood,
       active: true,
+      lat: coords?.lat ?? null,
+      lng: coords?.lng ?? null,
     });
 
     if (providerError) {
