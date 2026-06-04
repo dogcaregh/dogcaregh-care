@@ -24,10 +24,10 @@ const DISPUTE_SELECT = `
   booking_id,
   bookings!booking_id(
     id, service_type, gross_amount, start_date, status,
-    users!owner_id(name),
-    providers!provider_id(users!user_id(name))
+    users!owner_id(name, email, phone),
+    providers!provider_id(users!user_id(name, email, phone))
   ),
-  users!raised_by(name)
+  users!raised_by(name, email, phone)
 `;
 
 export async function GET(req: NextRequest) {

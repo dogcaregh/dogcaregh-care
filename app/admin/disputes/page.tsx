@@ -8,14 +8,16 @@ import { AdminNav } from "@/components/admin-nav";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type UserSnap = { name: string; email: string | null; phone: string | null };
+
 type BookingSnap = {
   id: string;
   service_type: string;
   gross_amount: number;
   start_date: string;
   status: string;
-  users: { name: string } | { name: string }[] | null;
-  providers: { users: { name: string } | { name: string }[] | null } | { users: { name: string } | { name: string }[] | null }[] | null;
+  users: UserSnap | UserSnap[] | null;
+  providers: { users: UserSnap | UserSnap[] | null } | { users: UserSnap | UserSnap[] | null }[] | null;
 } | null;
 
 type Dispute = {
@@ -28,8 +30,10 @@ type Dispute = {
   resolved_at: string | null;
   booking_id: string;
   bookings: BookingSnap | BookingSnap[];
-  users: { name: string } | { name: string }[] | null;
+  users: UserSnap | UserSnap[] | null;
 };
+
+type ContactInfo = { name: string; email: string | null; phone: string | null; role: "Owner" | "Provider" };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -42,11 +46,11 @@ const REASON_LABELS: Record<string, string> = {
 };
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  open:               { label: "Open",           color: "#d97706", bg: "rgba(251,191,36,.12)" },
-  under_review:       { label: "Under Review",   color: "#0891b2", bg: "rgba(8,145,178,.10)"  },
-  resolved_no_action: { label: "No Action",      color: "#6b7280", bg: "rgba(107,114,128,.10)"},
-  resolved_refund:    { label: "Refund Issued",  color: "#059669", bg: "rgba(5,150,105,.10)"  },
-  dismissed:          { label: "Dismissed",      color: "#9ca3af", bg: "rgba(156,163,175,.10)"},
+  open:               { label: "Open",          color: "#d97706", bg: "rgba(251,191,36,.12)"  },
+  under_review:       { label: "Under Review",  color: "#0891b2", bg: "rgba(8,145,178,.10)"   },
+  resolved_no_action: { label: "No Action",     color: "#6b7280", bg: "rgba(107,114,128,.10)" },
+  resolved_refund:    { label: "Refund Issued", color: "#059669", bg: "rgba(5,150,105,.10)"   },
+  dismissed:          { label: "Dismissed",     color: "#9ca3af", bg: "rgba(156,163,175,.10)" },
 };
 
 const FILTERS = [
@@ -74,6 +78,78 @@ function fmtDate(iso: string) {
 
 function shortRef(id: string) { return id.replace(/-/g, "").slice(0, 8).toUpperCase(); }
 
+// ─── Contact popup ────────────────────────────────────────────────────────────
+
+function ContactPopup({ contact, onClose }: { contact: ContactInfo; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-base font-extrabold" style={{ color: "#0a2e30" }}>{contact.name}</p>
+            <span
+              className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold"
+              style={{ backgroundColor: contact.role === "Owner" ? "rgba(99,102,241,.12)" : "rgba(0,176,150,.12)", color: contact.role === "Owner" ? "#6366f1" : "#00b096" }}
+            >
+              {contact.role}
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {contact.email && (
+            <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+              <span className="text-base">✉️</span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Email</p>
+                <a
+                  href={`mailto:${contact.email}`}
+                  className="truncate text-sm font-semibold transition hover:underline"
+                  style={{ color: "#0a2e30" }}
+                >
+                  {contact.email}
+                </a>
+              </div>
+            </div>
+          )}
+
+          {contact.phone && (
+            <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+              <span className="text-base">📞</span>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Phone</p>
+                <a
+                  href={`tel:${contact.phone}`}
+                  className="text-sm font-semibold transition hover:underline"
+                  style={{ color: "#0a2e30" }}
+                >
+                  {contact.phone}
+                </a>
+              </div>
+            </div>
+          )}
+
+          {!contact.email && !contact.phone && (
+            <p className="text-center text-sm text-gray-400">No contact details on file.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminDisputesPage() {
@@ -83,6 +159,7 @@ export default function AdminDisputesPage() {
   const [filter,  setFilter]  = useState<typeof FILTERS[number]["key"]>("open");
   const [acting,  setActing]  = useState<string | null>(null);
   const [noteMap, setNoteMap] = useState<Record<string, string>>({});
+  const [contact, setContact] = useState<ContactInfo | null>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -111,6 +188,8 @@ export default function AdminDisputesPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
       <AdminNav />
+
+      {contact && <ContactPopup contact={contact} onClose={() => setContact(null)} />}
 
       <div className="mx-auto max-w-5xl px-4 py-10 md:px-8">
         <h1 className="mb-1 text-2xl font-extrabold" style={{ color: "#0a2e30" }}>Disputes</h1>
@@ -142,12 +221,14 @@ export default function AdminDisputesPage() {
         ) : (
           <div className="space-y-4">
             {rows.map(d => {
-              const booking      = resolveArr(d.bookings as BookingSnap | BookingSnap[]);
-              const ownerName    = resolveArr(d.users)?.name ?? "Unknown";
-              const provSnap     = resolveArr(booking?.providers as { users: { name: string } | { name: string }[] | null } | { users: { name: string } | { name: string }[] | null }[] | null);
-              const provName     = resolveArr(provSnap?.users as { name: string } | { name: string }[] | null)?.name ?? "Unknown";
-              const sm           = STATUS_META[d.status] ?? STATUS_META.open;
-              const isActing     = acting === d.id;
+              const booking   = resolveArr(d.bookings as BookingSnap | BookingSnap[]);
+              const ownerSnap = resolveArr(booking?.users as UserSnap | UserSnap[] | null);
+              const provSnap  = resolveArr(booking?.providers as { users: UserSnap | UserSnap[] | null } | { users: UserSnap | UserSnap[] | null }[] | null);
+              const provUser  = resolveArr(provSnap?.users as UserSnap | UserSnap[] | null);
+              const ownerName = ownerSnap?.name ?? "Unknown";
+              const provName  = provUser?.name ?? "Unknown";
+              const sm        = STATUS_META[d.status] ?? STATUS_META.open;
+              const isActing  = acting === d.id;
               const isActionable = d.status === "open" || d.status === "under_review";
 
               return (
@@ -161,9 +242,23 @@ export default function AdminDisputesPage() {
                           {REASON_LABELS[d.reason] ?? d.reason}
                         </p>
                         <p className="mt-0.5 text-xs text-gray-400">
-                          Owner: <span className="font-semibold text-gray-600">{ownerName}</span>
+                          Owner:{" "}
+                          <button
+                            onClick={() => setContact({ name: ownerName, email: ownerSnap?.email ?? null, phone: ownerSnap?.phone ?? null, role: "Owner" })}
+                            className="font-semibold transition hover:underline"
+                            style={{ color: "#6366f1" }}
+                          >
+                            {ownerName}
+                          </button>
                           {" · "}
-                          Provider: <span className="font-semibold text-gray-600">{provName}</span>
+                          Provider:{" "}
+                          <button
+                            onClick={() => setContact({ name: provName, email: provUser?.email ?? null, phone: provUser?.phone ?? null, role: "Provider" })}
+                            className="font-semibold transition hover:underline"
+                            style={{ color: "#00b096" }}
+                          >
+                            {provName}
+                          </button>
                           {" · "}
                           {fmtDate(d.created_at)}
                         </p>
@@ -194,7 +289,7 @@ export default function AdminDisputesPage() {
                       </div>
                     )}
 
-                    {/* Admin note (for resolved) */}
+                    {/* Admin note (resolved) */}
                     {d.admin_note && !isActionable && (
                       <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-blue-400">Admin note</p>
@@ -250,9 +345,7 @@ export default function AdminDisputesPage() {
 
                     {/* Resolved timestamp */}
                     {d.resolved_at && (
-                      <p className="mt-3 text-[11px] text-gray-400">
-                        Resolved {fmtDate(d.resolved_at)}
-                      </p>
+                      <p className="mt-3 text-[11px] text-gray-400">Resolved {fmtDate(d.resolved_at)}</p>
                     )}
                   </div>
                 </div>
