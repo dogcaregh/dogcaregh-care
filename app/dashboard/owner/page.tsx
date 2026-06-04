@@ -267,6 +267,14 @@ export default function OwnerDashboard() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError,    setReviewError]    = useState<string | null>(null);
 
+  // Dispute modal state
+  const [disputeModal,      setDisputeModal]      = useState<{ bookingId: string; providerName: string } | null>(null);
+  const [disputeReason,     setDisputeReason]     = useState("");
+  const [disputeDesc,       setDisputeDesc]       = useState("");
+  const [submittingDispute, setSubmittingDispute] = useState(false);
+  const [disputeError,      setDisputeError]      = useState<string | null>(null);
+  const [raisedDisputeIds,  setRaisedDisputeIds]  = useState<Set<string>>(new Set());
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -322,6 +330,27 @@ export default function OwnerDashboard() {
       }
     }
     setUpdating(null);
+  }
+
+  async function submitDispute() {
+    if (!disputeModal || !disputeReason) return;
+    setSubmittingDispute(true);
+    setDisputeError(null);
+    const res = await fetch("/api/disputes", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ bookingId: disputeModal.bookingId, reason: disputeReason, description: disputeDesc }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setDisputeError(data.error ?? "Failed to submit dispute. Please try again.");
+    } else {
+      setRaisedDisputeIds(prev => new Set(prev).add(disputeModal.bookingId));
+      setDisputeModal(null);
+      setDisputeReason("");
+      setDisputeDesc("");
+    }
+    setSubmittingDispute(false);
   }
 
   async function submitReview() {
@@ -413,6 +442,57 @@ export default function OwnerDashboard() {
 
   return (
     <>
+    {/* Dispute modal */}
+    {disputeModal && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setDisputeModal(null)}>
+        <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-lg font-extrabold" style={{ color: "#0a2e30" }}>Raise a Dispute</p>
+              <p className="mt-0.5 text-sm text-gray-500">Tell us what went wrong with {disputeModal.providerName.split(" ")[0]}&apos;s service</p>
+            </div>
+            <button onClick={() => setDisputeModal(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200">✕</button>
+          </div>
+          <div className="mb-3">
+            <label className="mb-1.5 block text-xs font-semibold text-gray-500">Reason *</label>
+            <select
+              value={disputeReason}
+              onChange={e => setDisputeReason(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
+            >
+              <option value="">Select a reason</option>
+              <option value="service_not_delivered">Service not delivered</option>
+              <option value="provider_no_show">Provider no-show</option>
+              <option value="poor_service_quality">Poor service quality</option>
+              <option value="property_damage">Property damage</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <textarea
+            value={disputeDesc}
+            onChange={e => setDisputeDesc(e.target.value)}
+            maxLength={800}
+            placeholder="Describe what happened (optional but helpful)…"
+            rows={3}
+            className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#00b096] focus:ring-2 focus:ring-[#00b096]/20"
+          />
+          <div className="mt-1 mb-2 flex justify-end">
+            <span className="text-[10px] text-gray-400">{disputeDesc.length}/800</span>
+          </div>
+          {disputeError && <p className="mb-2 text-xs text-red-500">{disputeError}</p>}
+          <button
+            onClick={submitDispute}
+            disabled={!disputeReason || submittingDispute}
+            className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: "#d97706" }}
+          >
+            {submittingDispute ? "Submitting…" : "Submit Dispute"}
+          </button>
+          <p className="mt-2 text-center text-[11px] text-gray-400">Our team will review your dispute within 24 hours.</p>
+        </div>
+      </div>
+    )}
+
     {/* Review modal — appears after confirming service complete */}
     {reviewModal && (
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setReviewModal(null)}>
@@ -817,9 +897,24 @@ export default function OwnerDashboard() {
                               {isBusy ? "Confirming…" : "✓  Confirm Service Complete"}
                             </button>
                             <p className="text-center text-xs text-gray-400">Confirming releases payment to the provider.</p>
-                            <button disabled className="w-full cursor-not-allowed rounded-xl border border-amber-200 py-2 text-xs font-medium text-amber-500 opacity-50">
-                              Raise a Dispute (coming soon)
-                            </button>
+                            {raisedDisputeIds.has(b.id) ? (
+                              <div className="rounded-xl border border-amber-100 bg-amber-50 py-2 text-center text-xs font-medium text-amber-600">
+                                ✓ Dispute raised — our team will review it
+                              </div>
+                            ) : (
+                              <button
+                                disabled={isBusy}
+                                onClick={() => {
+                                  setDisputeReason("");
+                                  setDisputeDesc("");
+                                  setDisputeError(null);
+                                  setDisputeModal({ bookingId: b.id, providerName });
+                                }}
+                                className="w-full rounded-xl border border-amber-200 py-2 text-xs font-medium text-amber-600 transition hover:bg-amber-50 disabled:opacity-50"
+                              >
+                                Raise a Dispute
+                              </button>
+                            )}
                           </div>
                         )}
 
