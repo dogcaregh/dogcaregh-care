@@ -55,6 +55,7 @@ export async function PATCH(req: NextRequest) {
         verification_status: "approved",
         provider_level:      level ?? 1,
         verified:            true,
+        active:              true,
         verified_at:         new Date().toISOString(),
         verification_note:   note?.trim() || null,
       }
