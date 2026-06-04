@@ -228,6 +228,48 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── How It Works (compact) ── */}
+      <section className="px-6 py-16 md:px-12" style={{ backgroundColor: "#f8fafb" }}>
+        <div className="mx-auto max-w-5xl">
+          <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>
+            Simple &amp; secure
+          </p>
+          <h2 className="mb-12 text-center text-2xl font-extrabold md:text-3xl" style={{ color: "#0a2e30" }}>
+            How it works
+          </h2>
+          <div className="grid gap-6 sm:grid-cols-3">
+            {[
+              { emoji: "🔍", step: "1", title: "Find a carer", desc: "Search verified carers in your neighbourhood by service type and availability." },
+              { emoji: "📅", step: "2", title: "Book & pay", desc: "Request a booking and pay securely via mobile money or card through Paystack." },
+              { emoji: "⭐", step: "3", title: "Relax", desc: "Your dog is in trusted hands. Rate your experience when the service is done." },
+            ].map(item => (
+              <div key={item.step} className="flex flex-col items-center rounded-2xl border border-gray-100 bg-white p-7 text-center shadow-sm">
+                <div
+                  className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-2xl"
+                  style={{ backgroundColor: "rgba(0,176,150,.12)" }}
+                >
+                  {item.emoji}
+                </div>
+                <span className="mb-1 text-[11px] font-bold uppercase tracking-widest" style={{ color: "#00b096" }}>
+                  Step {item.step}
+                </span>
+                <h3 className="mb-2 text-base font-extrabold" style={{ color: "#0a2e30" }}>{item.title}</h3>
+                <p className="text-sm leading-relaxed text-gray-500">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Link
+              href="/how-it-works"
+              className="text-sm font-semibold transition hover:opacity-70"
+              style={{ color: "#00b096" }}
+            >
+              See the full guide for owners &amp; carers →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── Become a Provider CTA ── */}
       <section id="become-provider" className="relative overflow-hidden px-6 py-20 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
         <div className="pointer-events-none absolute inset-0 select-none overflow-hidden" aria-hidden="true">
