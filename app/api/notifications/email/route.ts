@@ -35,6 +35,7 @@ type NotificationType =
   | "awaiting_confirmation"
   | "payout_triggered"
   | "cashout_paid"
+  | "cashout_rejected"
   | "new_message";
 
 interface EmailContent {
@@ -134,6 +135,15 @@ function buildContent(
       return {
         subject: "Your withdrawal has been sent",
         heading: "Withdrawal Sent!",
+        body: message,
+        ctaLabel: "View Earnings",
+        ctaUrl: `${BASE_URL}/dashboard/provider`,
+      };
+
+    case "cashout_rejected":
+      return {
+        subject: "Your withdrawal request could not be processed",
+        heading: "Withdrawal Not Approved",
         body: message,
         ctaLabel: "View Earnings",
         ctaUrl: `${BASE_URL}/dashboard/provider`,
