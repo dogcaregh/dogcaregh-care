@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { computeCancelPolicy, policyDescription, type CancelPolicy } from "@/lib/cancel-policy";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -293,6 +294,12 @@ export default function BookingPage() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [bookingAddons,  setBookingAddons]  = useState<{ id: string; name: string; description: string | null; price: number }[]>([]);
 
+  // Cancel modal state
+  const [cancelPolicy,    setCancelPolicy]    = useState<CancelPolicy | null>(null);
+  const [cancellingRole,  setCancellingRole]  = useState<"owner" | "provider">("owner");
+  const [submittingCancel, setSubmittingCancel] = useState(false);
+  const [cancelError,     setCancelError]     = useState<string | null>(null);
+
   // Dispute state
   const [disputeRaised,      setDisputeRaised]      = useState(false);
   const [disputeModalOpen,   setDisputeModalOpen]   = useState(false);
@@ -488,6 +495,41 @@ export default function BookingPage() {
     setSubmittingDispute(false);
   }
 
+  // ── Cancel with policy ────────────────────────────────────────────────────
+  function openCancelModal(role: "owner" | "provider") {
+    if (!booking) return;
+    const policy = computeCancelPolicy(
+      {
+        status:         booking.status,
+        gross_amount:   booking.gross_amount,
+        start_date:     booking.start_date,
+        end_date:       booking.end_date,
+        created_at:     booking.created_at,
+        selected_dates: booking.selected_dates,
+      },
+      role,
+    );
+    setCancellingRole(role);
+    setCancelPolicy(policy);
+    setCancelError(null);
+  }
+
+  async function executeCancel() {
+    if (!booking || !cancelPolicy) return;
+    setSubmittingCancel(true);
+    setCancelError(null);
+    const res = await fetch(`/api/bookings/${booking.id}/cancel`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) {
+      setCancelError(data.error ?? "Failed to cancel. Please try again.");
+      setSubmittingCancel(false);
+      return;
+    }
+    setBooking(prev => prev ? { ...prev, status: "cancelled" } : prev);
+    setCancelPolicy(null);
+    setSubmittingCancel(false);
+  }
+
   // ── Submit review ─────────────────────────────────────────────────────────
   async function submitReview() {
     if (starPick === 0 || !booking || !me) return;
@@ -557,6 +599,61 @@ export default function BookingPage() {
           <button className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20" onClick={() => setLightbox(null)}>✕</button>
         </div>
       )}
+
+      {/* Cancel modal */}
+      {cancelPolicy && booking && (() => {
+        const { ownerMsg, providerMsg } = policyDescription(cancelPolicy, cancellingRole);
+        const msg = cancellingRole === "owner" ? ownerMsg : providerMsg;
+        const needsRefund = cancelPolicy.policyApplied !== "no_payment";
+        return (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setCancelPolicy(null)}>
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-lg font-extrabold" style={{ color: "#0a2e30" }}>Cancel Booking?</p>
+                <button onClick={() => setCancelPolicy(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200">✕</button>
+              </div>
+
+              <div className="mb-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                <p className="text-sm leading-relaxed text-gray-700">{msg}</p>
+              </div>
+
+              {needsRefund && (
+                <div className="mb-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-center">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-500">Owner Refund</p>
+                    <p className="text-base font-extrabold text-emerald-700">GHS {cancelPolicy.refundAmount.toFixed(2)}</p>
+                  </div>
+                  {cancelPolicy.penaltyAmount > 0 && (
+                    <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-center">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-500">15% Penalty</p>
+                      <p className="text-base font-extrabold text-amber-700">GHS {cancelPolicy.penaltyAmount.toFixed(2)}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {cancelError && <p className="mb-3 text-xs text-red-500">{cancelError}</p>}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setCancelPolicy(null)}
+                  className="flex-1 rounded-xl border border-gray-200 py-3 text-sm font-semibold text-gray-500 transition hover:bg-gray-50"
+                >
+                  Keep Booking
+                </button>
+                <button
+                  onClick={executeCancel}
+                  disabled={submittingCancel}
+                  className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                  style={{ backgroundColor: "#dc2626" }}
+                >
+                  {submittingCancel ? "Cancelling…" : "Confirm Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Dispute modal */}
       {disputeModalOpen && (
@@ -970,14 +1067,34 @@ export default function BookingPage() {
                   </>
                 )}
 
-                {/* Owner: Cancel */}
+                {/* Owner: Cancel (pending/confirmed — no penalty) */}
                 {isOwner && (booking.status === "pending" || booking.status === "confirmed") && (
                   <button
                     disabled={updating}
-                    onClick={() => updateStatus("cancelled")}
+                    onClick={() => openCancelModal("owner")}
                     className="w-full rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-400 transition hover:bg-gray-50 disabled:opacity-50"
                   >
-                    {updating ? "Cancelling…" : "Cancel Booking"}
+                    Cancel Booking
+                  </button>
+                )}
+
+                {/* Owner: Cancel (paid/in_progress — refund policy applies) */}
+                {isOwner && (booking.status === "paid" || booking.status === "in_progress") && (
+                  <button
+                    onClick={() => openCancelModal("owner")}
+                    className="w-full rounded-xl border border-red-100 py-2.5 text-xs font-medium text-red-400 transition hover:bg-red-50"
+                  >
+                    Cancel Booking
+                  </button>
+                )}
+
+                {/* Provider: Cancel (paid/in_progress — refund policy applies) */}
+                {isProvider && (booking.status === "paid" || booking.status === "in_progress") && (
+                  <button
+                    onClick={() => openCancelModal("provider")}
+                    className="w-full rounded-xl border border-red-100 py-2.5 text-xs font-medium text-red-400 transition hover:bg-red-50"
+                  >
+                    Cancel Booking
                   </button>
                 )}
 

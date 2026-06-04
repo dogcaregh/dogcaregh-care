@@ -36,6 +36,7 @@ type NotificationType =
   | "payout_triggered"
   | "cashout_paid"
   | "cashout_rejected"
+  | "booking_cancelled"
   | "new_message";
 
 interface EmailContent {
@@ -147,6 +148,15 @@ function buildContent(
         body: message,
         ctaLabel: "View Earnings",
         ctaUrl: `${BASE_URL}/dashboard/provider`,
+      };
+
+    case "booking_cancelled":
+      return {
+        subject: "Booking cancellation update",
+        heading: "Booking Cancelled",
+        body: message,
+        ctaLabel: "View Dashboard",
+        ctaUrl: `${BASE_URL}/dashboard/owner`,
       };
 
     case "new_message":
