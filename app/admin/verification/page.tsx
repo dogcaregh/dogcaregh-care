@@ -88,6 +88,19 @@ export default function AdminVerificationPage() {
     setLoading(false);
   }
 
+  async function upgrade(id: string) {
+    setActing(id);
+    const res = await fetch("/api/admin/verification", {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ id, action: "approve", level: 2, note: noteMap[id] ?? "" }),
+    });
+    if (res.ok) {
+      setRows(prev => prev.map(r => r.id === id ? { ...r, provider_level: 2 } : r));
+    }
+    setActing(null);
+  }
+
   async function act(id: string, action: "approve" | "reject") {
     setActing(id);
     const res = await fetch("/api/admin/verification", {
@@ -152,11 +165,12 @@ export default function AdminVerificationPage() {
         ) : (
           <div className="space-y-4">
             {rows.map(r => {
-              const user    = resolveArr(r.users);
-              const docs    = r.verification_docs;
-              const sm      = STATUS_STYLE[r.verification_status] ?? STATUS_STYLE.pending;
-              const isPending = r.verification_status === "pending";
-              const isBusy  = acting === r.id;
+              const user       = resolveArr(r.users);
+              const docs       = r.verification_docs;
+              const sm         = STATUS_STYLE[r.verification_status] ?? STATUS_STYLE.pending;
+              const isPending  = r.verification_status === "pending";
+              const canUpgrade = r.verification_status === "approved" && r.provider_level === 1 && docs?.applying_level2 === true;
+              const isBusy     = acting === r.id;
 
               return (
                 <div key={r.id} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
@@ -176,6 +190,11 @@ export default function AdminVerificationPage() {
                         {r.verification_status === "approved" && (
                           <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: "rgba(0,176,150,.12)", color: "#00b096" }}>
                             Level {r.provider_level}
+                          </span>
+                        )}
+                        {canUpgrade && (
+                          <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: "rgba(8,145,178,.10)", color: "#0891b2" }}>
+                            Level 2 Pending
                           </span>
                         )}
                         <span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ backgroundColor: sm.bg, color: sm.color }}>
@@ -283,6 +302,28 @@ export default function AdminVerificationPage() {
                           </button>
                         </div>
                         <p className="text-center text-[10px] text-gray-400">A note is required to reject. Provider will be notified by email.</p>
+                      </div>
+                    )}
+
+                    {/* Level 2 upgrade */}
+                    {canUpgrade && (
+                      <div className="mt-4 space-y-2 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                        <p className="text-xs font-semibold text-blue-700">This provider applied for Level 2 (home services). Approve when their space check clears.</p>
+                        <textarea
+                          value={noteMap[r.id] ?? ""}
+                          onChange={e => setNoteMap(prev => ({ ...prev, [r.id]: e.target.value }))}
+                          placeholder="Optional note to provider"
+                          rows={2}
+                          className="w-full resize-none rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none transition focus:border-[#0891b2] focus:ring-2 focus:ring-[#0891b2]/20"
+                        />
+                        <button
+                          disabled={isBusy}
+                          onClick={() => upgrade(r.id)}
+                          className="w-full rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+                          style={{ backgroundColor: "#0891b2" }}
+                        >
+                          {isBusy ? "…" : "✓ Approve Level 2 — All Services"}
+                        </button>
                       </div>
                     )}
                   </div>
