@@ -725,7 +725,8 @@ export default function BookPage() {
   const [error,       setError]       = useState<string | null>(null);
   const [dateWarning, setDateWarning] = useState(false);
   const [slots,       setSlots]       = useState<Slot[]>([emptySlot()]);
-  const [notes,       setNotes]       = useState("");
+  const [notes,          setNotes]          = useState("");
+  const [policyAccepted, setPolicyAccepted] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -781,7 +782,7 @@ export default function BookPage() {
   const totalGross = validSlots.reduce((sum, s) => sum + (slotPricing(s, services, dogs, discountTiers, addons)?.gross ?? 0), 0);
   const totalComm  = Math.round(totalGross * COMMISSION_RATE * 100) / 100;
   const totalSaved = validSlots.reduce((sum, s) => sum + (slotPricing(s, services, dogs, discountTiers, addons)?.discountAmt ?? 0), 0);
-  const canSubmit  = validSlots.length > 0 && !submitting;
+  const canSubmit  = validSlots.length > 0 && !submitting && policyAccepted;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1001,6 +1002,19 @@ export default function BookPage() {
             {error && (
               <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">{error}</p>
             )}
+
+            {/* Cancellation policy acceptance */}
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 transition hover:bg-gray-100">
+              <input
+                type="checkbox"
+                checked={policyAccepted}
+                onChange={e => setPolicyAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded accent-[#00b096]"
+              />
+              <span className="text-xs leading-relaxed text-gray-600">
+                I understand the <strong>cancellation policy</strong>: full refund if cancelled 48+ hours before the service date; a 15% fee applies if cancelled within 48 hours (same-day bookings are exempt). For ongoing bookings cancelled mid-service, the provider is paid for days worked and the balance is refunded, less the 15% fee where applicable.
+              </span>
+            </label>
 
             <button type="submit" disabled={!canSubmit}
               className="w-full rounded-2xl py-3.5 text-sm font-bold text-white transition hover:opacity-90 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40"
