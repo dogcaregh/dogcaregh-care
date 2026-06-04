@@ -76,7 +76,7 @@ type Booking = {
 const SERVICES: Record<ServiceId, { label: string; emoji: string }> = {
   dog_sitting:  { label: "Dog Sitting",  emoji: "🐾" },
   dog_daycare:  { label: "Dog Daycare",  emoji: "🏡" },
-  dog_boarding: { label: "Dog Boarding", emoji: "🛏️" },
+  dog_boarding: { label: "Dog Overnight", emoji: "🛏️" },
   dog_grooming: { label: "Dog Grooming", emoji: "✂️" },
   dog_walking:  { label: "Dog Walking",  emoji: "🦮" },
 };

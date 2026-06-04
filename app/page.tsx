@@ -9,7 +9,7 @@ import { ACCRA_AREAS } from "@/lib/geocode";
 const services = [
   { emoji: "🐾", name: "Dog Sitting",  id: "dog_sitting",  description: "A trusted sitter cares for your dog in their own home while you're away."  },
   { emoji: "🏡", name: "Dog Daycare",  id: "dog_daycare",  description: "Socialisation and supervised play for your dog during the day."              },
-  { emoji: "🛏️", name: "Dog Boarding", id: "dog_boarding", description: "Overnight stays in a comfortable home — no kennels, ever."                  },
+  { emoji: "🛏️", name: "Dog Overnight", id: "dog_boarding", description: "Overnight stays in a comfortable home — no kennels, ever."                  },
   { emoji: "✂️", name: "Dog Grooming", id: "dog_grooming", description: "Professional grooming services for your dog."                                },
   { emoji: "🦮", name: "Dog Walking",  id: "dog_walking",  description: "Daily walks to keep your dog happy, healthy, and well-exercised."            },
 ];

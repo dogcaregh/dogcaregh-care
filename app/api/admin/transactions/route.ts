@@ -8,7 +8,7 @@ const SERVICE_LABELS: Record<string, string> = {
   dog_walking:     "Dog Walking",
   pet_sitting:     "Dog Sitting",
   doggy_daycare:   "Dog Daycare",
-  dog_boarding:    "Dog Boarding",
+  dog_boarding:    "Dog Overnight",
   mobile_grooming: "Dog Grooming",
 };
 

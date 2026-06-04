@@ -19,7 +19,7 @@ insert into service_types (id, slug, name, rate_unit, description) values
   (uuid_generate_v4(), 'dog_walking',  'Dog Walking',  'per_walk',    'Daily walks for your dog in your neighbourhood'),
   (uuid_generate_v4(), 'dog_sitting',  'Dog Sitting',  'per_visit',   'In-home visits to feed, play with, and check on your dog'),
   (uuid_generate_v4(), 'dog_daycare',  'Dog Daycare',  'per_day',     'Full-day supervised care at the provider''s home or facility'),
-  (uuid_generate_v4(), 'dog_boarding', 'Dog Boarding', 'per_night',   'Overnight stays at the provider''s home or facility'),
+  (uuid_generate_v4(), 'dog_boarding', 'Dog Overnight', 'per_night',   'Overnight stays at the provider''s home or facility'),
   (uuid_generate_v4(), 'dog_grooming', 'Dog Grooming', 'per_session', 'Bathing, trimming, and grooming services for your dog');
 
 

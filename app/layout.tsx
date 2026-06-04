@@ -16,7 +16,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "DogCareGH — Trusted Pet Care in Ghana",
-  description: "Find trusted pet sitters, dog walkers, groomers, and boarding services near you in Ghana.",
+  description: "Find trusted pet sitters, dog walkers, groomers, and overnight dog care near you in Ghana.",
 };
 
 export default function RootLayout({

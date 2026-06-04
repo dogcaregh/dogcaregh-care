@@ -64,7 +64,7 @@ const SERVICES: {
   { slug: "dog_walking",  emoji: "🦮", label: "Dog Walking",  unit: "per hour"    },
   { slug: "dog_sitting",  emoji: "🐾", label: "Dog Sitting",  unit: "half / full day" },
   { slug: "dog_daycare",  emoji: "🏡", label: "Dog Daycare",  unit: "per 12 hrs"  },
-  { slug: "dog_boarding", emoji: "🛏️", label: "Dog Boarding", unit: "per night"   },
+  { slug: "dog_boarding", emoji: "🛏️", label: "Dog Overnight", unit: "per night"  },
   { slug: "dog_grooming", emoji: "✂️", label: "Dog Grooming", unit: "per session" },
 ];
 
