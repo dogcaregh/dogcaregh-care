@@ -142,7 +142,7 @@ export default function HomePage() {
           </h1>
 
           <p className="mt-5 max-w-xl text-lg text-white/70">
-            Connect with vetted, passionate pet caregivers across Accra, Kumasi, and beyond.
+            Connect with vetted, passionate pet caregivers across Accra and beyond.
           </p>
 
           {/* Search */}
