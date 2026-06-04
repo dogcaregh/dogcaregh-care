@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAdminGuard } from "@/lib/use-admin-guard";
 import { AdminNav } from "@/components/admin-nav";
 
@@ -273,8 +274,15 @@ export default function AdminDisputesPage() {
 
                     {/* Booking info */}
                     {booking && (
-                      <div className="mt-3 flex flex-wrap gap-3 rounded-xl bg-gray-50 px-4 py-3 text-xs text-gray-500">
-                        <span className="font-mono font-semibold">#{shortRef(booking.id)}</span>
+                      <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-xs text-gray-500">
+                        <Link
+                          href={`/admin/bookings/${booking.id}`}
+                          onClick={e => e.stopPropagation()}
+                          className="font-mono font-bold transition hover:underline"
+                          style={{ color: "#0a2e30" }}
+                        >
+                          #{shortRef(booking.id)}
+                        </Link>
                         <span>📅 {new Date(booking.start_date + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
                         <span>GHS {Number(booking.gross_amount).toFixed(2)}</span>
                         <span className="capitalize">{booking.service_type?.replace(/_/g, " ")}</span>

@@ -25,8 +25,8 @@ export async function GET() {
     .select(`
       id, service_type, status, start_date, end_date,
       gross_amount, commission_amount, provider_payout, created_at,
-      owner:users!bookings_owner_id_fkey(name),
-      provider:providers!bookings_provider_id_fkey(user:users!providers_user_id_fkey(name))
+      users!owner_id(name),
+      providers!provider_id(users!user_id(name))
     `)
     .order("created_at", { ascending: false });
 

@@ -35,9 +35,16 @@ type Booking = {
   commission_amount: number;
   provider_payout: number;
   created_at: string;
-  owner: { name: string } | null;
-  provider: { user: { name: string } | null } | null;
+  users: { name: string } | { name: string }[] | null;
+  providers: { users: { name: string } | { name: string }[] | null } | { users: { name: string } | { name: string }[] | null }[] | null;
 };
+
+function resolve<T>(v: T | T[] | null | undefined): T | null {
+  if (!v) return null;
+  return Array.isArray(v) ? (v[0] ?? null) : v;
+}
+
+function shortRef(id: string) { return id.replace(/-/g, "").slice(0, 8).toUpperCase(); }
 
 function fmtDate(iso: string) {
   return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -126,19 +133,23 @@ export default function AdminBookingsPage() {
           <div className="divide-y divide-gray-50">
             {visible.map(b => {
               const st           = STATUS_META[b.status] ?? STATUS_META.pending;
-              const ownerName    = ((b.owner as unknown) as { name: string } | null)?.name ?? "—";
-              const providerName = ((b.provider as unknown) as { user: { name: string } | null } | null)?.user?.name ?? "—";
+              const ownerName    = resolve(b.users)?.name ?? "—";
+              const provSnap     = resolve(b.providers);
+              const providerName = resolve(provSnap?.users)?.name ?? "—";
               const sameDay      = b.start_date === b.end_date;
               return (
                 <div
                   key={b.id}
-                  onClick={() => router.push(`/booking/${b.id}`)}
+                  onClick={() => router.push(`/admin/bookings/${b.id}`)}
                   className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer transition hover:bg-gray-50"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate" style={{ color: "#0a2e30" }}>
-                      {ownerName} → {providerName}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[11px] font-bold text-gray-300">#{shortRef(b.id)}</span>
+                      <p className="text-sm font-semibold truncate" style={{ color: "#0a2e30" }}>
+                        {ownerName} → {providerName}
+                      </p>
+                    </div>
                     <p className="text-xs text-gray-400">
                       {SERVICE_LABELS[b.service_type] ?? b.service_type}
                       {" · "}
