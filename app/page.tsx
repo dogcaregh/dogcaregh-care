@@ -256,6 +256,8 @@ export default function HomePage() {
       {/* ── Footer ── */}
       <footer className="border-t border-gray-100 px-6 py-8 text-center text-sm text-gray-400 md:px-12">
         © {new Date().getFullYear()} DogCareGH. All rights reserved.
+        <span className="mx-2">·</span>
+        <Link href="/how-it-works" className="hover:underline">How It Works</Link>
       </footer>
     </main>
   );
