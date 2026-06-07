@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-const FROM = "DogCareGH <onboarding@resend.dev>";
+const FROM = "DogCareGH <noreply@dogcaregh.com>";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
 
 function getClients() {
