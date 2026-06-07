@@ -93,8 +93,6 @@ export async function PATCH(req: NextRequest) {
     .single();
 
   if (prov) {
-    const provUsers  = Array.isArray(prov.users) ? prov.users[0] : prov.users;
-    const provUser   = provUsers as { name: string; email: string } | null;
     const provUserId = prov.user_id as string;
 
     const message = action === "approve"

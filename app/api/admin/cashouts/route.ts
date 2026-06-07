@@ -69,10 +69,6 @@ export async function PATCH(req: NextRequest) {
   // Resolve provider contact
   const provSnap   = Array.isArray(row.providers) ? row.providers[0] : row.providers;
   const provUserId = (provSnap as { user_id: string } | null)?.user_id ?? null;
-  const provUsers  = (provSnap as { users: unknown } | null)?.users;
-  const provUser   = Array.isArray(provUsers) ? provUsers[0] : provUsers;
-  const provName   = (provUser as { name: string } | null)?.name ?? "Provider";
-  const provEmail  = (provUser as { email: string } | null)?.email ?? null;
 
   if (provUserId) {
     const amount  = `GHS ${Number(row.amount).toFixed(2)}`;

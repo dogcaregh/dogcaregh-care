@@ -39,9 +39,6 @@ export async function POST(
   const bk          = booking as Record<string, unknown>;
   const provSnap    = Array.isArray(bk.providers) ? (bk.providers as Record<string, unknown>[])[0] : bk.providers as Record<string, unknown>;
   const provUserId  = provSnap?.user_id as string | null;
-  const provUsers   = provSnap?.users;
-  const provUser    = Array.isArray(provUsers) ? (provUsers as Record<string, unknown>[])[0] : provUsers as Record<string, unknown>;
-  const ownerUsers  = Array.isArray(bk.users) ? (bk.users as Record<string, unknown>[])[0] : bk.users as Record<string, unknown>;
 
   const isOwner    = user.id === bk.owner_id;
   const isProvider = provUserId && user.id === provUserId;
