@@ -91,19 +91,20 @@ export async function PATCH(req: NextRequest) {
     });
 
     // Email notification (fire-and-forget)
-    if (provEmail) {
-      const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
-      fetch(`${base}/api/notifications/email`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", "x-webhook-secret": process.env.NOTIFICATIONS_WEBHOOK_SECRET ?? "" },
-        body: JSON.stringify({
-          to:           provEmail,
-          type:         status === "paid" ? "cashout_paid" : "cashout_rejected",
+    const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
+    fetch(`${base}/api/notifications/email`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "x-webhook-secret": process.env.NOTIFICATIONS_WEBHOOK_SECRET ?? "" },
+      body: JSON.stringify({
+        type:   "INSERT",
+        record: {
+          user_id:    provUserId,
+          booking_id: null,
+          type:       status === "paid" ? "cashout_paid" : "cashout_rejected",
           message,
-          providerName: provName,
-        }),
-      }).catch(() => {});
-    }
+        },
+      }),
+    }).catch(() => {});
   }
 
   return NextResponse.json({ ok: true });

@@ -103,16 +103,14 @@ export async function POST(
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
 
   const webhookSecret = process.env.NOTIFICATIONS_WEBHOOK_SECRET ?? "";
-  if (ownerUsers?.email) {
+  fetch(`${base}/api/notifications/email`, {
+    method: "POST", headers: { "Content-Type": "application/json", "x-webhook-secret": webhookSecret },
+    body: JSON.stringify({ type: "INSERT", record: { user_id: bk.owner_id, booking_id: bookingId, type: "booking_cancelled", message: ownerMsg } }),
+  }).catch(() => {});
+  if (provUserId) {
     fetch(`${base}/api/notifications/email`, {
       method: "POST", headers: { "Content-Type": "application/json", "x-webhook-secret": webhookSecret },
-      body: JSON.stringify({ to: ownerUsers.email, type: "booking_cancelled", message: ownerMsg }),
-    }).catch(() => {});
-  }
-  if (provUser?.email && provUserId) {
-    fetch(`${base}/api/notifications/email`, {
-      method: "POST", headers: { "Content-Type": "application/json", "x-webhook-secret": webhookSecret },
-      body: JSON.stringify({ to: provUser.email, type: "booking_cancelled", message: providerMsg }),
+      body: JSON.stringify({ type: "INSERT", record: { user_id: provUserId, booking_id: bookingId, type: "booking_cancelled", message: providerMsg } }),
     }).catch(() => {});
   }
 
