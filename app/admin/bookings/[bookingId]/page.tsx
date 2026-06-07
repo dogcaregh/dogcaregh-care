@@ -289,7 +289,7 @@ export default function AdminBookingDetailPage() {
               <p className="text-base font-extrabold" style={{ color: "#0a2e30" }}>GHS {Number(booking.gross_amount).toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-gray-400">Commission (10%)</p>
+              <p className="text-[10px] text-gray-400">Commission (25%)</p>
               <p className="text-base font-extrabold" style={{ color: "#6366f1" }}>GHS {Number(booking.commission_amount).toFixed(2)}</p>
             </div>
             <div>

@@ -1,1 +1,1 @@
-export const COMMISSION_RATE = 0.10;
+export const COMMISSION_RATE = 0.25;

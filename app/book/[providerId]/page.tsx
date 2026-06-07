@@ -982,7 +982,7 @@ export default function BookPage() {
                     </div>
                   )}
                   <div className="flex justify-between text-xs text-gray-400">
-                    <span>Platform fee (10%)</span>
+                    <span>Platform fee (25%)</span>
                     <span>GHS {totalComm.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between border-t border-gray-100 pt-2 text-base font-extrabold" style={{ color: "#0a2e30" }}>
