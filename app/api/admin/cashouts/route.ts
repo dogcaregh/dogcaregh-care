@@ -95,7 +95,7 @@ export async function PATCH(req: NextRequest) {
       const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
       fetch(`${base}/api/notifications/email`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-webhook-secret": process.env.NOTIFICATIONS_WEBHOOK_SECRET ?? "" },
         body: JSON.stringify({
           to:           provEmail,
           type:         status === "paid" ? "cashout_paid" : "cashout_rejected",
