@@ -297,9 +297,15 @@ export default function HomePage() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-gray-100 px-6 py-8 text-center text-sm text-gray-400 md:px-12">
-        © {new Date().getFullYear()} DogCareGH. All rights reserved.
+        © {new Date().getFullYear()} DogCareGH · 888 Capital City Ventures.
         <span className="mx-2">·</span>
         <Link href="/how-it-works" className="hover:underline">How It Works</Link>
+        <span className="mx-2">·</span>
+        <Link href="/terms" className="hover:underline">Terms</Link>
+        <span className="mx-2">·</span>
+        <Link href="/privacy" className="hover:underline">Privacy</Link>
+        <span className="mx-2">·</span>
+        <Link href="/contact" className="hover:underline">Contact</Link>
       </footer>
     </main>
   );
