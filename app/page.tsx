@@ -301,6 +301,8 @@ export default function HomePage() {
         <span className="mx-2">·</span>
         <Link href="/how-it-works" className="hover:underline">How It Works</Link>
         <span className="mx-2">·</span>
+        <Link href="/faq" className="hover:underline">FAQ</Link>
+        <span className="mx-2">·</span>
         <Link href="/terms" className="hover:underline">Terms</Link>
         <span className="mx-2">·</span>
         <Link href="/privacy" className="hover:underline">Privacy</Link>
