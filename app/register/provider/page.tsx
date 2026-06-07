@@ -33,8 +33,8 @@ export default function ProviderRegisterPage() {
       email,
       password,
       options: {
-        data: { name },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: { name, phone, neighbourhood, role: "provider" },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/register/provider/complete`,
       },
     });
 
