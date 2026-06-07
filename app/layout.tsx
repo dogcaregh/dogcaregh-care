@@ -14,9 +14,32 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
+
 export const metadata: Metadata = {
-  title: "DogCareGH — Trusted Pet Care in Ghana",
+  metadataBase: new URL(BASE),
+  title: {
+    default: "DogCareGH — Trusted Pet Care in Ghana",
+    template: "%s | DogCareGH",
+  },
   description: "Find trusted pet sitters, dog walkers, groomers, and overnight dog care near you in Ghana.",
+  openGraph: {
+    siteName: "DogCareGH",
+    type: "website",
+    locale: "en_GH",
+    images: [
+      {
+        url: "/homepage.jpg",
+        width: 1200,
+        height: 630,
+        alt: "DogCareGH — Trusted pet care in Ghana",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@dogcaregh",
+  },
 };
 
 export default function RootLayout({
