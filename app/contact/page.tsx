@@ -44,7 +44,8 @@ export default function ContactPage() {
           >
             support@dogcaregh.com
           </a>
-          <p className="mt-4 text-xs text-gray-400">Response time: within 24 hours on business days (Mon – Fri)</p>
+          <p className="mt-3 text-sm font-medium" style={{ color: "#0a2e30" }}>or call <a href="tel:0548667516" className="hover:underline" style={{ color: "#00b096" }}>054 866 7516</a></p>
+          <p className="mt-1 text-xs text-gray-400">Response time: within 24 hours on business days (Mon – Fri)</p>
         </div>
 
         {/* Topic cards */}

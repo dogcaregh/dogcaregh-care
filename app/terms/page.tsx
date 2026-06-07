@@ -93,9 +93,28 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-lg font-extrabold" style={{ color: "#0a2e30" }}>8. Verification</h2>
-            <p className="text-sm leading-relaxed text-gray-600">
-              DogCareGH offers a voluntary verification process for Providers. Verification is not a guarantee of quality or safety — it indicates that a Provider has submitted documents that we have reviewed. Owners should exercise their own judgement when choosing a Provider.
+            <h2 className="mb-3 text-lg font-extrabold" style={{ color: "#0a2e30" }}>8. Carer Verification</h2>
+            <p className="mb-3 text-sm leading-relaxed text-gray-600">
+              Because owners trust carers with their dogs and sometimes their homes, carers go through a verification process before becoming active on the platform. Verification requires:
+            </p>
+            <ul className="space-y-2 text-sm text-gray-600">
+              {[
+                "Ghana Card identity check, verified against the national database, with a selfie to confirm the card belongs to you",
+                "Phone number confirmation via one-time code",
+                "Proof of address — utility bill, tenancy agreement, or a signed note from an assembly member or community elder",
+                "Two character references (names and phone numbers of people we may contact)",
+                "A passport photo for your public carer profile",
+                "For home services (daycare, sitting, overnight): photos and a short video of the space, and a rabies vaccination certificate for any dog sharing the space",
+                "Optional: a Police Clearance Certificate to earn the Police-Cleared badge",
+              ].map(item => (
+                <li key={item} className="flex gap-2">
+                  <span style={{ color: "#00b096" }} className="mt-0.5 shrink-0">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-sm leading-relaxed text-gray-600">
+              Verification is not a guarantee of quality or safety — it indicates that a carer has submitted documents we have reviewed. Owners should exercise their own judgement when choosing a carer. Your verified badge is shown publicly; your underlying ID documents are never shared with other users.
             </p>
           </section>
 
@@ -156,8 +175,14 @@ export default function TermsPage() {
 
           <section>
             <h2 className="mb-3 text-lg font-extrabold" style={{ color: "#0a2e30" }}>14. Contact</h2>
-            <p className="text-sm leading-relaxed text-gray-600">
-              Questions about these Terms? Contact <strong>888 Capital City Ventures</strong> at <a href="mailto:support@dogcaregh.com" className="font-semibold hover:underline" style={{ color: "#00b096" }}>support@dogcaregh.com</a>.
+            <p className="mb-3 text-sm leading-relaxed text-gray-600">Questions about these Terms? Contact us:</p>
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 text-sm text-gray-600">
+              <p className="font-bold" style={{ color: "#0a2e30" }}>DogCareGH (operated by 888 Capital City Ventures)</p>
+              <p className="mt-1">Email: <a href="mailto:support@dogcaregh.com" className="font-semibold hover:underline" style={{ color: "#00b096" }}>support@dogcaregh.com</a></p>
+              <p>Phone: <a href="tel:0548667516" className="hover:underline" style={{ color: "#00b096" }}>054 866 7516</a></p>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-gray-600">
+              For data privacy matters, see our <Link href="/privacy" className="font-semibold hover:underline" style={{ color: "#00b096" }}>Privacy Policy</Link> or contact the <strong>Data Protection Commission of Ghana</strong> at <a href="mailto:info@dataprotection.org.gh" className="font-semibold hover:underline" style={{ color: "#00b096" }}>info@dataprotection.org.gh</a>.
             </p>
           </section>
 
