@@ -991,21 +991,29 @@ export default function BookingPage() {
 
                 {/* Review form — owner rates provider */}
                 {booking.status === "closed" && isOwner && reviewLoaded && (
-                  <div ref={reviewRef}>
-                  <ReviewCard
-                    title="Rate Your Provider"
-                    prompt={`How was your experience with ${providerFullName.split(" ")[0]}?`}
-                    existingReview={existingReview}
-                    starPick={starPick}
-                    starHover={starHover}
-                    reviewBody={reviewBody}
-                    submitting={submittingReview}
-                    error={reviewError}
-                    onStarPick={setStarPick}
-                    onStarHover={setStarHover}
-                    onBodyChange={setReviewBody}
-                    onSubmit={submitReview}
-                  />
+                  <div ref={reviewRef} className="space-y-2">
+                    <ReviewCard
+                      title="Rate Your Provider"
+                      prompt={`How was your experience with ${providerFullName.split(" ")[0]}?`}
+                      existingReview={existingReview}
+                      starPick={starPick}
+                      starHover={starHover}
+                      reviewBody={reviewBody}
+                      submitting={submittingReview}
+                      error={reviewError}
+                      onStarPick={setStarPick}
+                      onStarHover={setStarHover}
+                      onBodyChange={setReviewBody}
+                      onSubmit={submitReview}
+                    />
+                    {provider && (
+                      <Link
+                        href={`/book/${provider.id}`}
+                        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+                      >
+                        Book Again →
+                      </Link>
+                    )}
                   </div>
                 )}
 
