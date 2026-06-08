@@ -6,18 +6,12 @@ export default function NotFound() {
       className="flex min-h-screen flex-col items-center justify-center px-4 text-center"
       style={{ backgroundColor: "#0a2e30" }}
     >
-      <svg
-        style={{ width: 80, opacity: 0.15, color: "#00b096", marginBottom: 24 }}
-        viewBox="0 0 100 100"
-        fill="currentColor"
+      <div
+        style={{ width: 148, height: 148, borderRadius: "50%", overflow: "hidden", marginBottom: 24, border: "3px solid rgba(0,176,150,0.4)" }}
         aria-hidden="true"
       >
-        <ellipse cx="50" cy="63" rx="24" ry="20" />
-        <ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)" />
-        <ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)" />
-        <ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)" />
-        <ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)" />
-      </svg>
+        <img src="/dog-lost.jpg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      </div>
 
       <p className="mb-2 text-7xl font-extrabold text-white/10">404</p>
       <h1 className="mb-2 text-2xl font-extrabold text-white">Page not found</h1>

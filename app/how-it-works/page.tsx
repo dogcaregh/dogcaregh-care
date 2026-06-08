@@ -223,6 +223,20 @@ export default function HowItWorksPage() {
         </div>
       </div>
 
+      {/* ── Dog image strip ── */}
+      <div className="relative overflow-hidden" style={{ height: 220 }}>
+        <img
+          src="/dog-walk.jpg"
+          alt="Dog on a walk"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition: "center 35%" }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(to bottom, rgba(248,250,251,0.6) 0%, transparent 22%, transparent 78%, rgba(255,255,255,0.6) 100%)" }}
+        />
+      </div>
+
       {/* ── Trust & Safety ── */}
       <div className="bg-white px-6 py-16 md:px-12">
         <div className="mx-auto max-w-5xl">

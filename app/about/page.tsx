@@ -23,7 +23,11 @@ export default function AboutPage() {
       </nav>
 
       {/* Hero */}
-      <div className="relative overflow-hidden px-6 py-20 md:px-12 md:py-28" style={{ backgroundColor: "#0a2e30" }}>
+      <div
+        className="relative overflow-hidden px-6 py-20 md:px-12 md:py-28"
+        style={{ backgroundImage: "url(/dog-register.jpg)", backgroundSize: "cover", backgroundPosition: "center" }}
+      >
+        <div className="absolute inset-0" style={{ backgroundColor: "rgba(10,46,48,0.84)" }} aria-hidden="true" />
         {/* Decorative dog silhouettes */}
         <div className="pointer-events-none absolute inset-0 select-none overflow-hidden" aria-hidden="true">
           <svg style={{ position:"absolute", width:180, top:"-20px", right:"4%", opacity:0.05, color:"#00b096", transform:"rotate(15deg)" }} viewBox="0 0 100 100" fill="currentColor"><ellipse cx="50" cy="63" rx="24" ry="20"/><ellipse cx="22" cy="38" rx="10" ry="13" transform="rotate(-12 22 38)"/><ellipse cx="40" cy="27" rx="10" ry="13" transform="rotate(-4 40 27)"/><ellipse cx="60" cy="27" rx="10" ry="13" transform="rotate(4 60 27)"/><ellipse cx="78" cy="38" rx="10" ry="13" transform="rotate(12 78 38)"/></svg>
@@ -66,6 +70,10 @@ export default function AboutPage() {
             <div className="h-px flex-1 bg-gray-200" />
             <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#00b096" }}>How it started</p>
             <div className="h-px flex-1 bg-gray-200" />
+          </div>
+
+          <div className="mb-8 overflow-hidden rounded-2xl shadow-sm">
+            <img src="/dog-care.jpg" alt="A dog being cared for" className="h-64 w-full object-cover md:h-80" />
           </div>
 
           <div className="space-y-6 text-base leading-relaxed text-gray-600">
