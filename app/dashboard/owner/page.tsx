@@ -919,16 +919,24 @@ export default function OwnerDashboard() {
                         )}
 
                         {b.status === "closed" && provider && (
-                          <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                            <span className="text-lg">⭐</span>
-                            <div className="flex-1">
-                              <p className="text-xs font-semibold text-emerald-700">Service complete!</p>
-                              <p className="text-xs text-emerald-600">How was your experience with {providerName}?</p>
+                          <div className="mt-4 space-y-2">
+                            <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                              <span className="text-lg">⭐</span>
+                              <div className="flex-1">
+                                <p className="text-xs font-semibold text-emerald-700">Service complete!</p>
+                                <p className="text-xs text-emerald-600">How was your experience with {providerName}?</p>
+                              </div>
+                              <Link href={`/booking/${b.id}?review=1`}
+                                className="shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
+                                style={{ backgroundColor: "#00b096" }}>
+                                Review
+                              </Link>
                             </div>
-                            <Link href={`/booking/${b.id}?review=1`}
-                              className="shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90"
-                              style={{ backgroundColor: "#00b096" }}>
-                              Review
+                            <Link
+                              href={`/book/${provider.id}`}
+                              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
+                            >
+                              Book Again →
                             </Link>
                           </div>
                         )}
