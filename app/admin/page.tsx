@@ -52,6 +52,8 @@ type Stats = {
   totalCommission: number;
   bookingsByStatus: Record<string, number>;
   weeklyRevenue: WeeklyBucket[];
+  pendingApplications: number;
+  openDisputes: number;
 };
 
 function RevenueChart({ data }: { data: WeeklyBucket[] }) {
@@ -101,8 +103,10 @@ export default function AdminOverviewPage() {
           pendingCashouts:  data.pendingCashouts,
           totalRevenue:     data.totalRevenue,
           totalCommission:  data.totalCommission,
-          bookingsByStatus: data.bookingsByStatus,
-          weeklyRevenue:    data.weeklyRevenue ?? [],
+          bookingsByStatus:    data.bookingsByStatus,
+          weeklyRevenue:       data.weeklyRevenue       ?? [],
+          pendingApplications: data.pendingApplications ?? 0,
+          openDisputes:        data.openDisputes        ?? 0,
         });
         setRecent(data.recentBookings as RecentBooking[]);
         setLoading(false);
@@ -121,8 +125,10 @@ export default function AdminOverviewPage() {
     { label: "Total Providers",   value: stats!.providers,                           accent: "#6366f1", href: "/admin/users?role=provider"  },
     { label: "Total Bookings",    value: stats!.bookings,                            accent: "#0891b2", href: "/admin/bookings"             },
     { label: "Pending Cashouts",  value: stats!.pendingCashouts,                     accent: "#f59e0b", href: "/admin/cashouts"             },
-    { label: "Platform Revenue",  value: `GHS ${stats!.totalRevenue.toFixed(2)}`,    accent: "#10b981", href: "/admin/bookings?status=closed"},
-    { label: "Platform Commission",value:`GHS ${stats!.totalCommission.toFixed(2)}`, accent: "#8b5cf6", href: "/admin/bookings?status=closed"},
+    { label: "Platform Revenue",    value: `GHS ${stats!.totalRevenue.toFixed(2)}`,    accent: "#10b981", href: "/admin/bookings?status=closed"  },
+    { label: "Platform Commission", value: `GHS ${stats!.totalCommission.toFixed(2)}`, accent: "#8b5cf6", href: "/admin/bookings?status=closed"  },
+    { label: "Pending Applicants",  value: stats!.pendingApplications,                 accent: "#f59e0b", href: "/admin/verification"            },
+    { label: "Open Disputes",       value: stats!.openDisputes,                        accent: "#dc2626", href: "/admin/disputes"                 },
   ];
 
   return (
@@ -137,7 +143,7 @@ export default function AdminOverviewPage() {
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 space-y-6">
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           {STAT_CARDS.map(s => (
             <Link
               key={s.label}

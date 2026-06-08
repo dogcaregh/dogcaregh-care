@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase";
@@ -20,6 +21,13 @@ const LINKS = [
 export function AdminNav() {
   const pathname = usePathname();
   const router   = useRouter();
+  const [alerts, setAlerts] = useState<{ pendingApplications: number; openDisputes: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/alerts")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setAlerts(data); });
+  }, [pathname]);
 
   async function signOut() {
     await createClient().auth.signOut();
@@ -40,17 +48,28 @@ export function AdminNav() {
           <div className="flex gap-1">
             {LINKS.map(l => {
               const active = pathname === l.href;
+              const badge =
+                l.href === "/admin/verification" ? (alerts?.pendingApplications ?? 0) :
+                l.href === "/admin/disputes"     ? (alerts?.openDisputes        ?? 0) : 0;
               return (
                 <Link
                   key={l.href}
                   href={l.href}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                  className="relative rounded-lg px-3 py-1.5 text-xs font-semibold transition"
                   style={active
                     ? { backgroundColor: "rgba(0,176,150,.18)", color: "#00b096" }
                     : { color: "rgba(255,255,255,.55)" }
                   }
                 >
                   {l.label}
+                  {badge > 0 && (
+                    <span
+                      className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[9px] font-bold text-white"
+                      style={{ backgroundColor: "#dc2626" }}
+                    >
+                      {badge > 9 ? "9+" : badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}

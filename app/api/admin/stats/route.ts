@@ -26,6 +26,8 @@ export async function GET() {
     { count: providers },
     { count: bookings },
     { count: pendingCashouts },
+    { count: pendingApplications },
+    { count: openDisputes },
     { data: allBookings },
     { data: recentRaw },
   ] = await Promise.all([
@@ -33,6 +35,8 @@ export async function GET() {
     db.from("users").select("*", { count: "exact", head: true }).eq("role", "provider"),
     db.from("bookings").select("*", { count: "exact", head: true }),
     db.from("cashout_requests").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    db.from("providers").select("*", { count: "exact", head: true }).eq("verification_status", "pending"),
+    db.from("disputes").select("*", { count: "exact", head: true }).eq("status", "open"),
     db.from("bookings").select("status, gross_amount, commission_amount, created_at"),
     db.from("bookings").select(`
       id, service_type, status, gross_amount, commission_amount, created_at,
@@ -71,7 +75,9 @@ export async function GET() {
     totalRevenue:     closedBks.reduce((s: number, b: Record<string, unknown>) => s + Number(b.gross_amount), 0),
     totalCommission:  closedBks.reduce((s: number, b: Record<string, unknown>) => s + Number(b.commission_amount), 0),
     bookingsByStatus: byStatus,
-    recentBookings:   recentRaw ?? [],
+    recentBookings:        recentRaw            ?? [],
     weeklyRevenue,
+    pendingApplications:   pendingApplications  ?? 0,
+    openDisputes:          openDisputes         ?? 0,
   });
 }
