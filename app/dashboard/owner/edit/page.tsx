@@ -112,6 +112,16 @@ export default function OwnerEditPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) { setError("Name is required."); return; }
+
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone) {
+      const stripped = trimmedPhone.replace(/[\s\-()+]/g, "");
+      if (!/^(0\d{9}|233\d{9})$/.test(stripped)) {
+        setError("Enter a valid Ghanaian phone number (e.g. 024 123 4567).");
+        return;
+      }
+    }
+
     setSaving(true);
     setError(null);
 

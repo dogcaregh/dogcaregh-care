@@ -218,6 +218,25 @@ export default function EditProfilePage() {
   // ── Save ──────────────────────────────────────────────────────────────────
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone) {
+      const stripped = trimmedPhone.replace(/[\s\-()+]/g, "");
+      if (!/^(0\d{9}|233\d{9})$/.test(stripped)) {
+        setError("Enter a valid Ghanaian phone number (e.g. 024 123 4567).");
+        return;
+      }
+    }
+
+    const trimmedMomo = momoNumber.trim();
+    if (trimmedMomo) {
+      const stripped = trimmedMomo.replace(/[\s\-()+]/g, "");
+      if (!/^(0\d{9}|233\d{9})$/.test(stripped)) {
+        setError("Enter a valid Ghanaian mobile money number (e.g. 024 123 4567).");
+        return;
+      }
+    }
+
     setSaving(true);
     setError(null);
 

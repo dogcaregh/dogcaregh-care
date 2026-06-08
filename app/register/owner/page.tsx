@@ -27,6 +27,7 @@ export default function OwnerRegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [neighbourhood, setNeighbourhood] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Dog fields
   const [dogName, setDogName] = useState("");
@@ -39,6 +40,17 @@ export default function OwnerRegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone) {
+      const stripped = trimmedPhone.replace(/[\s\-()+]/g, "");
+      if (!/^(0\d{9}|233\d{9})$/.test(stripped)) {
+        setError("Enter a valid Ghanaian phone number (e.g. 024 123 4567).");
+        setLoading(false);
+        return;
+      }
+    }
+
     const supabase = createClient();
 
     const { data, error } = await supabase.auth.signUp({
@@ -257,9 +269,29 @@ export default function OwnerRegisterPage() {
                   </datalist>
                 </div>
 
+                <div className="flex items-start gap-2.5">
+                  <input
+                    id="owner-tos"
+                    type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={e => setAgreedToTerms(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-[#00b096]"
+                  />
+                  <label htmlFor="owner-tos" className="text-xs text-gray-500">
+                    I agree to the{" "}
+                    <Link href="/terms" target="_blank" className="font-semibold underline" style={{ color: "#00b096" }}>
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/privacy" target="_blank" className="font-semibold underline" style={{ color: "#00b096" }}>
+                      Privacy Policy
+                    </Link>
+                  </label>
+                </div>
+
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !agreedToTerms}
                   className="mt-2 w-full rounded-xl py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                   style={{ backgroundColor: "#00b096" }}
                 >
