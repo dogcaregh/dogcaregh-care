@@ -28,6 +28,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     )
     .eq("id", id)
     .eq("active", true)
+    .eq("verified", true)
     .single();
 
   if (pvErr || !provider) {

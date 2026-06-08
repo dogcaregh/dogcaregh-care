@@ -23,6 +23,7 @@ export async function GET() {
            provider_services(service_type_id, rate_small, rate_medium, rate_large, is_active, availability)`
         )
         .eq("active", true)
+        .eq("verified", true)
         .order("rating_avg", { ascending: false })
         .limit(1000),
       db.from("service_types").select("id, slug, name").order("name"),
@@ -38,6 +39,7 @@ export async function GET() {
          provider_services(service_type_id, rate_small, rate_medium, rate_large, is_active)`
       )
       .eq("active", true)
+      .eq("verified", true)
       .order("rating_avg", { ascending: false })
       .limit(1000);
 
