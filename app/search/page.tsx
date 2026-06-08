@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { RatingBadge } from "@/components/star-rating";
@@ -130,7 +131,7 @@ function ProviderCard({ p, highlightTypeId, serviceTypes }: { p: RankedProvider;
           {/* Header row */}
           <div className="flex items-start gap-3">
             {p.avatar_url ? (
-              <img src={p.avatar_url} alt={name} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+              <Image src={p.avatar_url} alt={name} width={48} height={48} className="h-12 w-12 shrink-0 rounded-xl object-cover" />
             ) : (
               <div
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 const DOG_SVG = (
@@ -225,10 +226,11 @@ export default function HowItWorksPage() {
 
       {/* ── Dog image strip ── */}
       <div className="relative overflow-hidden" style={{ height: 220 }}>
-        <img
+        <Image
           src="/dog-walk.jpg"
           alt="Dog on a walk"
-          className="absolute inset-0 h-full w-full object-cover"
+          fill
+          className="object-cover"
           style={{ objectPosition: "center 35%" }}
         />
         <div

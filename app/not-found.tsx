@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function NotFound() {
@@ -7,10 +8,10 @@ export default function NotFound() {
       style={{ backgroundColor: "#0a2e30" }}
     >
       <div
-        style={{ width: 148, height: 148, borderRadius: "50%", overflow: "hidden", marginBottom: 24, border: "3px solid rgba(0,176,150,0.4)" }}
+        style={{ position: "relative", width: 148, height: 148, borderRadius: "50%", overflow: "hidden", marginBottom: 24, border: "3px solid rgba(0,176,150,0.4)" }}
         aria-hidden="true"
       >
-        <img src="/dog-lost.jpg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <Image src="/dog-lost.jpg" alt="" fill style={{ objectFit: "cover" }} />
       </div>
 
       <p className="mb-2 text-7xl font-extrabold text-white/10">404</p>
