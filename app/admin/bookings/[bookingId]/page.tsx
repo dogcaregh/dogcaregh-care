@@ -132,10 +132,12 @@ export default function AdminBookingDetailPage() {
   const router    = useRouter();
   const { bookingId } = useParams<{ bookingId: string }>();
 
-  const [booking,  setBooking]  = useState<Booking | null>(null);
-  const [dispute,  setDispute]  = useState<Dispute | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading,  setLoading]  = useState(true);
+  const [booking,       setBooking]      = useState<Booking | null>(null);
+  const [dispute,       setDispute]      = useState<Dispute | null>(null);
+  const [messages,      setMessages]     = useState<Message[]>([]);
+  const [loading,       setLoading]      = useState(true);
+  const [overrideSt,    setOverrideSt]   = useState("");
+  const [overrideBusy,  setOverrideBusy] = useState(false);
 
   useEffect(() => {
     if (!ready || !bookingId) return;
@@ -144,6 +146,7 @@ export default function AdminBookingDetailPage() {
       .then(data => {
         if (!data) { router.push("/admin/bookings"); return; }
         setBooking(data.booking);
+        setOverrideSt(data.booking.status);
         setDispute(data.dispute);
         setMessages(data.messages ?? []);
         setLoading(false);
@@ -158,6 +161,19 @@ export default function AdminBookingDetailPage() {
   );
 
   if (!booking) return null;
+
+  async function applyStatusOverride() {
+    if (overrideSt === booking!.status) return;
+    if (!confirm(`Change status to "${STATUS_META[overrideSt]?.label ?? overrideSt}"?`)) return;
+    setOverrideBusy(true);
+    const res = await fetch(`/api/admin/bookings/${bookingId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: overrideSt }),
+    });
+    if (res.ok) setBooking(prev => prev ? { ...prev, status: overrideSt } : prev);
+    setOverrideBusy(false);
+  }
 
   const ownerSnap    = resolve(booking.users as UserSnap | UserSnap[] | null);
   const providerSnap = resolve(booking.providers as ProviderSnap | ProviderSnap[] | null);
@@ -203,6 +219,31 @@ export default function AdminBookingDetailPage() {
             </Link>
           </div>
         )}
+
+        {/* Status override */}
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Admin — Override Status</p>
+          <div className="flex items-center gap-3">
+            <select
+              value={overrideSt}
+              onChange={e => setOverrideSt(e.target.value)}
+              className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium focus:outline-none"
+              style={{ color: "#0a2e30" }}
+            >
+              {Object.entries(STATUS_META).map(([s, m]) => (
+                <option key={s} value={s}>{m.label}</option>
+              ))}
+            </select>
+            <button
+              onClick={applyStatusOverride}
+              disabled={overrideBusy || overrideSt === booking.status}
+              className="rounded-xl px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40"
+              style={{ backgroundColor: "#0a2e30" }}
+            >
+              {overrideBusy ? "Saving…" : "Apply"}
+            </button>
+          </div>
+        </div>
 
         {/* Service + dates */}
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">

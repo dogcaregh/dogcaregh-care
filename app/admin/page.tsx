@@ -41,6 +41,8 @@ type RecentBooking = {
   provider: { user: { name: string } | null } | null;
 };
 
+type WeeklyBucket = { label: string; revenue: number; count: number };
+
 type Stats = {
   owners: number;
   providers: number;
@@ -49,7 +51,36 @@ type Stats = {
   totalRevenue: number;
   totalCommission: number;
   bookingsByStatus: Record<string, number>;
+  weeklyRevenue: WeeklyBucket[];
 };
+
+function RevenueChart({ data }: { data: WeeklyBucket[] }) {
+  const max = Math.max(...data.map(d => d.revenue), 1);
+  return (
+    <div className="w-full">
+      <div className="flex items-end gap-1.5" style={{ height: 88 }}>
+        {data.map((d, i) => (
+          <div
+            key={i}
+            title={d.revenue > 0 ? `GHS ${d.revenue.toFixed(0)} · ${d.count} booking${d.count !== 1 ? "s" : ""}` : "No revenue"}
+            className="relative flex flex-1 cursor-default items-end justify-center"
+            style={{ height: "100%" }}
+          >
+            <div
+              className="w-full rounded-t-md"
+              style={{ height: `${Math.max((d.revenue / max) * 100, 2)}%`, backgroundColor: d.revenue > 0 ? "#00b096" : "#e5e7eb" }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-1.5 flex gap-1.5">
+        {data.map((d, i) => (
+          <p key={i} className="flex-1 text-center text-[8px] leading-tight text-gray-400">{d.label}</p>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminOverviewPage() {
   const ready = useAdminGuard();
@@ -71,6 +102,7 @@ export default function AdminOverviewPage() {
           totalRevenue:     data.totalRevenue,
           totalCommission:  data.totalCommission,
           bookingsByStatus: data.bookingsByStatus,
+          weeklyRevenue:    data.weeklyRevenue ?? [],
         });
         setRecent(data.recentBookings as RecentBooking[]);
         setLoading(false);
@@ -138,6 +170,17 @@ export default function AdminOverviewPage() {
             })}
           </div>
         </div>
+
+        {/* Revenue chart */}
+        {stats!.weeklyRevenue?.some(w => w.revenue > 0) && (
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>Revenue — Last 8 Weeks</p>
+              <p className="text-xs text-gray-400">closed bookings only</p>
+            </div>
+            <RevenueChart data={stats!.weeklyRevenue} />
+          </div>
+        )}
 
         {/* Recent bookings */}
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">

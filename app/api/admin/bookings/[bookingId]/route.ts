@@ -56,3 +56,18 @@ export async function GET(
   if (error || !booking) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ booking, dispute: dispute ?? null, messages: messages ?? [] });
 }
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { bookingId: string } }
+) {
+  if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { status } = await req.json() as { status: string };
+  const VALID = ["pending","confirmed","paid","in_progress","completed_pending","closed","cancelled"];
+  if (!VALID.includes(status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+
+  const { error } = await db().from("bookings").update({ status }).eq("id", params.bookingId);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}

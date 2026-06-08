@@ -36,6 +36,7 @@ export default function AdminUsersPage() {
   const [loading,  setLoading] = useState(true);
   const [acting,   setActing]  = useState<string | null>(null);
   const [filter,   setFilter]  = useState<FilterKey>("all");
+  const [search,   setSearch]  = useState("");
 
   useEffect(() => {
     if (!ready) return;
@@ -54,6 +55,20 @@ export default function AdminUsersPage() {
     }
     load();
   }, [ready]);
+
+  async function toggleSuspend(providerId: string, currentActive: boolean) {
+    setActing(providerId);
+    const sb = createClient();
+    const { error } = await sb.from("providers").update({ active: !currentActive }).eq("id", providerId);
+    if (!error) {
+      setUsers(prev => prev.map(u =>
+        u.provider?.id === providerId
+          ? { ...u, provider: { ...u.provider!, active: !currentActive } }
+          : u
+      ));
+    }
+    setActing(null);
+  }
 
   async function toggleVerified(providerId: string, current: boolean) {
     setActing(providerId);
@@ -75,7 +90,9 @@ export default function AdminUsersPage() {
     provider: users.filter(u => u.role === "provider").length,
   };
 
-  const visible = filter === "all" ? users : users.filter(u => u.role === filter);
+  const byRole  = filter === "all" ? users : users.filter(u => u.role === filter);
+  const q       = search.trim().toLowerCase();
+  const visible = q ? byRole.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)) : byRole;
 
   if (!ready || loading) return (
     <div className="flex min-h-screen flex-col items-center justify-center" style={{ backgroundColor: "#0a2e30" }}>
@@ -95,6 +112,15 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 space-y-5">
+
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search by name or email…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full rounded-2xl border border-gray-100 bg-white px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#00b096]/30"
+        />
 
         {/* Filter tabs */}
         <div className="flex gap-1 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm">
@@ -155,6 +181,17 @@ export default function AdminUsersPage() {
                         }
                       >
                         {acting === u.provider.id ? "…" : u.provider.verified ? "Unverify" : "Verify"}
+                      </button>
+                      <button
+                        onClick={() => toggleSuspend(u.provider!.id, u.provider!.active)}
+                        disabled={acting === u.provider.id}
+                        className="rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition hover:opacity-80 disabled:opacity-40"
+                        style={u.provider.active
+                          ? { borderColor: "#fcd34d", color: "#b45309" }
+                          : { borderColor: "#6ee7b7", color: "#059669" }
+                        }
+                      >
+                        {acting === u.provider.id ? "…" : u.provider.active ? "Suspend" : "Unsuspend"}
                       </button>
                       <Link
                         href={`/provider/${u.provider.id}`}

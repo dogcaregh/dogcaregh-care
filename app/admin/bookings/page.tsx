@@ -58,6 +58,7 @@ export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [filter,   setFilter]   = useState<FilterKey>("all");
+  const [search,   setSearch]   = useState("");
 
   useEffect(() => {
     if (!ready) return;
@@ -72,7 +73,14 @@ export default function AdminBookingsPage() {
   const counts: Record<string, number> = { all: bookings.length };
   for (const b of bookings) counts[b.status] = (counts[b.status] ?? 0) + 1;
 
-  const visible = filter === "all" ? bookings : bookings.filter(b => b.status === filter);
+  const byStatus = filter === "all" ? bookings : bookings.filter(b => b.status === filter);
+  const q        = search.trim().toLowerCase();
+  const visible  = q ? byStatus.filter(b => {
+    const ownerName    = resolve(b.users)?.name ?? "";
+    const provSnap     = resolve(b.providers);
+    const providerName = resolve(provSnap?.users)?.name ?? "";
+    return ownerName.toLowerCase().includes(q) || providerName.toLowerCase().includes(q) || shortRef(b.id).toLowerCase().includes(q);
+  }) : byStatus;
 
   const totalGross      = visible.reduce((s, b) => s + Number(b.gross_amount), 0);
   const totalCommission = visible.reduce((s, b) => s + Number(b.commission_amount), 0);
@@ -101,6 +109,15 @@ export default function AdminBookingsPage() {
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 space-y-5">
+
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search by owner, provider, or ref…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full rounded-2xl border border-gray-100 bg-white px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#00b096]/30"
+        />
 
         {/* Filter tabs */}
         <div className="flex flex-wrap gap-1 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm">
