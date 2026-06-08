@@ -32,6 +32,7 @@ type ProviderInfo = {
   neighbourhood: string | null;
   avatar_url: string | null;
   active: boolean;
+  blocked_dates: string[];
   users: { name: string } | { name: string }[] | null;
 };
 
@@ -281,7 +282,7 @@ function fmtWindow(w: { start: string; end: string }) {
 
 // ── CalendarPicker ─────────────────────────────────────────────────────────
 
-function CalendarPicker({ selected, onChange }: { selected: string[]; onChange: (d: string[]) => void }) {
+function CalendarPicker({ selected, onChange, blockedDates = [] }: { selected: string[]; onChange: (d: string[]) => void; blockedDates?: string[] }) {
   const now = new Date();
   const [viewYear,  setViewYear]  = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
@@ -317,11 +318,16 @@ function CalendarPicker({ selected, onChange }: { selected: string[]; onChange: 
       <div className="grid grid-cols-7 gap-y-1">
         {cells.map((ds, i) => {
           if (!ds) return <div key={`e-${i}`} />;
-          const isPast = ds < today; const isSel = selected.includes(ds); const isToday = ds === today;
+          const isPast    = ds < today;
+          const isBlocked = blockedDates.includes(ds);
+          const isSel     = selected.includes(ds);
+          const isToday   = ds === today;
+          const isDisabled = isPast || isBlocked;
           return (
-            <button key={ds} type="button" disabled={isPast} onClick={() => toggle(ds)}
+            <button key={ds} type="button" disabled={isDisabled} onClick={() => toggle(ds)}
               className="mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm transition"
               style={isSel ? { backgroundColor: "#00b096", color: "#fff", fontWeight: 700 }
+                : isBlocked ? { backgroundColor: "rgba(220,38,38,.08)", color: "#fca5a5", cursor: "not-allowed", textDecoration: "line-through" }
                 : isPast ? { color: "#d1d5db", cursor: "not-allowed" }
                 : isToday ? { border: "2px solid #00b096", color: "#0a2e30", fontWeight: 600 }
                 : { color: "#374151" }}>
@@ -345,13 +351,14 @@ function CalendarPicker({ selected, onChange }: { selected: string[]; onChange: 
 // ── SlotPanel ──────────────────────────────────────────────────────────────
 
 function SlotPanel({
-  slot, index, canRemove, services, dogs, discountTiers, addons,
+  slot, index, canRemove, services, dogs, discountTiers, addons, blockedDates,
   onChange, onRemove,
 }: {
   slot: Slot; index: number; canRemove: boolean;
   services: ProviderService[]; dogs: Dog[];
   discountTiers: DiscountTier[];
   addons: ProviderAddon[];
+  blockedDates: string[];
   onChange: (patch: Partial<Slot>) => void;
   onRemove: () => void;
 }) {
@@ -521,23 +528,30 @@ function SlotPanel({
             )}
 
             {isRange ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-gray-500">Check-in date</label>
-                  <input type="date" min={today} value={slot.startDate}
-                    onChange={e => { const v = e.target.value; onChange({ startDate: v, endDate: slot.endDate && v > slot.endDate ? v : slot.endDate }); }}
-                    className={INPUT} />
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-gray-500">Check-in date</label>
+                    <input type="date" min={today} value={slot.startDate}
+                      onChange={e => { const v = e.target.value; onChange({ startDate: v, endDate: slot.endDate && v > slot.endDate ? v : slot.endDate }); }}
+                      className={INPUT} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-gray-500">Check-out date</label>
+                    <input type="date" min={slot.startDate || today} value={slot.endDate}
+                      onChange={e => onChange({ endDate: e.target.value })}
+                      className={INPUT} />
+                  </div>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold text-gray-500">Check-out date</label>
-                  <input type="date" min={slot.startDate || today} value={slot.endDate}
-                    onChange={e => onChange({ endDate: e.target.value })}
-                    className={INPUT} />
-                </div>
-              </div>
+                {slot.startDate && slot.endDate && blockedDates.some(d => d >= slot.startDate && d <= slot.endDate) && (
+                  <p className="mt-2 text-xs font-medium text-red-500">
+                    ⚠ The provider is unavailable on some dates in this range. Please choose different dates.
+                  </p>
+                )}
+              </>
             ) : (
               <>
-                <CalendarPicker selected={slot.selectedDates} onChange={v => onChange({ selectedDates: v })} />
+                <CalendarPicker selected={slot.selectedDates} onChange={v => onChange({ selectedDates: v })} blockedDates={blockedDates} />
 
                 {/* Tiered sitting */}
                 {isTiered && (
@@ -935,6 +949,7 @@ export default function BookPage() {
                 dogs={dogs}
                 discountTiers={discountTiers}
                 addons={addons}
+                blockedDates={provider.blocked_dates ?? []}
                 onChange={patch => updateSlot(slot.id, patch)}
                 onRemove={() => removeSlot(slot.id)}
               />

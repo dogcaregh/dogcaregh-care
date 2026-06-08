@@ -23,7 +23,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     .from("providers")
     .select(
       `id, user_id, bio, rating_avg, review_count, verified, active,
-       neighbourhood, years_experience, avatar_url, gallery_photos,
+       neighbourhood, years_experience, avatar_url, gallery_photos, blocked_dates,
        users!user_id(name)`
     )
     .eq("id", id)

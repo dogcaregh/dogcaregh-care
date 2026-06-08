@@ -23,7 +23,7 @@ export async function GET() {
     .select(
       `id, active, bio, years_experience, neighbourhood,
        avatar_url, gallery_photos, momo_network, momo_number,
-       verification_status, provider_level, verification_note,
+       verification_status, provider_level, verification_note, blocked_dates,
        users!user_id(name, phone)`
     )
     .eq("user_id", user.id)

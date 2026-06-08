@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
@@ -84,6 +84,11 @@ export default function EditProfilePage() {
   const [yearsExp,     setYearsExp]     = useState<number | "">("");
   const [active,       setActive]       = useState(true);
 
+  // Availability
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [bdViewYear,   setBdViewYear]   = useState(new Date().getFullYear());
+  const [bdViewMonth,  setBdViewMonth]  = useState(new Date().getMonth());
+
   // Payout
   const [momoNetwork, setMomoNetwork] = useState("");
   const [momoNumber,  setMomoNumber]  = useState("");
@@ -134,6 +139,7 @@ export default function EditProfilePage() {
       setNeighbourhood(p.neighbourhood ?? "");
       setYearsExp(p.years_experience ?? "");
       setActive(p.active);
+      setBlockedDates((p as unknown as { blocked_dates?: string[] }).blocked_dates ?? []);
       setMomoNetwork(p.momo_network ?? "");
       setMomoNumber(p.momo_number ?? "");
       setAvatarUrl(p.avatar_url);
@@ -244,6 +250,9 @@ export default function EditProfilePage() {
 
     const coords = await resolveCoords(neighbourhood.trim());
 
+    const today = new Date().toISOString().split("T")[0];
+    const futureDates = blockedDates.filter(d => d >= today);
+
     const [uErr, pErr] = await Promise.all([
       sb.from("users")
         .update({ name: name.trim(), phone: phone.trim() || null })
@@ -260,6 +269,7 @@ export default function EditProfilePage() {
           momo_number:      momoNumber.trim() || null,
           avatar_url:       avatarUrl,
           gallery_photos:   gallery,
+          blocked_dates:    futureDates,
           lat:              coords?.lat ?? null,
           lng:              coords?.lng ?? null,
         })
@@ -479,7 +489,100 @@ export default function EditProfilePage() {
             </div>
           </Section>
 
-          {/* ── 3. Payout Details ── */}
+          {/* ── 3. Availability ── */}
+          {(() => {
+            const today     = new Date().toISOString().split("T")[0];
+            const pad       = (n: number) => String(n).padStart(2, "0");
+            const toStr     = (d: number) => `${bdViewYear}-${pad(bdViewMonth + 1)}-${pad(d)}`;
+            // eslint-disable-next-line react-hooks/rules-of-hooks
+            const firstOfMonth  = useMemo(() => new Date(bdViewYear, bdViewMonth, 1), [bdViewYear, bdViewMonth]);
+            const daysInMonth   = new Date(bdViewYear, bdViewMonth + 1, 0).getDate();
+            const startOffset   = (firstOfMonth.getDay() + 6) % 7;
+            const monthLabel    = firstOfMonth.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+            const cells: (string | null)[] = [...Array(startOffset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => toStr(i + 1))];
+            while (cells.length % 7 !== 0) cells.push(null);
+            function prevMonth() {
+              if (bdViewMonth === 0) { setBdViewYear(y => y - 1); setBdViewMonth(11); }
+              else setBdViewMonth(m => m - 1);
+            }
+            function nextMonth() {
+              if (bdViewMonth === 11) { setBdViewYear(y => y + 1); setBdViewMonth(0); }
+              else setBdViewMonth(m => m + 1);
+            }
+            function toggleDate(ds: string) {
+              setBlockedDates(prev =>
+                prev.includes(ds) ? prev.filter(d => d !== ds) : [...prev, ds].sort()
+              );
+            }
+            const futureBlocked = blockedDates.filter(d => d >= today);
+            return (
+              <Section title="Availability" subtitle="Mark dates you are not available. Owners cannot select blocked dates when booking.">
+                <div className="mb-3 flex items-center justify-between">
+                  <button type="button" onClick={prevMonth} className="flex h-7 w-7 items-center justify-center rounded-lg text-lg text-gray-500 hover:bg-gray-100">‹</button>
+                  <span className="text-sm font-bold" style={{ color: "#0a2e30" }}>{monthLabel}</span>
+                  <button type="button" onClick={nextMonth} className="flex h-7 w-7 items-center justify-center rounded-lg text-lg text-gray-500 hover:bg-gray-100">›</button>
+                </div>
+                <div className="mb-1 grid grid-cols-7 text-center">
+                  {["Mo","Tu","We","Th","Fr","Sa","Su"].map(d => (
+                    <span key={d} className="text-[10px] font-semibold text-gray-400">{d}</span>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-y-1">
+                  {cells.map((ds, i) => {
+                    if (!ds) return <div key={`e-${i}`} />;
+                    const isPast    = ds < today;
+                    const isBlocked = blockedDates.includes(ds);
+                    const isToday   = ds === today;
+                    return (
+                      <button
+                        key={ds}
+                        type="button"
+                        disabled={isPast}
+                        onClick={() => toggleDate(ds)}
+                        className="mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm transition"
+                        style={
+                          isBlocked
+                            ? { backgroundColor: "rgba(220,38,38,.15)", color: "#dc2626", fontWeight: 700 }
+                            : isPast
+                            ? { color: "#d1d5db", cursor: "not-allowed" }
+                            : isToday
+                            ? { border: "2px solid #00b096", color: "#0a2e30", fontWeight: 600 }
+                            : { color: "#374151" }
+                        }
+                      >
+                        {parseInt(ds.split("-")[2])}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 flex items-center gap-4 text-xs text-gray-400">
+                  <span><span className="mr-1 inline-block h-3 w-3 rounded-full bg-red-200" />Unavailable</span>
+                  <span><span className="mr-1 inline-block h-3 w-3 rounded-full border-2 border-[#00b096]" />Today</span>
+                </div>
+                {futureBlocked.length > 0 && (
+                  <div className="mt-3">
+                    <p className="mb-2 text-xs font-semibold text-gray-500">
+                      {futureBlocked.length} date{futureBlocked.length !== 1 ? "s" : ""} blocked — click to unblock
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {futureBlocked.map(d => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => setBlockedDates(prev => prev.filter(x => x !== d))}
+                          className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-500 transition hover:bg-red-100"
+                        >
+                          {new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })} ✕
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Section>
+            );
+          })()}
+
+          {/* ── 4. Payout Details ── */}
           <Section
             id="payout"
             title="Payout Details"
