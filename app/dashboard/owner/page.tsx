@@ -64,8 +64,8 @@ const STATUS_META: Record<BookingStatus, { label: string; color: string; bg: str
   pending:           { label: "Pending",            color: "#d97706", bg: "rgba(251,191,36,.12)", desc: "Waiting for provider to respond"         },
   confirmed:         { label: "Payment Due",        color: "#0891b2", bg: "rgba(8,145,178,.10)",  desc: "Provider accepted — pay now to confirm" },
   paid:              { label: "Paid",               color: "#059669", bg: "rgba(5,150,105,.10)",  desc: "Payment received, service upcoming"     },
-  in_progress:       { label: "In Progress",        color: "#6366f1", bg: "rgba(99,102,241,.10)", desc: "Service is underway"                    },
-  completed_pending: { label: "Confirm Completion", color: "#8b5cf6", bg: "rgba(139,92,246,.10)", desc: "Provider marked done — please confirm"  },
+  in_progress:       { label: "In Progress",        color: "#2563eb", bg: "rgba(37,99,235,.10)", desc: "Service is underway"                    },
+  completed_pending: { label: "Confirm Completion", color: "#0284c7", bg: "rgba(2,132,199,.10)", desc: "Provider marked done — please confirm"  },
   closed:            { label: "Closed",             color: "#10b981", bg: "rgba(16,185,129,.10)", desc: "Service complete, payout released"      },
   cancelled:         { label: "Cancelled",          color: "#dc2626", bg: "rgba(220,38,38,.08)",  desc: "This booking was cancelled"             },
 };
@@ -94,7 +94,7 @@ const NOTIF_ICONS: Record<string, string> = {
 };
 
 const DOG_SIZES = ["small", "medium", "large", "xlarge"] as const;
-const PALETTE   = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
+const PALETTE   = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#2563eb","#0284c7","#ec4899"];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -581,7 +581,7 @@ export default function OwnerDashboard() {
               { label: "Action Needed", value: stats.action,  accent: "#f59e0b", dest: "action"  as TabKey },
               { label: "Active",        value: stats.active,  accent: "#00b096", dest: "active"  as TabKey },
               { label: "History",       value: stats.history, accent: "#a78bfa", dest: "history" as TabKey },
-              { label: "Total",         value: stats.total,   accent: "#6366f1", dest: "all"     as TabKey },
+              { label: "Total",         value: stats.total,   accent: "#2563eb", dest: "all"     as TabKey },
             ].map(s => (
               <button
                 key={s.label}

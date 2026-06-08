@@ -19,8 +19,8 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string }> 
   pending:           { label: "Pending",          color: "#d97706", bg: "rgba(251,191,36,.12)" },
   confirmed:         { label: "Confirmed",        color: "#0891b2", bg: "rgba(8,145,178,.10)"  },
   paid:              { label: "Paid",             color: "#059669", bg: "rgba(5,150,105,.10)"  },
-  in_progress:       { label: "In Progress",      color: "#6366f1", bg: "rgba(99,102,241,.10)" },
-  completed_pending: { label: "Awaiting Confirm", color: "#8b5cf6", bg: "rgba(139,92,246,.10)" },
+  in_progress:       { label: "In Progress",      color: "#2563eb", bg: "rgba(37,99,235,.10)" },
+  completed_pending: { label: "Awaiting Confirm", color: "#0284c7", bg: "rgba(2,132,199,.10)" },
   closed:            { label: "Closed",           color: "#10b981", bg: "rgba(16,185,129,.10)" },
   cancelled:         { label: "Cancelled",        color: "#dc2626", bg: "rgba(220,38,38,.08)"  },
 };

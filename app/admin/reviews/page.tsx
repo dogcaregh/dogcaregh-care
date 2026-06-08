@@ -50,7 +50,7 @@ export default function AdminReviewsPage() {
     provider: reviews.filter(r => r.from_role === "provider").length,
   };
 
-  const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
+  const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#2563eb","#0284c7","#ec4899"];
   const bg  = (s: string) => PALETTE[s.charCodeAt(0) % PALETTE.length];
   const ini = (name?: string | null) => name ? name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase() : "?";
 
@@ -136,7 +136,7 @@ export default function AdminReviewsPage() {
                                 className="rounded-full px-2 py-0.5 text-[10px] font-bold capitalize"
                                 style={r.from_role === "owner"
                                   ? { backgroundColor: "rgba(0,176,150,.1)", color: "#00b096" }
-                                  : { backgroundColor: "rgba(99,102,241,.1)", color: "#6366f1" }
+                                  : { backgroundColor: "rgba(37,99,235,.1)", color: "#2563eb" }
                                 }
                               >
                                 {r.from_role}

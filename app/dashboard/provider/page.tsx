@@ -85,8 +85,8 @@ const STATUS_META: Record<BookingStatus, { label: string; color: string; bg: str
   pending:           { label: "Awaiting Response",    color: "#d97706", bg: "rgba(251,191,36,.12)" },
   confirmed:         { label: "Awaiting Payment",     color: "#0891b2", bg: "rgba(8,145,178,.10)"  },
   paid:              { label: "Ready to Start",       color: "#059669", bg: "rgba(5,150,105,.10)"  },
-  in_progress:       { label: "In Progress",          color: "#6366f1", bg: "rgba(99,102,241,.10)" },
-  completed_pending: { label: "Awaiting Confirmation",color: "#8b5cf6", bg: "rgba(139,92,246,.10)" },
+  in_progress:       { label: "In Progress",          color: "#2563eb", bg: "rgba(37,99,235,.10)" },
+  completed_pending: { label: "Awaiting Confirmation",color: "#0284c7", bg: "rgba(2,132,199,.10)" },
   closed:            { label: "Closed",               color: "#10b981", bg: "rgba(16,185,129,.10)" },
   cancelled:         { label: "Cancelled",            color: "#dc2626", bg: "rgba(220,38,38,.08)"  },
 };
@@ -114,7 +114,7 @@ const TABS: Array<{ key: TabKey; label: string; statuses: BookingStatus[] }> = [
   { key: "history",  label: "History",   statuses: ["closed", "cancelled"] },
 ];
 
-const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
+const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#2563eb","#0284c7","#ec4899"];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -253,7 +253,7 @@ function EarningsView({
           { label: "Total Earned",    value: `GHS ${totalEarned.toFixed(2)}`,    color: "#10b981" },
           { label: "Available",       value: `GHS ${available.toFixed(2)}`,       color: "#00b096" },
           { label: "In Bookings",     value: `GHS ${pendingAmount.toFixed(2)}`,   color: "#f59e0b" },
-          { label: "This Month",      value: `GHS ${thisMonth.toFixed(2)}`,        color: "#6366f1" },
+          { label: "This Month",      value: `GHS ${thisMonth.toFixed(2)}`,        color: "#2563eb" },
         ].map(s => (
           <div key={s.label} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm text-center">
             <p className="text-[11px] font-medium text-gray-400">{s.label}</p>
@@ -427,7 +427,7 @@ function EarningsView({
 }
 
 function ReviewsView({ reviews, ratingAvg, reviewCount }: { reviews: Review[]; ratingAvg: number; reviewCount: number }) {
-  const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
+  const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#2563eb","#0284c7","#ec4899"];
   const bg = (s: string) => PALETTE[s.charCodeAt(0) % PALETTE.length];
   const ini = (name?: string | null) => name ? name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase() : "?";
 
@@ -1068,7 +1068,7 @@ export default function ProviderDashboard() {
                             disabled={isBusy}
                             onClick={() => updateStatus(b.id, "in_progress")}
                             className="w-full rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                            style={{ backgroundColor: "#6366f1" }}
+                            style={{ backgroundColor: "#2563eb" }}
                           >
                             {isBusy ? "Updating…" : "▶  Start Service"}
                           </button>
@@ -1081,7 +1081,7 @@ export default function ProviderDashboard() {
                             disabled={isBusy}
                             onClick={() => updateStatus(b.id, "completed_pending")}
                             className="w-full rounded-xl py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                            style={{ backgroundColor: "#8b5cf6" }}
+                            style={{ backgroundColor: "#0284c7" }}
                           >
                             {isBusy ? "Updating…" : "✓  Mark Service as Complete"}
                           </button>

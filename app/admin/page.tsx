@@ -20,8 +20,8 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string }> 
   pending:           { label: "Pending",            color: "#d97706", bg: "rgba(251,191,36,.12)" },
   confirmed:         { label: "Confirmed",          color: "#0891b2", bg: "rgba(8,145,178,.10)"  },
   paid:              { label: "Paid",               color: "#059669", bg: "rgba(5,150,105,.10)"  },
-  in_progress:       { label: "In Progress",        color: "#6366f1", bg: "rgba(99,102,241,.10)" },
-  completed_pending: { label: "Awaiting Confirm",   color: "#8b5cf6", bg: "rgba(139,92,246,.10)" },
+  in_progress:       { label: "In Progress",        color: "#2563eb", bg: "rgba(37,99,235,.10)" },
+  completed_pending: { label: "Awaiting Confirm",   color: "#0284c7", bg: "rgba(2,132,199,.10)" },
   closed:            { label: "Closed",             color: "#10b981", bg: "rgba(16,185,129,.10)" },
   cancelled:         { label: "Cancelled",          color: "#dc2626", bg: "rgba(220,38,38,.08)"  },
 };
@@ -122,13 +122,13 @@ export default function AdminOverviewPage() {
 
   const STAT_CARDS = [
     { label: "Total Owners",      value: stats!.owners,                              accent: "#00b096", href: "/admin/users?role=owner"    },
-    { label: "Total Providers",   value: stats!.providers,                           accent: "#6366f1", href: "/admin/users?role=provider"  },
+    { label: "Total Providers",   value: stats!.providers,                           accent: "#2563eb", href: "/admin/users?role=provider"  },
     { label: "Total Bookings",    value: stats!.bookings,                            accent: "#0891b2", href: "/admin/bookings"             },
     { label: "Pending Cashouts",  value: stats!.pendingCashouts,                     accent: "#f59e0b", href: "/admin/cashouts"             },
-    { label: "Platform Revenue",    value: `GHS ${stats!.totalRevenue.toFixed(2)}`,    accent: "#10b981", href: "/admin/bookings?status=closed"  },
-    { label: "Platform Commission", value: `GHS ${stats!.totalCommission.toFixed(2)}`, accent: "#8b5cf6", href: "/admin/bookings?status=closed"  },
     { label: "Pending Applicants",  value: stats!.pendingApplications,                 accent: "#f59e0b", href: "/admin/verification"            },
     { label: "Open Disputes",       value: stats!.openDisputes,                        accent: "#dc2626", href: "/admin/disputes"                 },
+    { label: "Platform Revenue",    value: `GHS ${stats!.totalRevenue.toFixed(2)}`,    accent: "#10b981", href: "/admin/bookings?status=closed"  },
+    { label: "Platform Commission", value: `GHS ${stats!.totalCommission.toFixed(2)}`, accent: "#0891b2", href: "/admin/bookings?status=closed"  },
   ];
 
   return (
@@ -234,7 +234,7 @@ export default function AdminOverviewPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { href: "/admin/transactions", label: "Transactions",     desc: "Unified money ledger — payments in and cashouts out", accent: "#10b981" },
-            { href: "/admin/users",        label: "Manage Users",     desc: "View all owners and providers, verify providers",     accent: "#6366f1" },
+            { href: "/admin/users",        label: "Manage Users",     desc: "View all owners and providers, verify providers",     accent: "#2563eb" },
             { href: "/admin/bookings",     label: "All Bookings",     desc: "Filter and browse every booking on the platform",     accent: "#0891b2" },
             { href: "/admin/cashouts",     label: "Cashout Requests", desc: "Process pending provider withdrawal requests",        accent: "#f59e0b" },
           ].map(c => (

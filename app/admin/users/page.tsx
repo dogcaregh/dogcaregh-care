@@ -147,7 +147,7 @@ export default function AdminUsersPage() {
                     <span
                       className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold capitalize"
                       style={u.role === "provider"
-                        ? { backgroundColor: "rgba(99,102,241,.1)", color: "#6366f1" }
+                        ? { backgroundColor: "rgba(37,99,235,.1)", color: "#2563eb" }
                         : { backgroundColor: "rgba(0,176,150,.1)", color: "#00b096" }
                       }
                     >

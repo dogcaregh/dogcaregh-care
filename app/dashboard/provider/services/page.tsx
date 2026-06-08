@@ -1161,11 +1161,11 @@ export default function ProviderServicesPage() {
                                 backgroundColor:
                                   dt.discountType === "duration"
                                     ? "rgba(0,176,150,.1)"
-                                    : "rgba(99,102,241,.1)",
+                                    : "rgba(37,99,235,.1)",
                                 color:
                                   dt.discountType === "duration"
                                     ? "#00b096"
-                                    : "#6366f1",
+                                    : "#2563eb",
                               }}
                             >
                               {dt.discountType === "duration"

@@ -87,8 +87,8 @@ const STATUS_META: Record<BookingStatus, { label: string; color: string; bg: str
   pending:           { label: "Pending",              color: "#d97706", bg: "rgba(251,191,36,.12)", desc: "Waiting for provider to respond"         },
   confirmed:         { label: "Payment Due",          color: "#0891b2", bg: "rgba(8,145,178,.10)",  desc: "Provider accepted — pay now to confirm"  },
   paid:              { label: "Paid",                 color: "#059669", bg: "rgba(5,150,105,.10)",  desc: "Payment received, service upcoming"       },
-  in_progress:       { label: "In Progress",          color: "#6366f1", bg: "rgba(99,102,241,.10)", desc: "Service is currently underway"            },
-  completed_pending: { label: "Awaiting Confirmation",color: "#8b5cf6", bg: "rgba(139,92,246,.10)", desc: "Provider marked done — confirm to close"  },
+  in_progress:       { label: "In Progress",          color: "#2563eb", bg: "rgba(37,99,235,.10)", desc: "Service is currently underway"            },
+  completed_pending: { label: "Awaiting Confirmation",color: "#0284c7", bg: "rgba(2,132,199,.10)", desc: "Provider marked done — confirm to close"  },
   closed:            { label: "Closed",               color: "#10b981", bg: "rgba(16,185,129,.10)", desc: "Service complete — all done!"             },
   cancelled:         { label: "Cancelled",            color: "#dc2626", bg: "rgba(220,38,38,.08)",  desc: "This booking was cancelled"               },
 };
@@ -101,7 +101,7 @@ const SIZE_LABEL: Record<string, string> = {
   small: "Small", medium: "Medium", large: "Large", xlarge: "XL",
 };
 
-const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
+const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#2563eb","#0284c7","#ec4899"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1133,7 +1133,7 @@ export default function BookingPage() {
                     disabled={updating}
                     onClick={() => updateStatus("in_progress")}
                     className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                    style={{ backgroundColor: "#6366f1" }}
+                    style={{ backgroundColor: "#2563eb" }}
                   >
                     {updating ? "Updating…" : "▶ Start Service"}
                   </button>
@@ -1145,7 +1145,7 @@ export default function BookingPage() {
                     disabled={updating}
                     onClick={() => updateStatus("completed_pending")}
                     className="w-full rounded-xl py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
-                    style={{ backgroundColor: "#8b5cf6" }}
+                    style={{ backgroundColor: "#0284c7" }}
                   >
                     {updating ? "Updating…" : "✓ Mark Service as Complete"}
                   </button>

@@ -27,8 +27,8 @@ type Transaction = {
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
   paid:              { label: "Paid",             color: "#10b981", bg: "rgba(16,185,129,.10)"  },
-  in_progress:       { label: "In Progress",      color: "#6366f1", bg: "rgba(99,102,241,.10)"  },
-  completed_pending: { label: "Pending Confirm",  color: "#8b5cf6", bg: "rgba(139,92,246,.10)"  },
+  in_progress:       { label: "In Progress",      color: "#2563eb", bg: "rgba(37,99,235,.10)"  },
+  completed_pending: { label: "Pending Confirm",  color: "#0284c7", bg: "rgba(2,132,199,.10)"  },
   closed:            { label: "Settled",          color: "#059669", bg: "rgba(5,150,105,.10)"   },
   pending:           { label: "Pending",          color: "#f59e0b", bg: "rgba(245,158,11,.10)"  },
   rejected:          { label: "Rejected",         color: "#dc2626", bg: "rgba(220,38,38,.08)"   },
@@ -90,7 +90,7 @@ export default function AdminTransactionsPage() {
           {[
             { label: "Revenue In",         value: `GHS ${totals.in.toFixed(2)}`,         color: "#10b981" },
             { label: "Payouts Out",        value: `GHS ${totals.out.toFixed(2)}`,        color: "#f59e0b" },
-            { label: "Platform Commission",value: `GHS ${totals.commission.toFixed(2)}`, color: "#6366f1" },
+            { label: "Platform Commission",value: `GHS ${totals.commission.toFixed(2)}`, color: "#2563eb" },
           ].map(s => (
             <div key={s.label} className="rounded-2xl p-4" style={{ backgroundColor: "rgba(255,255,255,.06)" }}>
               <p className="text-[11px] font-medium text-white/50">{s.label}</p>

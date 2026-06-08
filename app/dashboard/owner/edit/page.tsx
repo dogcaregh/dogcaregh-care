@@ -12,7 +12,7 @@ const INPUT =
   "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-[#00b096] focus:bg-white focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400";
 const LABEL = "block text-xs font-semibold text-gray-600 mb-1.5";
 
-const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#6366f1","#8b5cf6","#ec4899"];
+const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#2563eb","#0284c7","#ec4899"];
 const avatarBg = (s: string) => PALETTE[s.charCodeAt(0) % PALETTE.length];
 function ini(name?: string | null) {
   if (!name) return "?";

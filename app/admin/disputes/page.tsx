@@ -96,7 +96,7 @@ function ContactPopup({ contact, onClose }: { contact: ContactInfo; onClose: () 
             <p className="text-base font-extrabold" style={{ color: "#0a2e30" }}>{contact.name}</p>
             <span
               className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold"
-              style={{ backgroundColor: contact.role === "Owner" ? "rgba(99,102,241,.12)" : "rgba(0,176,150,.12)", color: contact.role === "Owner" ? "#6366f1" : "#00b096" }}
+              style={{ backgroundColor: contact.role === "Owner" ? "rgba(37,99,235,.12)" : "rgba(0,176,150,.12)", color: contact.role === "Owner" ? "#2563eb" : "#00b096" }}
             >
               {contact.role}
             </span>
@@ -247,7 +247,7 @@ export default function AdminDisputesPage() {
                           <button
                             onClick={() => setContact({ name: ownerName, email: ownerSnap?.email ?? null, phone: ownerSnap?.phone ?? null, role: "Owner" })}
                             className="font-semibold transition hover:underline"
-                            style={{ color: "#6366f1" }}
+                            style={{ color: "#2563eb" }}
                           >
                             {ownerName}
                           </button>
