@@ -116,7 +116,7 @@ export default function HomePage() {
                   Log In
                 </Link>
                 <Link
-                  href="/register/owner"
+                  href="/register"
                   className="rounded-full px-3 py-1.5 text-xs font-semibold transition hover:opacity-90 md:px-5 md:py-2 md:text-sm"
                   style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
                 >
