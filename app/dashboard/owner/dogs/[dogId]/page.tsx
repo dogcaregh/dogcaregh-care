@@ -91,6 +91,14 @@ function toggleArr(arr: string[], id: string): string[] {
   return arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id];
 }
 
+function toStringArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v as string[];
+  if (typeof v === "string" && v) {
+    try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; }
+  }
+  return [];
+}
+
 // ── Chip sub-components ────────────────────────────────────────────────────
 
 function MultiChip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -220,9 +228,9 @@ export default function DogProfilePage() {
     setVaccinated(d.vaccination_status);
     setNeutered(d.neutered ?? false);
     setLeashTrained(d.leash_trained ?? false);
-    setTemperament(d.temperament ?? []);
+    setTemperament(toStringArray(d.temperament));
     setDiet(d.diet_preference ?? "");
-    setAllergies(d.allergies ?? []);
+    setAllergies(toStringArray(d.allergies));
     setBio(d.bio ?? "");
     setAvatarUrl(d.avatar_url);
   }
@@ -287,9 +295,8 @@ export default function DogProfilePage() {
         setError(err.message);
       } else if (data) {
         const d = data as Dog;
-        // Ensure array fields are always arrays even if DB returns null
-        d.temperament = Array.isArray(d.temperament) ? d.temperament : [];
-        d.allergies   = Array.isArray(d.allergies)   ? d.allergies   : [];
+        d.temperament = toStringArray(d.temperament) as unknown as string[];
+        d.allergies   = toStringArray(d.allergies)   as unknown as string[];
         setDog(d);
         setEditing(false);
       }
@@ -321,8 +328,8 @@ export default function DogProfilePage() {
   if (!dog) return null;
 
   const INPUT = "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-[#00b096] focus:bg-white focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400";
-  const dogTemperament = Array.isArray(dog.temperament) ? dog.temperament : [];
-  const dogAllergies   = Array.isArray(dog.allergies)   ? dog.allergies   : [];
+  const dogTemperament = toStringArray(dog.temperament);
+  const dogAllergies   = toStringArray(dog.allergies);
   const hasProfile = dogTemperament.length > 0 || dog.diet_preference || dogAllergies.length > 0 || dog.bio;
 
   return (
