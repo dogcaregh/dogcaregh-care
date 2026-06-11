@@ -22,12 +22,20 @@ export default function ProviderRegisterPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [neighbourhood, setNeighbourhood] = useState("");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
 
     const trimmedPhone = phone.trim();
     if (trimmedPhone) {
@@ -204,15 +212,42 @@ export default function ProviderRegisterPage() {
                 </div>
                 <div>
                   <label className={LABEL}>Password</label>
-                  <input
-                    className={INPUT}
-                    type="password"
-                    placeholder="Min. 8 characters"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+                  <div className="relative">
+                    <input
+                      className={INPUT + " pr-11"}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Min. 8 characters"
+                      required
+                      minLength={8}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      {showPassword
+                        ? <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M2 10s3.2-6 8-6 8 6 8 6-3.2 6-8 6-8-6-8-6z"/><circle cx="10" cy="10" r="2.5"/><line x1="3" y1="3" x2="17" y2="17" strokeLinecap="round"/></svg>
+                        : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M2 10s3.2-6 8-6 8 6 8 6-3.2 6-8 6-8-6-8-6z"/><circle cx="10" cy="10" r="2.5"/></svg>
+                      }
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className={LABEL}>Confirm Password</label>
+                  <div className="relative">
+                    <input
+                      className={INPUT + " pr-11"}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Repeat your password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                    <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      {showPassword
+                        ? <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M2 10s3.2-6 8-6 8 6 8 6-3.2 6-8 6-8-6-8-6z"/><circle cx="10" cy="10" r="2.5"/><line x1="3" y1="3" x2="17" y2="17" strokeLinecap="round"/></svg>
+                        : <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M2 10s3.2-6 8-6 8 6 8 6-3.2 6-8 6-8-6-8-6z"/><circle cx="10" cy="10" r="2.5"/></svg>
+                      }
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className={LABEL}>Neighbourhood / Area</label>
