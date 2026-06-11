@@ -90,8 +90,14 @@ export default function EditProfilePage() {
   const [bdViewMonth,  setBdViewMonth]  = useState(new Date().getMonth());
 
   // Payout
-  const [momoNetwork, setMomoNetwork] = useState("");
-  const [momoNumber,  setMomoNumber]  = useState("");
+  const [momoNetwork,   setMomoNetwork]   = useState("");
+  const [momoNumber,    setMomoNumber]    = useState("");
+  const [momoVerified,  setMomoVerified]  = useState(false);
+  const [momoOtpSent,   setMomoOtpSent]   = useState(false);
+  const [momoOtp,       setMomoOtp]       = useState("");
+  const [momoSending,   setMomoSending]   = useState(false);
+  const [momoVerifying, setMomoVerifying] = useState(false);
+  const [momoOtpError,  setMomoOtpError]  = useState<string | null>(null);
 
   // Photos
   const [avatarUrl,        setAvatarUrl]        = useState<string | null>(null);
@@ -126,7 +132,7 @@ export default function EditProfilePage() {
         id: string; bio: string | null; years_experience: number | null;
         neighbourhood: string | null; active: boolean;
         avatar_url: string | null; gallery_photos: string[];
-        momo_network: string | null; momo_number: string | null;
+        momo_network: string | null; momo_number: string | null; momo_verified: boolean;
         users: { name: string; phone: string | null } | { name: string; phone: string | null }[] | null;
       };
       const pUser = Array.isArray(p.users) ? p.users[0] : p.users;
@@ -142,6 +148,7 @@ export default function EditProfilePage() {
       setBlockedDates((p as unknown as { blocked_dates?: string[] }).blocked_dates ?? []);
       setMomoNetwork(p.momo_network ?? "");
       setMomoNumber(p.momo_number ?? "");
+      setMomoVerified(p.momo_verified ?? false);
       setAvatarUrl(p.avatar_url);
       setGallery(p.gallery_photos ?? []);
       setLoading(false);
@@ -265,8 +272,6 @@ export default function EditProfilePage() {
           neighbourhood:    neighbourhood.trim() || null,
           location:         neighbourhood.trim() || null,
           active,
-          momo_network:     momoNetwork || null,
-          momo_number:      momoNumber.trim() || null,
           avatar_url:       avatarUrl,
           gallery_photos:   gallery,
           blocked_dates:    futureDates,
@@ -594,7 +599,13 @@ export default function EditProfilePage() {
                 <select
                   className={INPUT}
                   value={momoNetwork}
-                  onChange={e => setMomoNetwork(e.target.value)}
+                  onChange={e => {
+                    setMomoNetwork(e.target.value);
+                    setMomoVerified(false);
+                    setMomoOtpSent(false);
+                    setMomoOtp("");
+                    setMomoOtpError(null);
+                  }}
                 >
                   <option value="">Select network…</option>
                   <option value="mtn">MTN Mobile Money</option>
@@ -609,15 +620,108 @@ export default function EditProfilePage() {
                   type="tel"
                   placeholder="024 000 0000"
                   value={momoNumber}
-                  onChange={e => setMomoNumber(e.target.value)}
+                  onChange={e => {
+                    setMomoNumber(e.target.value);
+                    setMomoVerified(false);
+                    setMomoOtpSent(false);
+                    setMomoOtp("");
+                    setMomoOtpError(null);
+                  }}
                 />
               </div>
             </div>
-            {momoNetwork && momoNumber && (
-              <p className="mt-3 text-xs text-gray-400">
-                Payouts will be sent to <strong className="text-gray-600">{momoNumber}</strong> via{" "}
-                {{ mtn: "MTN Mobile Money", vodafone: "Telecel Cash", airtel_tigo: "AirtelTigo Money" }[momoNetwork] ?? momoNetwork}.
-              </p>
+
+            {/* Verification flow */}
+            {momoNetwork && momoNumber.trim() && (
+              <div className="mt-4">
+                {momoVerified ? (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 border border-green-200">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l3.5 3.5L13 5"/></svg>
+                      Verified
+                    </span>
+                    <span className="text-xs text-gray-400">{momoNumber}</span>
+                  </div>
+                ) : !momoOtpSent ? (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      disabled={momoSending}
+                      onClick={async () => {
+                        setMomoSending(true);
+                        setMomoOtpError(null);
+                        const res = await fetch("/api/momo/send-otp", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ phone: momoNumber }),
+                        });
+                        const json = await res.json();
+                        if (!res.ok) {
+                          setMomoOtpError(json.error ?? "Failed to send code.");
+                        } else {
+                          setMomoOtpSent(true);
+                        }
+                        setMomoSending(false);
+                      }}
+                      className="self-start rounded-xl border border-[#00b096] px-4 py-2 text-xs font-semibold text-[#00b096] transition hover:bg-[#00b096]/10 disabled:opacity-50"
+                    >
+                      {momoSending ? "Sending…" : "Verify Number — Send Code"}
+                    </button>
+                    {momoOtpError && <p className="text-xs text-red-500">{momoOtpError}</p>}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs text-gray-500">
+                      A 6-digit code was sent to <strong className="text-gray-700">{momoNumber}</strong>. Enter it below to verify.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="w-36 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-800 outline-none tracking-widest transition focus:border-[#00b096] focus:bg-white focus:ring-2 focus:ring-[#00b096]/20 placeholder-gray-400"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="000000"
+                        value={momoOtp}
+                        onChange={e => { setMomoOtp(e.target.value.replace(/\D/g, "")); setMomoOtpError(null); }}
+                      />
+                      <button
+                        type="button"
+                        disabled={momoVerifying || momoOtp.length < 6}
+                        onClick={async () => {
+                          setMomoVerifying(true);
+                          setMomoOtpError(null);
+                          const res = await fetch("/api/momo/verify-otp", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ phone: momoNumber, code: momoOtp, network: momoNetwork }),
+                          });
+                          const json = await res.json();
+                          if (!res.ok) {
+                            setMomoOtpError(json.error ?? "Verification failed.");
+                          } else {
+                            setMomoVerified(true);
+                            setMomoOtpSent(false);
+                            setMomoOtp("");
+                          }
+                          setMomoVerifying(false);
+                        }}
+                        className="rounded-xl px-4 py-2.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                        style={{ backgroundColor: "#00b096" }}
+                      >
+                        {momoVerifying ? "Verifying…" : "Verify"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setMomoOtpSent(false); setMomoOtp(""); setMomoOtpError(null); }}
+                        className="text-xs text-gray-400 hover:text-gray-600 underline"
+                      >
+                        Resend
+                      </button>
+                    </div>
+                    {momoOtpError && <p className="text-xs text-red-500">{momoOtpError}</p>}
+                  </div>
+                )}
+              </div>
             )}
           </Section>
 
