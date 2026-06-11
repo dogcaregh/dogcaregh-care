@@ -22,7 +22,7 @@ export async function GET() {
     .from("providers")
     .select(
       `id, active, bio, years_experience, neighbourhood,
-       avatar_url, gallery_photos, momo_network, momo_number, momo_verified,
+       avatar_url, gallery_photos, momo_network, momo_number,
        verification_status, provider_level, verification_note, blocked_dates,
        users!user_id(name, phone)`
     )
