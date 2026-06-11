@@ -66,6 +66,7 @@ export const AREA_COORDS: Record<string, [number, number]> = {
   "Laterbiokoshie":      [5.5672, -0.2313],
   "Legon":               [5.6502, -0.1869],
   "Maamobi":             [5.5883, -0.2126],
+  "Malejor":             [5.6800, -0.1600],
   "Madina":              [5.6792, -0.1667],
   "Mallam":              [5.5583, -0.2961],
   "Mamprobi":            [5.5447, -0.2333],
