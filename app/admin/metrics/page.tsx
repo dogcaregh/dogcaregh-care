@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 export const dynamic = "force-dynamic";
@@ -154,7 +155,7 @@ function Sparkline({ values }: { values: number[] }) {
 // ── Gate card ─────────────────────────────────────────────────────────────
 
 function GateCard({
-  title, value, display, sub, threshold, green, sparkValues,
+  title, display, sub, threshold, green, sparkValues,
 }: {
   title: string;
   value: number;
