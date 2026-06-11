@@ -37,11 +37,12 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     const sb = createClient();
+    let cancelled = false;
     let channel: ReturnType<typeof sb.channel> | null = null;
 
     async function init() {
       const { data: { user } } = await sb.auth.getUser();
-      if (!user) return;
+      if (!user || cancelled) return;
       userIdRef.current = user.id;
 
       const { data } = await sb
@@ -50,6 +51,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(30);
+
+      if (cancelled) return;
 
       // Populate history — do NOT add to toastQueue (no toasts for old notifications)
       setNotifications((data ?? []) as AppNotification[]);
@@ -75,7 +78,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
 
     init();
-    return () => { if (channel) sb.removeChannel(channel); };
+    return () => {
+      cancelled = true;
+      if (channel) sb.removeChannel(channel);
+    };
   }, []);
 
   const markRead = useCallback(async (id: string) => {
