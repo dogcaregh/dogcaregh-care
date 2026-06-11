@@ -81,5 +81,27 @@ export async function POST(req: NextRequest) {
     },
   ]);
 
+  const base   = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
+  const secret = process.env.NOTIFICATIONS_WEBHOOK_SECRET ?? "";
+
+  if (provider) {
+    fetch(`${base}/api/notifications/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-webhook-secret": secret },
+      body: JSON.stringify({
+        type: "INSERT",
+        record: { user_id: provider.user_id, booking_id: bookingId, type: "payment_received", message: "Payment received for your booking. Get ready for the service!" },
+      }),
+    }).catch(() => {});
+  }
+  fetch(`${base}/api/notifications/email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-webhook-secret": secret },
+    body: JSON.stringify({
+      type: "INSERT",
+      record: { user_id: booking.owner_id, booking_id: bookingId, type: "payment_confirmed", message: "Your payment was successful! Your booking is now confirmed." },
+    }),
+  }).catch(() => {});
+
   return NextResponse.json({ success: true, booking_id: bookingId });
 }

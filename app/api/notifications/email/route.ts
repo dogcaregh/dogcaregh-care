@@ -26,6 +26,7 @@ const SERVICE_LABELS: Record<string, string> = {
 };
 
 type NotificationType =
+  | "booking_request"
   | "booking_confirmed"
   | "booking_declined"
   | "booking_cancelled"
@@ -36,7 +37,6 @@ type NotificationType =
   | "payout_triggered"
   | "cashout_paid"
   | "cashout_rejected"
-  | "booking_cancelled"
   | "verification_approved"
   | "verification_rejected"
   | "new_message";
@@ -62,6 +62,15 @@ function buildContent(
   const bookingUrl = bookingId ? `${BASE_URL}/booking/${bookingId}` : BASE_URL;
 
   switch (type) {
+    case "booking_request":
+      return {
+        subject: `New booking request — ${service}`,
+        heading: "New Booking Request",
+        body: `<strong>${ownerName}</strong> has sent you a ${service} booking request. Review the details and accept or decline.`,
+        ctaLabel: "View Request",
+        ctaUrl: bookingUrl,
+      };
+
     case "booking_confirmed":
       return {
         subject: "Your booking has been accepted — payment required",

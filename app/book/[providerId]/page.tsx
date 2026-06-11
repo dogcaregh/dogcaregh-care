@@ -860,6 +860,12 @@ export default function BookPage() {
         return;
       }
       createdIds.push(booking.id);
+
+      fetch(`/api/bookings/${booking.id}/email-trigger`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "booking_request" }),
+      }).catch(() => {});
     }
 
     if (notes.trim() && createdIds[0]) {

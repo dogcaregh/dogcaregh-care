@@ -621,11 +621,27 @@ export default function ProviderDashboard() {
   async function updateStatus(bookingId: string, status: BookingStatus) {
     setUpdating(bookingId);
     const sb = createClient();
+    const prevStatus = bookings.find(b => b.id === bookingId)?.status;
     const { error } = await sb
       .from("bookings")
       .update({ status })
       .eq("id", bookingId);
-    if (!error) setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
+    if (!error) {
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status } : b));
+      if (prevStatus === "pending") {
+        const emailType =
+          status === "confirmed" ? "booking_confirmed" :
+          status === "cancelled" ? "booking_declined"  :
+          null;
+        if (emailType) {
+          fetch(`/api/bookings/${bookingId}/email-trigger`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: emailType }),
+          }).catch(() => {});
+        }
+      }
+    }
     setUpdating(null);
   }
 
