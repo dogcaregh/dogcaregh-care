@@ -24,6 +24,12 @@ export const metadata: Metadata = {
     template: "%s | DogCareGH",
   },
   description: "Find trusted pet sitters, dog walkers, groomers, and overnight dog care near you in Ghana.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "DogCareGH",
+  },
   openGraph: {
     siteName: "DogCareGH",
     type: "website",
@@ -50,6 +56,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta name="theme-color" content="#0a2e30" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden`}
       >
