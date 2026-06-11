@@ -61,7 +61,7 @@ export async function POST(
   const base   = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
   const secret = process.env.NOTIFICATIONS_WEBHOOK_SECRET ?? "";
 
-  fetch(`${base}/api/notifications/email`, {
+  await fetch(`${base}/api/notifications/email`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-webhook-secret": secret },
     body: JSON.stringify({

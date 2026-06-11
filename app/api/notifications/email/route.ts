@@ -266,8 +266,11 @@ export async function POST(req: NextRequest) {
     message: string;
   };
 
-  const { data: { user } } = await admin.auth.admin.getUserById(user_id);
-  if (!user?.email) return NextResponse.json({ ok: true });
+  const { data: { user }, error: authErr } = await admin.auth.admin.getUserById(user_id);
+  if (!user?.email) {
+    console.warn("[email-notification] no email for user", user_id, authErr?.message);
+    return NextResponse.json({ ok: true });
+  }
 
   let ownerName = "the owner";
   let providerName = "the provider";
@@ -276,7 +279,7 @@ export async function POST(req: NextRequest) {
   let grossAmount = "0.00";
 
   if (booking_id) {
-    const { data: booking } = await admin
+    const { data: booking, error: bErr } = await admin
       .from("bookings")
       .select(`
         service_type, gross_amount, provider_payout,
@@ -287,6 +290,8 @@ export async function POST(req: NextRequest) {
       `)
       .eq("id", booking_id)
       .single();
+
+    if (bErr) console.warn("[email-notification] booking lookup failed:", bErr.message);
 
     if (booking) {
       service = SERVICE_LABELS[booking.service_type] ?? booking.service_type;
@@ -302,8 +307,12 @@ export async function POST(req: NextRequest) {
     ownerName, providerName, service,
     providerPayout, grossAmount,
   );
-  if (!content) return NextResponse.json({ ok: true });
+  if (!content) {
+    console.warn("[email-notification] no content for type:", type);
+    return NextResponse.json({ ok: true });
+  }
 
+  console.log("[email-notification] sending", type, "to", user.email);
   try {
     await resend.emails.send({
       from: FROM,
