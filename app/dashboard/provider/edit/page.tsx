@@ -88,6 +88,7 @@ export default function EditProfilePage() {
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [bdViewYear,   setBdViewYear]   = useState(new Date().getFullYear());
   const [bdViewMonth,  setBdViewMonth]  = useState(new Date().getMonth());
+  const firstOfMonth = useMemo(() => new Date(bdViewYear, bdViewMonth, 1), [bdViewYear, bdViewMonth]);
 
   // Payout
   const [momoNetwork, setMomoNetwork] = useState("");
@@ -494,8 +495,6 @@ export default function EditProfilePage() {
             const today     = new Date().toISOString().split("T")[0];
             const pad       = (n: number) => String(n).padStart(2, "0");
             const toStr     = (d: number) => `${bdViewYear}-${pad(bdViewMonth + 1)}-${pad(d)}`;
-            // eslint-disable-next-line react-hooks/rules-of-hooks
-            const firstOfMonth  = useMemo(() => new Date(bdViewYear, bdViewMonth, 1), [bdViewYear, bdViewMonth]);
             const daysInMonth   = new Date(bdViewYear, bdViewMonth + 1, 0).getDate();
             const startOffset   = (firstOfMonth.getDay() + 6) % 7;
             const monthLabel    = firstOfMonth.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
