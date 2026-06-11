@@ -314,12 +314,14 @@ export async function POST(req: NextRequest) {
 
   console.log("[email-notification] sending", type, "to", user.email);
   try {
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: FROM,
       to: user.email,
       subject: content.subject,
       html: renderHtml(content),
     });
+    if (error) console.error("[email-notification] resend error:", error);
+    else console.log("[email-notification] sent id:", data?.id);
   } catch (err) {
     console.error("[email-notification] send failed:", err);
   }
