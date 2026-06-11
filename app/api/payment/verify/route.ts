@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
   }
 
-  await admin.from("bookings").update({ status: "paid" }).eq("id", bookingId);
+  await admin.from("bookings").update({ status: "paid", payment_ref: reference }).eq("id", bookingId);
 
   // Notify the provider
   const { data: provider } = await admin

@@ -49,6 +49,36 @@ export async function PATCH(req: NextRequest) {
   const { id, note } = await req.json();
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
+  const { data: booking, error: fetchErr } = await db()
+    .from("bookings")
+    .select("payment_ref, refund_amount, refund_status")
+    .eq("id", id)
+    .single();
+
+  if (fetchErr || !booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+  if (booking.refund_status === "processed") return NextResponse.json({ error: "Already processed" }, { status: 409 });
+  if (!booking.payment_ref) return NextResponse.json({ error: "No payment reference on record — cannot refund via Paystack" }, { status: 422 });
+  if (!booking.refund_amount || Number(booking.refund_amount) <= 0) return NextResponse.json({ error: "Refund amount is zero" }, { status: 422 });
+
+  const amountPesewas = Math.round(Number(booking.refund_amount) * 100);
+
+  const psRes = await fetch("https://api.paystack.co/refund", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ transaction: booking.payment_ref, amount: amountPesewas }),
+  });
+
+  const psData = await psRes.json();
+  if (!psRes.ok || !psData.status) {
+    return NextResponse.json(
+      { error: psData.message ?? "Paystack refund failed" },
+      { status: 502 }
+    );
+  }
+
   const { error } = await db()
     .from("bookings")
     .update({ refund_status: "processed" })
@@ -56,14 +86,11 @@ export async function PATCH(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Optional note stored as a message on the booking
-  if (note?.trim()) {
-    await db().from("messages").insert({
-      booking_id: id,
-      sender_id:  null,
-      content:    `[Admin] Refund processed: ${note.trim()}`,
-    });
-  }
+  await db().from("messages").insert({
+    booking_id: id,
+    sender_id:  null,
+    content:    `[Admin] Refund of GHS ${Number(booking.refund_amount).toFixed(2)} issued via Paystack.${note?.trim() ? ` Note: ${note.trim()}` : ""}`,
+  });
 
   return NextResponse.json({ ok: true });
 }
