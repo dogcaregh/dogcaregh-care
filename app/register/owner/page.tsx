@@ -408,7 +408,7 @@ export default function OwnerRegisterPage() {
                 </div>
                 <div>
                   <label className={LABEL}>
-                    Age in years{" "}
+                    Age in months{" "}
                     <span className="font-normal text-gray-400">(optional)</span>
                   </label>
                   <input
@@ -416,7 +416,7 @@ export default function OwnerRegisterPage() {
                     type="number"
                     placeholder="3"
                     min={0}
-                    max={25}
+                    max={240}
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
                   />

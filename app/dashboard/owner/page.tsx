@@ -203,8 +203,8 @@ function AddDogForm({ ownerId, onAdded, onCancel }: {
           <input className={INPUT} placeholder="e.g. Labrador" value={breed} onChange={e => setBreed(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-semibold text-gray-500">Age (years)</label>
-          <input className={INPUT} type="number" min={0} max={30} placeholder="e.g. 3" value={age} onChange={e => setAge(e.target.value)} />
+          <label className="mb-1 block text-xs font-semibold text-gray-500">Age (months)</label>
+          <input className={INPUT} type="number" min={0} max={240} placeholder="e.g. 3" value={age} onChange={e => setAge(e.target.value)} />
         </div>
         <div>
           <label className="mb-1 block text-xs font-semibold text-gray-500">Size</label>
