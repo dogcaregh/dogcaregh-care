@@ -11,6 +11,13 @@ import { useChat } from "@/lib/chat-context";
 const PALETTE   = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#2563eb","#0284c7","#ec4899"];
 const avatarBg  = (s: string) => PALETTE[s.charCodeAt(0) % PALETTE.length];
 const SIZE_LABEL: Record<string, string> = { small: "Small", medium: "Medium", large: "Large", xlarge: "XL" };
+function fmtAge(months: number | null): string | null {
+  if (months == null) return null;
+  if (months < 12) return `${months}mo`;
+  const yrs = Math.floor(months / 12);
+  const mo  = months % 12;
+  return mo === 0 ? `${yrs}yr${yrs > 1 ? "s" : ""}` : `${yrs}yr ${mo}mo`;
+};
 const SLUG_EMOJI: Record<string, string> = {
   dog_walking: "🦮", dog_sitting: "🐾", dog_daycare: "🏡",
   dog_boarding: "🛏️", dog_grooming: "✂️",
@@ -254,7 +261,7 @@ export default function OwnerProfileForProvider() {
                   <div className="min-w-0 flex-1">
                     <p className="font-bold" style={{ color: "#0a2e30" }}>{dog.name}</p>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      {[dog.breed, dog.size ? SIZE_LABEL[dog.size] : null, dog.age ? `${dog.age}y` : null].filter(Boolean).join(" · ") || "No details"}
+                      {[dog.breed, dog.size ? SIZE_LABEL[dog.size] : null, fmtAge(dog.age)].filter(Boolean).join(" · ") || "No details"}
                     </p>
                     {dog.temperament && (
                       <p className="mt-1 text-xs text-gray-400">🧠 {dog.temperament}</p>

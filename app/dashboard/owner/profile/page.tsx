@@ -11,6 +11,13 @@ function ini(name?: string | null) {
   if (!name) return "?";
   return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
 }
+function fmtAge(months: number | null): string | null {
+  if (months == null) return null;
+  if (months < 12) return `${months}mo`;
+  const yrs = Math.floor(months / 12);
+  const mo  = months % 12;
+  return mo === 0 ? `${yrs}yr${yrs > 1 ? "s" : ""}` : `${yrs}yr ${mo}mo`;
+}
 
 type Dog = {
   id: string;
@@ -188,7 +195,7 @@ export default function OwnerProfilePage() {
                   <div className="min-w-0 flex-1">
                     <p className="font-bold" style={{ color: "#0a2e30" }}>{dog.name}</p>
                     <p className="text-xs text-gray-500">
-                      {[dog.breed, dog.size ? SIZE_LABEL[dog.size] : null, dog.age ? `${dog.age}y` : null]
+                      {[dog.breed, dog.size ? SIZE_LABEL[dog.size] : null, fmtAge(dog.age)]
                         .filter(Boolean).join(" · ")}
                     </p>
                   </div>

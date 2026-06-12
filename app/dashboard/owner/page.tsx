@@ -18,6 +18,14 @@ type ServiceId =
   | "dog_sitting" | "dog_daycare" | "dog_boarding"
   | "dog_grooming" | "dog_walking";
 
+function fmtAge(months: number | null): string | null {
+  if (months == null) return null;
+  if (months < 12) return `${months}mo`;
+  const yrs = Math.floor(months / 12);
+  const mo  = months % 12;
+  return mo === 0 ? `${yrs}yr${yrs > 1 ? "s" : ""}` : `${yrs}yr ${mo}mo`;
+}
+
 type Dog = {
   id: string;
   name: string;
@@ -690,7 +698,7 @@ export default function OwnerDashboard() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold" style={{ color: "#0a2e30" }}>{dog.name}</p>
                       <p className="text-xs text-gray-400">
-                        {[dog.breed, dog.size, dog.age != null ? `${dog.age}y` : null].filter(Boolean).join(" · ") || "No details"}
+                        {[dog.breed, dog.size, fmtAge(dog.age)].filter(Boolean).join(" · ") || "No details"}
                       </p>
                     </div>
                     {dog.vaccination_status && (

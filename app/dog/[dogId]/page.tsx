@@ -48,6 +48,14 @@ const ALLERGIES = [
   { id: "none",    label: "None ✅"   },
 ];
 
+function fmtAge(months: number | null): string | null {
+  if (months == null) return null;
+  if (months < 12) return `${months}mo`;
+  const yrs = Math.floor(months / 12);
+  const mo  = months % 12;
+  return mo === 0 ? `${yrs}yr${yrs > 1 ? "s" : ""}` : `${yrs}yr ${mo}mo`;
+}
+
 function toStringArray(v: unknown): string[] {
   if (Array.isArray(v)) return v as string[];
   if (typeof v === "string" && v) {
@@ -153,7 +161,7 @@ export default function DogViewPage() {
             )}
             <h1 className="mt-4 text-2xl font-extrabold" style={{ color: "#0a2e30" }}>{dog.name}</h1>
             <p className="mt-1 text-sm text-gray-500">
-              {[dog.breed, dog.size ? SIZE_LABEL[dog.size] : null, dog.age != null ? `${dog.age} yrs` : null]
+              {[dog.breed, dog.size ? SIZE_LABEL[dog.size] : null, fmtAge(dog.age)]
                 .filter(Boolean).join(" · ") || "No details added yet"}
             </p>
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2">

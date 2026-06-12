@@ -87,6 +87,14 @@ const SIZE_LABEL: Record<string, string> = {
   small: "Small", medium: "Medium", large: "Large", xlarge: "XL",
 };
 
+function fmtAge(months: number | null): string | null {
+  if (months == null) return null;
+  if (months < 12) return `${months}mo`;
+  const yrs = Math.floor(months / 12);
+  const mo  = months % 12;
+  return mo === 0 ? `${yrs}yr${yrs > 1 ? "s" : ""}` : `${yrs}yr ${mo}mo`;
+}
+
 function toggleArr(arr: string[], id: string): string[] {
   return arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id];
 }
@@ -365,7 +373,7 @@ export default function DogProfilePage() {
                 )}
                 <h1 className="mt-4 text-2xl font-extrabold" style={{ color: "#0a2e30" }}>{dog.name}</h1>
                 <p className="mt-1 text-sm text-gray-500">
-                  {[dog.breed, dog.size ? SIZE_LABEL[dog.size] : null, dog.age != null ? `${dog.age} yrs` : null]
+                  {[dog.breed, dog.size ? SIZE_LABEL[dog.size] : null, fmtAge(dog.age)]
                     .filter(Boolean).join(" · ") || "Add details below"}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
@@ -532,8 +540,8 @@ export default function DogProfilePage() {
                   </datalist>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-gray-500">Age (years)</label>
-                  <input className={INPUT} type="number" min={0} max={30} value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 3" />
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-500">Age (months)</label>
+                  <input className={INPUT} type="number" min={0} max={240} value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 3" />
                 </div>
               </div>
             </div>

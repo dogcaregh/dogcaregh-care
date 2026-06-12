@@ -129,6 +129,14 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
+function fmtAge(months: number | null): string | null {
+  if (months == null) return null;
+  if (months < 12) return `${months}mo`;
+  const yrs = Math.floor(months / 12);
+  const mo  = months % 12;
+  return mo === 0 ? `${yrs}yr${yrs > 1 ? "s" : ""}` : `${yrs}yr ${mo}mo`;
+}
+
 function shortRef(id: string) {
   return id.replace(/-/g, "").slice(0, 8).toUpperCase();
 }
@@ -912,7 +920,7 @@ export default function BookingPage() {
                             {[
                               "breed" in d ? d.breed : null,
                               d.size ? (SIZE_LABEL[d.size] ?? d.size) : null,
-                              "age" in d && d.age ? `${d.age}y` : null,
+                              "age" in d ? fmtAge(d.age) : null,
                             ].filter(Boolean).join(" · ") || "No details"}
                           </p>
                         </div>
