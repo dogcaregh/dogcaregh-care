@@ -48,6 +48,14 @@ const ALLERGIES = [
   { id: "none",    label: "None ✅"   },
 ];
 
+function toStringArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v as string[];
+  if (typeof v === "string" && v) {
+    try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; }
+  }
+  return [];
+}
+
 type Dog = {
   id: string;
   name: string;
@@ -89,8 +97,8 @@ export default function DogViewPage() {
         setError("Dog profile not found or you don't have access.");
       } else {
         const d = data as Dog;
-        d.temperament = Array.isArray(d.temperament) ? d.temperament : [];
-        d.allergies   = Array.isArray(d.allergies)   ? d.allergies   : [];
+        d.temperament = toStringArray(d.temperament);
+        d.allergies   = toStringArray(d.allergies);
         setDog(d);
       }
       setLoading(false);
