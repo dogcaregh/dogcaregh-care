@@ -5,7 +5,6 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useAdminGuard } from "@/lib/use-admin-guard";
 import { AdminNav } from "@/components/admin-nav";
-import { createClient } from "@/lib/supabase";
 import Link from "next/link";
 
 type UserRow = {
@@ -56,33 +55,25 @@ export default function AdminUsersPage() {
     load();
   }, [ready]);
 
-  async function toggleSuspend(providerId: string, currentActive: boolean) {
+  async function toggleField(providerId: string, field: "verified" | "active", current: boolean) {
     setActing(providerId);
-    const sb = createClient();
-    const { error } = await sb.from("providers").update({ active: !currentActive }).eq("id", providerId);
-    if (!error) {
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ providerId, field, value: !current }),
+    });
+    if (res.ok) {
       setUsers(prev => prev.map(u =>
         u.provider?.id === providerId
-          ? { ...u, provider: { ...u.provider!, active: !currentActive } }
+          ? { ...u, provider: { ...u.provider!, [field]: !current } }
           : u
       ));
     }
     setActing(null);
   }
 
-  async function toggleVerified(providerId: string, current: boolean) {
-    setActing(providerId);
-    const sb = createClient();
-    const { error } = await sb.from("providers").update({ verified: !current }).eq("id", providerId);
-    if (!error) {
-      setUsers(prev => prev.map(u =>
-        u.provider?.id === providerId
-          ? { ...u, provider: { ...u.provider!, verified: !current } }
-          : u
-      ));
-    }
-    setActing(null);
-  }
+  const toggleVerified = (providerId: string, current: boolean) => toggleField(providerId, "verified", current);
+  const toggleSuspend  = (providerId: string, current: boolean) => toggleField(providerId, "active",   current);
 
   const counts = {
     all:      users.length,

@@ -28,3 +28,24 @@ export async function GET() {
 
   return NextResponse.json({ users: users ?? [], providers: providers ?? [] });
 }
+
+export async function PATCH(req: Request) {
+  const supabase = createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const db = admin();
+  const { data: me } = await db.from("users").select("role").eq("id", user.id).single();
+  if (!me || (me as { role: string }).role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { providerId, field, value } = await req.json();
+  if (!providerId || !["verified", "active"].includes(field)) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  const { error } = await db.from("providers").update({ [field]: value }).eq("id", providerId);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
