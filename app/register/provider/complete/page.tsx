@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
-import { lookupCoords } from "@/lib/geocode";
 
 export default function ProviderCompletePage() {
   const router = useRouter();
@@ -14,33 +13,8 @@ export default function ProviderCompletePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/login"); return; }
 
-      const meta = user.user_metadata as { name?: string; phone?: string; neighbourhood?: string };
-      const name         = meta.name ?? "";
-      const phone        = meta.phone ?? "";
-      const neighbourhood = meta.neighbourhood ?? "";
-
-      await supabase
-        .from("users")
-        .upsert({ id: user.id, email: user.email, name, phone, role: "provider", location: neighbourhood })
-        .eq("id", user.id);
-
-      const { data: existing } = await supabase
-        .from("providers")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!existing) {
-        const coords = lookupCoords(neighbourhood.trim());
-        await supabase.from("providers").insert({
-          user_id:      user.id,
-          neighbourhood,
-          location:     neighbourhood,
-          active:       true,
-          lat:          coords?.lat ?? null,
-          lng:          coords?.lng ?? null,
-        });
-      }
+      // Use the service-role API route so RLS cannot block creating the provider rows.
+      await fetch("/api/register/provider", { method: "POST" });
 
       router.push("/dashboard/provider/services");
     }
