@@ -479,6 +479,14 @@ export default function EditProfilePage() {
                   onChange={e => setBio(e.target.value)}
                   style={{ resize: "vertical" }}
                 />
+                <div className="mt-2 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                  <span className="mt-0.5 shrink-0 text-sm">⚠️</span>
+                  <p className="text-xs leading-relaxed text-amber-800">
+                    <span className="font-semibold">Do not include phone numbers, email addresses, or social media handles in your bio.</span>{" "}
+                    Contact details should only be exchanged after a booking is confirmed through the platform.
+                    Non-compliance may result in account suspension.
+                  </p>
+                </div>
               </div>
               <div className="sm:col-span-2">
                 <Toggle
