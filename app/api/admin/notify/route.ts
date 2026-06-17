@@ -6,7 +6,7 @@ import { renderDogCareEmail } from "@/lib/dogCareEmail";
 
 export const dynamic = "force-dynamic";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://dogcaregh.com";
 const FROM = "DogCareGH <noreply@dogcaregh.com>";
 
 const db = () =>

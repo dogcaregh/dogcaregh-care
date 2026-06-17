@@ -6,7 +6,7 @@ import { renderDogCareEmail } from "@/lib/dogCareEmail";
 export const dynamic = "force-dynamic";
 
 const FROM = "DogCareGH <noreply@dogcaregh.com>";
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://dogcaregh.com";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://dogcaregh.com";
 
 function getClients() {
   const resend = new Resend(process.env.RESEND_API_KEY);
