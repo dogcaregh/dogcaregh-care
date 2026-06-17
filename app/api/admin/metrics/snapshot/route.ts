@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { renderDogCareEmail } from "@/lib/dogCareEmail";
 
 export const dynamic = "force-dynamic";
 
@@ -87,56 +88,37 @@ export async function POST(req: NextRequest) {
   if (emails.length > 0 && process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const gates = (metrics as any)?.gates ?? {};
+    const bpp = Number(gates.bookings_per_provider ?? 0);
+    const hrs = Number(gates.median_response_hours ?? 0);
+    const nrp = Number(gates.no_response_pct ?? 0);
+    const rpt = Number(gates.repeat_rate ?? 0);
+    const openCount = (openIncidents ?? []).length;
+    const green = (v: string) => `<span style="color:#059669;font-weight:700">${v}</span>`;
+    const red   = (v: string) => `<span style="color:#dc2626;font-weight:700">${v}</span>`;
     await resend.emails.send({
       from:    "DogCareGH <noreply@dogcaregh.com>",
       to:      emails,
       subject: `[DogCareGH] Weekly Digest — ${isGo ? "🟢 GO" : "🔴 HOLD"}`,
-      html:    buildDigest(isGo, holdReason, gates, (openIncidents ?? []).length),
+      html:    renderDogCareEmail({
+        preheader:  `Weekly metrics digest — ${isGo ? "GO" : "HOLD"}`,
+        heading:    `Weekly Digest — ${isGo ? "🟢 GO" : "🔴 HOLD"}`,
+        intro:      isGo
+          ? "All expansion gates passed for the last two weeks. The platform is ready for expansion."
+          : `HOLD — ${holdReason}.`,
+        rows: [
+          { label: "Bookings / provider / month", value: bpp >= 5  ? green(bpp.toFixed(1))              : red(bpp.toFixed(1)) },
+          { label: "Median response time",        value: hrs < 4   ? green(hrs > 0 ? `${hrs.toFixed(1)}h` : "—") : red(hrs > 0 ? `${hrs.toFixed(1)}h` : "—") },
+          { label: "No-response rate (48h)",      value: nrp < 10  ? green(`${nrp.toFixed(1)}%`)        : red(`${nrp.toFixed(1)}%`) },
+          { label: "Repeat booking rate",         value: rpt >= 30 ? green(`${rpt.toFixed(1)}%`)        : red(`${rpt.toFixed(1)}%`) },
+          ...(openCount > 0 ? [{ label: "Open incidents", value: red(`⚠ ${openCount} — review required`) }] : []),
+        ],
+        buttonText: "Open Dashboard",
+        buttonUrl:  `${BASE_URL}/admin/metrics`,
+        footerNote: "DogCareGH — admin weekly snapshot",
+      }),
     });
   }
 
   return NextResponse.json({ ok: true, verdict: isGo ? "GO" : "HOLD", holdReason });
 }
 
-function buildDigest(isGo: boolean, holdReason: string, gates: any, openCount: number): string {
-  const bpp = Number(gates.bookings_per_provider ?? 0);
-  const hrs = Number(gates.median_response_hours ?? 0);
-  const nrp = Number(gates.no_response_pct ?? 0);
-  const rpt = Number(gates.repeat_rate ?? 0);
-
-  const row = (label: string, val: string, ok: boolean) =>
-    `<tr><td style="padding:5px 0;font-size:14px;color:#374151">${label}</td>
-     <td style="padding:5px 0;font-size:14px;font-weight:600;text-align:right;color:${ok ? "#059669" : "#dc2626"}">${val}</td></tr>`;
-
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:system-ui,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
-<tr><td align="center">
-<table width="100%" style="max-width:520px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
-<tr><td style="background:#0a2e30;padding:22px 32px;text-align:center;">
-  <span style="color:#fff;font-size:18px;font-weight:800;">Dog<span style="color:#00b096">Care</span>GH — Weekly Digest</span>
-</td></tr>
-<tr><td style="padding:24px 32px;">
-  <div style="background:${isGo ? "rgba(5,150,105,.1)" : "rgba(220,38,38,.08)"};border-radius:10px;padding:14px 18px;margin-bottom:20px;text-align:center;">
-    <p style="margin:0;font-size:15px;font-weight:700;color:${isGo ? "#059669" : "#dc2626"}">
-      ${isGo ? "🟢 EXPANSION: GO" : `🔴 EXPANSION: HOLD — ${holdReason}`}
-    </p>
-  </div>
-  <p style="margin:0 0 6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af">Gates (last 30 days)</p>
-  <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #f0f0f0;margin-bottom:20px;">
-    ${row("Bookings / provider / month", bpp.toFixed(1), bpp >= 5)}
-    ${row("Median response time", hrs > 0 ? `${hrs.toFixed(1)}h` : "—", hrs < 4)}
-    ${row("No-response rate (48h)", `${nrp.toFixed(1)}%`, nrp < 10)}
-    ${row("Repeat booking rate", `${rpt.toFixed(1)}%`, rpt >= 30)}
-  </table>
-  ${openCount > 0 ? `<p style="margin:0 0 20px;font-size:13px;color:#dc2626;font-weight:600">⚠ ${openCount} open incident(s) — review required</p>` : ""}
-  <a href="${BASE_URL}/admin/metrics" style="display:inline-block;background:#00b096;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;">Open Dashboard</a>
-</td></tr>
-<tr><td style="padding:14px 32px;border-top:1px solid #f0f0f0;">
-  <p style="margin:0;font-size:11px;color:#9ca3af">DogCareGH — admin weekly snapshot</p>
-</td></tr>
-</table>
-</td></tr>
-</table>
-</body></html>`;
-}

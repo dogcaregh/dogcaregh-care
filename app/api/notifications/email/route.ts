@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
+import { renderDogCareEmail } from "@/lib/dogCareEmail";
 
 export const dynamic = "force-dynamic";
 
@@ -41,14 +42,6 @@ type NotificationType =
   | "verification_rejected"
   | "new_message";
 
-interface EmailContent {
-  subject: string;
-  heading: string;
-  body: string;
-  ctaLabel: string;
-  ctaUrl: string;
-}
-
 function buildContent(
   type: NotificationType,
   message: string,
@@ -58,192 +51,195 @@ function buildContent(
   service: string,
   payoutAmount: string,
   grossAmount: string,
-): EmailContent | null {
+): { subject: string; html: string } | null {
   const bookingUrl = bookingId ? `${BASE_URL}/booking/${bookingId}` : BASE_URL;
 
   switch (type) {
     case "booking_request":
       return {
         subject: `New booking request — ${service}`,
-        heading: "New Booking Request",
-        body: `<strong>${ownerName}</strong> has sent you a ${service} booking request. Review the details and accept or decline.`,
-        ctaLabel: "View Request",
-        ctaUrl: bookingUrl,
+        html: renderDogCareEmail({
+          preheader: `New ${service} booking request from ${ownerName}`,
+          heading: "New Booking Request",
+          intro: `<strong>${ownerName}</strong> has sent you a ${service} booking request. Review the details and accept or decline.`,
+          buttonText: "View Request",
+          buttonUrl: bookingUrl,
+        }),
       };
 
     case "booking_confirmed":
       return {
         subject: "Your booking has been accepted — payment required",
-        heading: "Booking Accepted!",
-        body: `Great news! <strong>${providerName}</strong> has accepted your ${service} booking. Please complete your payment to secure the service.`,
-        ctaLabel: "Pay Now",
-        ctaUrl: bookingUrl,
+        html: renderDogCareEmail({
+          preheader: "Your booking was accepted — complete payment to confirm",
+          heading: "Booking Accepted!",
+          intro: `Great news! <strong>${providerName}</strong> has accepted your ${service} booking. Please complete your payment to secure the service.`,
+          buttonText: "Pay Now",
+          buttonUrl: bookingUrl,
+        }),
       };
 
     case "booking_declined":
       return {
         subject: "Your booking request was declined",
-        heading: "Booking Request Declined",
-        body: `Unfortunately, <strong>${providerName}</strong> is unable to take your ${service} booking. You can search for another provider on DogCareGH.`,
-        ctaLabel: "Find a Provider",
-        ctaUrl: `${BASE_URL}/search`,
+        html: renderDogCareEmail({
+          preheader: "Your booking request was declined",
+          heading: "Booking Request Declined",
+          intro: `Unfortunately, <strong>${providerName}</strong> is unable to take your ${service} booking. You can search for another provider on DogCareGH.`,
+          buttonText: "Find a Provider",
+          buttonUrl: `${BASE_URL}/search`,
+        }),
       };
 
     case "booking_cancelled":
       return {
         subject: "A booking has been cancelled",
-        heading: "Booking Cancelled",
-        body: `<strong>${ownerName}</strong> has cancelled their ${service} booking.`,
-        ctaLabel: "View Booking",
-        ctaUrl: bookingUrl,
+        html: renderDogCareEmail({
+          preheader: "A booking has been cancelled",
+          heading: "Booking Cancelled",
+          intro: `<strong>${ownerName}</strong> has cancelled their ${service} booking.`,
+          buttonText: "View Booking",
+          buttonUrl: bookingUrl,
+        }),
       };
 
     case "payment_received":
       return {
         subject: `Payment received — GHS ${grossAmount}`,
-        heading: "Payment Received",
-        body: `You've received a payment of <strong>GHS ${grossAmount}</strong> from <strong>${ownerName}</strong> for the ${service} booking. The service is ready to begin.`,
-        ctaLabel: "View Booking",
-        ctaUrl: bookingUrl,
+        html: renderDogCareEmail({
+          preheader: `Payment of GHS ${grossAmount} received from ${ownerName}`,
+          heading: "Payment Received",
+          intro: `You've received a payment of <strong>GHS ${grossAmount}</strong> from <strong>${ownerName}</strong> for the ${service} booking. The service is ready to begin.`,
+          total: `GHS ${grossAmount}`,
+          buttonText: "View Booking",
+          buttonUrl: bookingUrl,
+        }),
       };
 
     case "payment_confirmed":
       return {
         subject: "Payment confirmed — you're all set!",
-        heading: "Payment Confirmed",
-        body: `Your payment has been confirmed for your ${service} booking with <strong>${providerName}</strong>. Your pet is in good hands!`,
-        ctaLabel: "View Booking",
-        ctaUrl: bookingUrl,
+        html: renderDogCareEmail({
+          preheader: "Your payment has been confirmed",
+          heading: "Payment Confirmed",
+          intro: `Your payment has been confirmed for your ${service} booking with <strong>${providerName}</strong>. Your pet is in good hands!`,
+          buttonText: "View Booking",
+          buttonUrl: bookingUrl,
+        }),
       };
 
     case "service_started":
       return {
         subject: `Your ${service} service has started`,
-        heading: "Service Started",
-        body: `<strong>${providerName}</strong> has started your ${service} service. We hope your pet has a great time!`,
-        ctaLabel: "View Booking",
-        ctaUrl: bookingUrl,
+        html: renderDogCareEmail({
+          preheader: `${providerName} has started your ${service} service`,
+          heading: "Service Started",
+          intro: `<strong>${providerName}</strong> has started your ${service} service. We hope your pet has a great time!`,
+          buttonText: "View Booking",
+          buttonUrl: bookingUrl,
+        }),
       };
 
     case "awaiting_confirmation":
       return {
         subject: "Service complete — please confirm",
-        heading: "Please Confirm Completion",
-        body: `<strong>${providerName}</strong> has marked your ${service} as complete. Please confirm to release their payment.`,
-        ctaLabel: "Confirm & Release Payment",
-        ctaUrl: bookingUrl,
+        html: renderDogCareEmail({
+          preheader: "Service complete — your confirmation is needed",
+          heading: "Please Confirm Completion",
+          intro: `<strong>${providerName}</strong> has marked your ${service} as complete. Please confirm to release their payment.`,
+          buttonText: "Confirm & Release Payment",
+          buttonUrl: bookingUrl,
+        }),
       };
 
     case "payout_triggered":
       return {
         subject: `Your payout of GHS ${payoutAmount} has been triggered`,
-        heading: "Payout Triggered",
-        body: `Your payout of <strong>GHS ${payoutAmount}</strong> for the ${service} booking with <strong>${ownerName}</strong> has been triggered. Funds will arrive shortly.`,
-        ctaLabel: "View Booking",
-        ctaUrl: bookingUrl,
+        html: renderDogCareEmail({
+          preheader: `Your payout of GHS ${payoutAmount} has been triggered`,
+          heading: "Payout Triggered",
+          intro: `Your payout of <strong>GHS ${payoutAmount}</strong> for the ${service} booking with <strong>${ownerName}</strong> has been triggered. Funds will arrive shortly.`,
+          total: `GHS ${payoutAmount}`,
+          buttonText: "View Booking",
+          buttonUrl: bookingUrl,
+        }),
       };
 
     case "cashout_paid":
       return {
         subject: "Your withdrawal has been sent",
-        heading: "Withdrawal Sent!",
-        body: message,
-        ctaLabel: "View Earnings",
-        ctaUrl: `${BASE_URL}/dashboard/provider`,
+        html: renderDogCareEmail({
+          preheader: "Your withdrawal has been sent",
+          heading: "Withdrawal Sent!",
+          intro: message,
+          buttonText: "View Earnings",
+          buttonUrl: `${BASE_URL}/dashboard/provider`,
+        }),
       };
 
     case "cashout_rejected":
       return {
         subject: "Your withdrawal request could not be processed",
-        heading: "Withdrawal Not Approved",
-        body: message,
-        ctaLabel: "View Earnings",
-        ctaUrl: `${BASE_URL}/dashboard/provider`,
+        html: renderDogCareEmail({
+          preheader: "Your withdrawal request could not be processed",
+          heading: "Withdrawal Not Approved",
+          intro: message,
+          buttonText: "View Earnings",
+          buttonUrl: `${BASE_URL}/dashboard/provider`,
+        }),
       };
 
     case "booking_cancelled":
       return {
         subject: "Booking cancellation update",
-        heading: "Booking Cancelled",
-        body: message,
-        ctaLabel: "View Dashboard",
-        ctaUrl: `${BASE_URL}/dashboard/owner`,
+        html: renderDogCareEmail({
+          preheader: "Booking cancellation update",
+          heading: "Booking Cancelled",
+          intro: message,
+          buttonText: "View Dashboard",
+          buttonUrl: `${BASE_URL}/dashboard/owner`,
+        }),
       };
 
     case "verification_approved":
       return {
         subject: "You're verified on DogCareGH!",
-        heading: "Verification Approved 🎉",
-        body: message,
-        ctaLabel: "Go to Dashboard",
-        ctaUrl: `${BASE_URL}/dashboard/provider`,
+        html: renderDogCareEmail({
+          preheader: "You're verified on DogCareGH!",
+          heading: "Verification Approved 🎉",
+          intro: message,
+          buttonText: "Go to Dashboard",
+          buttonUrl: `${BASE_URL}/dashboard/provider`,
+        }),
       };
 
     case "verification_rejected":
       return {
         subject: "Update on your DogCareGH application",
-        heading: "Application Update",
-        body: message,
-        ctaLabel: "Reapply",
-        ctaUrl: `${BASE_URL}/dashboard/provider/verify`,
+        html: renderDogCareEmail({
+          preheader: "Update on your DogCareGH application",
+          heading: "Application Update",
+          intro: message,
+          buttonText: "Reapply",
+          buttonUrl: `${BASE_URL}/dashboard/provider/verify`,
+        }),
       };
 
     case "new_message":
       return {
         subject: message,
-        heading: "New Message",
-        body: `You have a new message about your booking.`,
-        ctaLabel: "View Message",
-        ctaUrl: `${bookingUrl}?tab=messages`,
+        html: renderDogCareEmail({
+          preheader: "You have a new message about your booking",
+          heading: "New Message",
+          intro: "You have a new message about your booking.",
+          buttonText: "View Message",
+          buttonUrl: `${bookingUrl}?tab=messages`,
+        }),
       };
 
     default:
       return null;
   }
-}
-
-function renderHtml(content: EmailContent): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>${content.subject}</title>
-</head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-        <tr>
-          <td style="background:#0a2e30;padding:28px 32px;text-align:center;">
-            <span style="color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.5px;">
-              Dog<span style="color:#00b096;">Care</span>GH
-            </span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:36px 32px 24px;">
-            <h1 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#0a2e30;">${content.heading}</h1>
-            <p style="margin:0 0 28px;font-size:15px;color:#4b5563;line-height:1.6;">${content.body}</p>
-            <a href="${content.ctaUrl}"
-               style="display:inline-block;background:#00b096;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 28px;border-radius:10px;">
-              ${content.ctaLabel}
-            </a>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:20px 32px 28px;border-top:1px solid #f0f0f0;">
-            <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">
-              You're receiving this because you have a DogCareGH account.<br />
-              <a href="${BASE_URL}" style="color:#00b096;text-decoration:none;">Visit DogCareGH</a>
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
 }
 
 export async function POST(req: NextRequest) {
@@ -318,7 +314,7 @@ export async function POST(req: NextRequest) {
       from: FROM,
       to: user.email,
       subject: content.subject,
-      html: renderHtml(content),
+      html: content.html,
     });
     if (error) console.error("[email-notification] resend error:", error);
     else console.log("[email-notification] sent id:", data?.id);
