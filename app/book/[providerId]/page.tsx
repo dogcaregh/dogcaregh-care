@@ -549,9 +549,9 @@ function SlotPanel({
               ✂️ Itemised grooming — final cost depends on services chosen. Discuss via chat after booking.
             </p>
           )}
-          {isRange && (
+          {(isRange || isTiered || slug === "dog_daycare") && (
             <p className="mt-2.5 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-              🍖 Overnight care: owners are required to provide their dog&apos;s food for the full duration of the stay.
+              🍖 Please note: owners are required to provide their dog&apos;s food for the duration of the service.
             </p>
           )}
         </div>
