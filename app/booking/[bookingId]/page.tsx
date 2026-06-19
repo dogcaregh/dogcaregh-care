@@ -342,7 +342,7 @@ export default function BookingPage() {
       ]);
 
       if (!apiRes.ok) { setLoading(false); return; }
-      const { booking: bk, review: rvData, addons: addonData } = await apiRes.json();
+      const { booking: bk, review: rvData, addons: addonData, isAdmin } = await apiRes.json();
       if (!bk) { setLoading(false); return; }
 
       const typedBk  = bk as unknown as BookingDetail;
@@ -352,7 +352,10 @@ export default function BookingPage() {
       const isOwner    = user.id === typedBk.owner_id;
       const isProvider = !!provider && provider.user_id === user.id;
 
-      if (!isOwner && !isProvider) { router.push("/"); return; }
+      if (!isOwner && !isProvider) {
+        router.push(isAdmin ? `/admin/bookings/${bookingId}` : "/");
+        return;
+      }
 
       setMe({
         userId:    user.id,

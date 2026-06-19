@@ -44,8 +44,13 @@ export async function GET(
   const isOwner    = user.id === bk.owner_id;
   const isProvider = prov && user.id === (prov as Record<string, unknown>).user_id;
 
+  let isAdmin = false;
   if (!isOwner && !isProvider) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { data: userRole } = await service.from("users").select("role").eq("id", user.id).single();
+    if (userRole?.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    isAdmin = true;
   }
 
   const [{ data: review }, { data: addonDetails }] = await Promise.all([
@@ -60,5 +65,5 @@ export async function GET(
       : Promise.resolve({ data: [] }),
   ]);
 
-  return NextResponse.json({ booking, review: review ?? null, addons: addonDetails ?? [] });
+  return NextResponse.json({ booking, review: review ?? null, addons: addonDetails ?? [], isAdmin });
 }
