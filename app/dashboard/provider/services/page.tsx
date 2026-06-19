@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { ACCRA_AREAS } from "@/lib/geocode";
+import { SERVICE_META } from "@/lib/service-meta";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -737,6 +738,9 @@ export default function ProviderServicesPage() {
                         <div>
                           <p className="text-sm font-semibold text-gray-500">{svc.label}</p>
                           <p className="text-xs text-gray-400">Requires Level 2 verification</p>
+                          {SERVICE_META[svc.slug as keyof typeof SERVICE_META]?.description && (
+                            <p className="mt-0.5 text-[11px] leading-snug text-gray-400">{SERVICE_META[svc.slug as keyof typeof SERVICE_META].description}</p>
+                          )}
                         </div>
                       </div>
                       <Link
@@ -796,6 +800,9 @@ export default function ProviderServicesPage() {
                             {svc.label}
                           </p>
                           <p className="text-xs text-gray-400">{svc.unit}</p>
+                          {SERVICE_META[svc.slug as keyof typeof SERVICE_META]?.description && (
+                            <p className="mt-0.5 text-[11px] leading-snug text-gray-400">{SERVICE_META[svc.slug as keyof typeof SERVICE_META].description}</p>
+                          )}
                         </div>
                       </button>
                     </div>
