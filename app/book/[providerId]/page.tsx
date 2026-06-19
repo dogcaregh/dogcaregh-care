@@ -490,6 +490,7 @@ function SlotPanel({
               </Link>
             </div>
           ) : (
+            <>
             <div className="grid gap-2 sm:grid-cols-2">
               {dogs.map(dog => {
                 const checked   = slot.dogIds.includes(dog.id);
@@ -533,9 +534,10 @@ function SlotPanel({
             </div>
             {unsupportedDogs.length > 0 && (
               <p className="mt-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                ⚠️ {unsupportedDogs.map(d => d.name).join(", ")} {unsupportedDogs.length === 1 ? "cannot" : "cannot"} be booked — this provider has not set a price for {[...new Set(unsupportedDogs.map(d => d.size).filter(Boolean))].join(" and ")} dogs.
+                ⚠️ {unsupportedDogs.map(d => d.name).join(", ")} {unsupportedDogs.length === 1 ? "cannot" : "cannot"} be booked — this provider has not set a price for {Array.from(new Set(unsupportedDogs.map(d => d.size).filter(Boolean) as string[])).join(" and ")} dogs.
               </p>
             )}
+            </>
           )}
           {selDogs.length > 1 && svc && !isTiered && !isItemised && (
             <p className="mt-2 text-xs font-semibold" style={{ color: "#00b096" }}>
