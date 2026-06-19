@@ -526,7 +526,7 @@ function SlotPanel({
                     {!supported ? (
                       <span className="shrink-0 text-xs text-gray-400">Not available</span>
                     ) : displayRate !== null ? (
-                      <span className="shrink-0 text-sm font-extrabold" style={{ color: "#00b096" }}>GHS {displayRate}</span>
+                      <span className="shrink-0 text-sm font-extrabold" style={{ color: "#00b096" }}>GHS {displayRate}{isHourly ? " / hr" : ""}</span>
                     ) : null}
                   </button>
                 );
@@ -541,7 +541,7 @@ function SlotPanel({
           )}
           {selDogs.length > 1 && svc && !isTiered && !isItemised && (
             <p className="mt-2 text-xs font-semibold" style={{ color: "#00b096" }}>
-              Combined rate: GHS {totalRateForDogs(svc, selDogs) ?? "—"} for {selDogs.length} dogs
+              Combined rate: GHS {totalRateForDogs(svc, selDogs) ?? "—"}{isHourly ? " / hr" : ""} for {selDogs.length} dogs
             </p>
           )}
           {isItemised && (
