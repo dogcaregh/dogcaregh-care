@@ -294,6 +294,55 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── FAQ ── */}
+      <section className="bg-white px-6 py-16 md:px-12">
+        <div className="mx-auto max-w-3xl">
+          <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>Common questions</p>
+          <h2 className="mb-10 text-center text-2xl font-extrabold md:text-3xl" style={{ color: "#0a2e30" }}>Frequently asked questions</h2>
+          <div className="space-y-2">
+            {[
+              {
+                q: "How does DogCareGH work?",
+                a: "You search for a verified carer by service type and neighbourhood, view their profile and reviews, then send a booking request. Once accepted, you pay securely through the platform. After the service, you confirm it went well and the carer is paid. Simple.",
+              },
+              {
+                q: "Are carers background-checked?",
+                a: "Yes. Every carer submits a Ghana Card (verified against the national database), proof of address, and two personal references before going live. Carers offering home-based services also submit photos and a video of the space.",
+              },
+              {
+                q: "What areas do you cover?",
+                a: "We currently cover Accra and Greater Accra — East Legon, Labone, Cantonments, Spintex, Tema, Adenta, and many more neighbourhoods. We are growing, so check back if your area isn't listed yet.",
+              },
+              {
+                q: "How do payments work?",
+                a: "All payments go through Paystack — Ghana's leading payment provider. You can pay by Mobile Money, debit card, or bank transfer. Your payment is held securely until you confirm the service is complete.",
+              },
+              {
+                q: "What if I am not happy with the service?",
+                a: "Don't confirm service completion until you're satisfied. If there's a genuine problem, raise a dispute directly from your booking and our team will step in fairly. We do not release payment to the carer until you confirm.",
+              },
+            ].map(item => (
+              <details key={item.q} className="group rounded-2xl border border-gray-100 bg-gray-50 shadow-sm">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm font-semibold select-none" style={{ color: "#0a2e30" }}>
+                  <span>{item.q}</span>
+                  <span className="shrink-0 rounded-full p-1 transition group-open:rotate-45" style={{ backgroundColor: "rgba(0,176,150,.12)", color: "#00b096" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                  </span>
+                </summary>
+                <div className="border-t border-gray-100 px-5 py-4 text-sm leading-relaxed text-gray-600">{item.a}</div>
+              </details>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Link href="/faq" className="text-sm font-semibold transition hover:opacity-70" style={{ color: "#00b096" }}>
+              See all FAQs →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── Footer ── */}
       <footer className="border-t border-gray-100 px-6 py-8 text-center text-sm text-gray-400 md:px-12">
         © {new Date().getFullYear()} DogCareGH · 888 Capital City Ventures.
