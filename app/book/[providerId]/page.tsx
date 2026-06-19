@@ -126,6 +126,15 @@ function rateForDog(svc: ProviderService, dogSize: string | null): number | null
   return svc.rate_small ?? svc.rate_medium ?? svc.rate_large ?? null;
 }
 
+function sizeSupported(svc: ProviderService, dogSize: string | null): boolean {
+  if (!dogSize) return true;
+  const s = dogSize.toLowerCase();
+  if (s.includes("small"))  return svc.rate_small !== null || svc.rate_half_small !== null;
+  if (s.includes("medium")) return svc.rate_medium !== null || svc.rate_half_medium !== null;
+  if (s.includes("large"))  return svc.rate_large !== null || svc.rate_half_large !== null;
+  return true;
+}
+
 function rateHalfForDog(svc: ProviderService, dogSize: string | null): number | null {
   const s = (dogSize ?? "").toLowerCase();
   if (s.includes("small"))  return svc.rate_half_small;
@@ -369,7 +378,9 @@ function SlotPanel({
   const isTiered = TIERED_SLUGS.has(slug);
   const isItemised = svc?.grooming_mode === "itemised";
 
-  const selDogs     = dogs.filter(d => slot.dogIds.includes(d.id));
+  const selDogs        = dogs.filter(d => slot.dogIds.includes(d.id));
+  const unsupportedDogs = (svc && !isItemised) ? dogs.filter(d => !sizeSupported(svc, d.size)) : [];
+  const supportedDogs   = dogs.filter(d => !svc || isItemised || sizeSupported(svc, d.size));
   const availDays   = svc ? svcAvailDays(svc) : [];
   const availWindow = (svc && (isHourly || isTiered)) ? svcAvailWindow(svc) : null;
 
@@ -423,7 +434,14 @@ function SlotPanel({
               const minRate = s.rate_small ?? s.rate_medium ?? s.rate_large;
               return (
                 <button key={s.id} type="button"
-                  onClick={() => onChange({ svcId: s.id, selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" })}
+                  onClick={() => {
+                    const nextSvc = services.find(sv => sv.id === s.id)!;
+                    const keepDogs = slot.dogIds.filter(id => {
+                      const d = dogs.find(dd => dd.id === id);
+                      return !d || nextSvc.grooming_mode === "itemised" || sizeSupported(nextSvc, d.size);
+                    });
+                    onChange({ svcId: s.id, dogIds: keepDogs, selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" });
+                  }}
                   className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
                   style={sel ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" } : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }}>
                   <span className="text-2xl">{st.emoji}</span>
@@ -453,10 +471,13 @@ function SlotPanel({
             <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>Select Dog{dogs.length > 1 ? "s" : ""}</p>
             {dogs.length > 1 && (
               <button type="button"
-                onClick={() => onChange({ dogIds: slot.dogIds.length === dogs.length ? [] : dogs.map(d => d.id) })}
+                onClick={() => {
+                  const allSelected = supportedDogs.every(d => slot.dogIds.includes(d.id));
+                  onChange({ dogIds: allSelected ? [] : supportedDogs.map(d => d.id) });
+                }}
                 className="text-xs font-semibold transition hover:opacity-70"
                 style={{ color: "#00b096" }}>
-                {slot.dogIds.length === dogs.length ? "Deselect all" : "Select all"}
+                {supportedDogs.every(d => slot.dogIds.includes(d.id)) ? "Deselect all" : "Select all"}
               </button>
             )}
           </div>
@@ -471,36 +492,50 @@ function SlotPanel({
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {dogs.map(dog => {
-                const checked = slot.dogIds.includes(dog.id);
-                const dogRate = svc && !isItemised && !isTiered ? rateForDog(svc, dog.size) : null;
+                const checked   = slot.dogIds.includes(dog.id);
+                const supported = !svc || isItemised || sizeSupported(svc, dog.size);
+                const dogRate     = svc && !isItemised && !isTiered ? rateForDog(svc, dog.size) : null;
                 const halfDogRate = svc && isTiered && slot.sittingTier === "half" ? rateHalfForDog(svc, dog.size) : null;
                 const fullDogRate = svc && isTiered && slot.sittingTier === "full" ? rateForDog(svc, dog.size) : null;
                 const displayRate = isTiered ? (halfDogRate ?? fullDogRate) : dogRate;
                 return (
                   <button key={dog.id} type="button"
+                    disabled={!supported}
                     onClick={() => {
+                      if (!supported) return;
                       const next = checked ? slot.dogIds.filter(id => id !== dog.id) : [...slot.dogIds, dog.id];
                       onChange({ dogIds: next });
                     }}
                     className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
-                    style={checked ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" } : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }}>
+                    style={
+                      !supported ? { borderColor: "#e5e7eb", backgroundColor: "#f9fafb", opacity: 0.5, cursor: "not-allowed" } :
+                      checked    ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" } :
+                                   { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }
+                    }>
                     <span
                       className="flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold text-white transition"
-                      style={checked ? { backgroundColor: "#00b096", borderColor: "#00b096" } : { borderColor: "#d1d5db" }}>
-                      {checked ? "✓" : ""}
+                      style={checked && supported ? { backgroundColor: "#00b096", borderColor: "#00b096" } : { borderColor: "#d1d5db" }}>
+                      {checked && supported ? "✓" : ""}
                     </span>
                     <span className="text-xl">🐕</span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold" style={{ color: "#0a2e30" }}>{dog.name}</p>
                       <p className="text-xs text-gray-400">{[dog.breed, dog.size].filter(Boolean).join(" · ") || "No details"}</p>
                     </div>
-                    {displayRate !== null && (
+                    {!supported ? (
+                      <span className="shrink-0 text-xs text-gray-400">Not available</span>
+                    ) : displayRate !== null ? (
                       <span className="shrink-0 text-sm font-extrabold" style={{ color: "#00b096" }}>GHS {displayRate}</span>
-                    )}
+                    ) : null}
                   </button>
                 );
               })}
             </div>
+            {unsupportedDogs.length > 0 && (
+              <p className="mt-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                ⚠️ {unsupportedDogs.map(d => d.name).join(", ")} {unsupportedDogs.length === 1 ? "cannot" : "cannot"} be booked — this provider has not set a price for {[...new Set(unsupportedDogs.map(d => d.size).filter(Boolean))].join(" and ")} dogs.
+              </p>
+            )}
           )}
           {selDogs.length > 1 && svc && !isTiered && !isItemised && (
             <p className="mt-2 text-xs font-semibold" style={{ color: "#00b096" }}>
