@@ -293,6 +293,13 @@ export default function AdminBookingDetailPage() {
           )}
         </div>
 
+        {/* Food notice */}
+        {["dog_boarding", "dog_sitting", "dog_daycare"].includes(booking.service_type) && (
+          <p className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+            🍖 Please note: owners are required to provide their dog&apos;s food for the duration of the service.
+          </p>
+        )}
+
         {/* Contacts */}
         <div className="grid gap-4 sm:grid-cols-2">
           <ContactCard label="Owner" user={ownerSnap} />
