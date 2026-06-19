@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase";
 import { useChat } from "@/lib/chat-context";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { useNotifications } from "@/lib/notifications-context";
+import { SERVICE_META } from "@/lib/service-meta";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -840,9 +841,14 @@ export default function ProviderDashboard() {
                     className="rounded-xl border border-gray-100 p-4"
                     style={{ borderLeftWidth: 3, borderLeftColor: "#00b096" }}
                   >
-                    <div className="mb-3 flex items-center gap-2">
+                    <div className="mb-3 flex items-start gap-2">
                       <span className="text-xl">{emoji}</span>
-                      <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>{label}</p>
+                      <div>
+                        <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>{label}</p>
+                        {st?.slug && SERVICE_META[st.slug as keyof typeof SERVICE_META]?.description && (
+                          <p className="mt-0.5 text-[11px] leading-snug text-gray-400">{SERVICE_META[st.slug as keyof typeof SERVICE_META].description}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-1">
                       {svc.rate_small  != null && <div className="flex justify-between text-xs"><span className="text-gray-400">Small dog</span><span className="font-semibold" style={{ color: "#00b096" }}>GHS {Number(svc.rate_small).toFixed(2)}</span></div>}
