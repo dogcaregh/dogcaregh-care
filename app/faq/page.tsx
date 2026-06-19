@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SERVICE_META } from "@/lib/service-meta";
 
 export const metadata: Metadata = {
   title: "Frequently Asked Questions",
@@ -17,7 +18,7 @@ const CATEGORIES = [
       },
       {
         q: "What services are available?",
-        a: "We offer five services: Dog Sitting (a carer looks after your dog in their home), Dog Daycare (supervised daytime play), Dog Overnight (boarding in a carer's home), Dog Grooming (mobile or in-home grooming), and Dog Walking (daily walks). You can filter by service when searching.",
+        a: "We offer five services: Dog Walking (a professional walker takes your dog out), Dog Sitting (a sitter comes to your home to care for your dog), Dog Daycare (your dog spends the day at the carer's home), Dog Overnight (your dog stays with a trusted carer for a night, a week, or longer), and Dog Grooming (at the groomer's place or a mobile groomer comes to you). You can filter by service when searching.",
       },
       {
         q: "Do I need to create an account to book?",
@@ -167,6 +168,24 @@ export default function FAQPage() {
               {cat.emoji} {cat.title}
             </a>
           ))}
+        </div>
+      </div>
+
+      {/* Services quick-reference */}
+      <div className="bg-white px-6 py-10 md:px-12">
+        <div className="mx-auto max-w-4xl">
+          <p className="mb-6 text-xs font-semibold uppercase tracking-widest text-center" style={{ color: "#00b096" }}>Our services</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {(Object.entries(SERVICE_META) as [keyof typeof SERVICE_META, typeof SERVICE_META[keyof typeof SERVICE_META]][]).map(([slug, svc]) => (
+              <div key={slug} className="flex gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                <span className="text-2xl">{svc.emoji}</span>
+                <div>
+                  <p className="text-xs font-bold" style={{ color: "#0a2e30" }}>{svc.name}</p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-gray-500">{svc.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
