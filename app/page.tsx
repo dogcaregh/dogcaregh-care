@@ -238,7 +238,7 @@ export default function HomePage() {
           </h2>
           <div className="grid gap-6 sm:grid-cols-3">
             {[
-              { emoji: "🔍", step: "1", title: "Find a carer", desc: "Search verified carers in your neighbourhood by service type and availability." },
+              { emoji: "🔍", step: "1", title: "Find a care provider", desc: "Search verified care providers in your neighbourhood by service type and availability." },
               { emoji: "📅", step: "2", title: "Book & pay", desc: "Request a booking and pay securely via mobile money or card through Paystack." },
               { emoji: "⭐", step: "3", title: "Relax", desc: "Your dog is in trusted hands. Rate your experience when the service is done." },
             ].map(item => (
@@ -263,7 +263,7 @@ export default function HomePage() {
               className="text-sm font-semibold transition hover:opacity-70"
               style={{ color: "#00b096" }}
             >
-              See the full guide for owners &amp; carers →
+              See the full guide for owners &amp; care providers →
             </Link>
           </div>
         </div>
@@ -303,11 +303,11 @@ export default function HomePage() {
             {[
               {
                 q: "How does DogCareGH work?",
-                a: "You search for a verified carer by service type and neighbourhood, view their profile and reviews, then send a booking request. Once accepted, you pay securely through the platform. After the service, you confirm it went well and the carer is paid. Simple.",
+                a: "You search for a verified care provider by service type and neighbourhood, view their profile and reviews, then send a booking request. Once accepted, you pay securely through the platform. After the service, you confirm it went well and the care provider is paid. Simple.",
               },
               {
-                q: "Are carers background-checked?",
-                a: "Yes. Every carer submits a Ghana Card (verified against the national database), proof of address, and two personal references before going live. Carers offering home-based services also submit photos and a video of the space.",
+                q: "Are care providers background-checked?",
+                a: "Yes. Every care provider submits a Ghana Card (verified against the national database), proof of address, and two personal references before going live. Care providers offering home-based services also submit photos and a video of the space.",
               },
               {
                 q: "What areas do you cover?",
@@ -319,7 +319,7 @@ export default function HomePage() {
               },
               {
                 q: "What if I am not happy with the service?",
-                a: "Don't confirm service completion until you're satisfied. If there's a genuine problem, raise a dispute directly from your booking and our team will step in fairly. We do not release payment to the carer until you confirm.",
+                a: "Don't confirm service completion until you're satisfied. If there's a genuine problem, raise a dispute directly from your booking and our team will step in fairly. We do not release payment to the care provider until you confirm.",
               },
             ].map(item => (
               <details key={item.q} className="group rounded-2xl border border-gray-100 bg-gray-50 shadow-sm">

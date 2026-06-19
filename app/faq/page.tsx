@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { SERVICE_META } from "@/lib/service-meta";
 
 export const metadata: Metadata = {
   title: "Frequently Asked Questions",
-  description: "Answers to common questions about DogCareGH — how bookings work, how carers are verified, payments, cancellations, and more.",
+  description: "Answers to common questions about DogCareGH — how bookings work, how care providers are verified, payments, cancellations, and more.",
 };
 
 const CATEGORIES = [
@@ -14,11 +14,11 @@ const CATEGORIES = [
     items: [
       {
         q: "How does DogCareGH work?",
-        a: "DogCareGH connects dog owners with trusted, verified carers across Ghana. You search for a carer by service type and neighbourhood, view their profile and reviews, then send a booking request. Once the carer accepts, you pay securely through the platform. After the service is done and you confirm it went well, the carer is paid. Simple.",
+        a: "DogCareGH connects dog owners with trusted, verified care providers across Ghana. You search for a care provider by service type and neighbourhood, view their profile and reviews, then send a booking request. Once the care provider accepts, you pay securely through the platform. After the service is done and you confirm it went well, the care provider is paid. Simple.",
       },
       {
         q: "What services are available?",
-        a: "We offer five services: Dog Walking (a professional walker takes your dog out), Dog Sitting (a sitter comes to your home to care for your dog), Dog Daycare (your dog spends the day at the carer's home), Dog Overnight (your dog stays with a trusted carer for a night, a week, or longer), and Dog Grooming (at the groomer's place or a mobile groomer comes to you). You can filter by service when searching.",
+        a: "We offer five services: Dog Walking (a professional walker takes your dog out), Dog Sitting (a sitter comes to your home to care for your dog), Dog Daycare (your dog spends the day at the care provider's home), Dog Overnight (your dog stays with a trusted care provider for a night, a week, or longer), and Dog Grooming (at the groomer's place or a mobile groomer comes to you). You can filter by service when searching.",
       },
       {
         q: "Do I need to create an account to book?",
@@ -26,15 +26,15 @@ const CATEGORIES = [
       },
       {
         q: "How do I add my dog's details?",
-        a: "After signing up, go to your dashboard and click 'Add Dog'. You can add your dog's name, breed, age, size, vaccination status, and any special needs or medical notes. Carers use this information to care for your dog properly. You can add multiple dogs.",
+        a: "After signing up, go to your dashboard and click 'Add Dog'. You can add your dog's name, breed, age, size, vaccination status, and any special needs or medical notes. Care providers use this information to care for your dog properly. You can add multiple dogs.",
       },
       {
-        q: "Are carers background-checked?",
-        a: "Yes. Every carer on DogCareGH goes through an identity and reference verification process before they can accept bookings. This includes a Ghana Card check verified against the national database, a selfie match, proof of address, and two character references. Carers offering home services also submit photos and a video of the space. Some carers optionally hold a Police Clearance Certificate, shown as a badge on their profile.",
+        q: "Are care providers background-checked?",
+        a: "Yes. Every care provider on DogCareGH goes through an identity and reference verification process before they can accept bookings. This includes a Ghana Card check verified against the national database, a selfie match, proof of address, and two character references. Care providers offering home services also submit photos and a video of the space. Some care providers optionally hold a Police Clearance Certificate, shown as a badge on their profile.",
       },
       {
         q: "What if I am not happy with the service?",
-        a: "Do not confirm service completion until you are satisfied. Once a carer marks a service as complete, you have the option to either confirm it (which releases payment to the carer) or raise a dispute. If you raise a dispute, our team reviews it and steps in fairly. Do not confirm completion if there is a genuine problem — that is what the dispute process is for.",
+        a: "Do not confirm service completion until you are satisfied. Once a care provider marks a service as complete, you have the option to either confirm it (which releases payment to the care provider) or raise a dispute. If you raise a dispute, our team reviews it and steps in fairly. Do not confirm completion if there is a genuine problem — that is what the dispute process is for.",
       },
       {
         q: "Can I cancel a booking?",
@@ -48,11 +48,11 @@ const CATEGORIES = [
   },
   {
     emoji: "🏡",
-    title: "For Carers",
+    title: "For care providers",
     items: [
       {
-        q: "How do I become a carer on DogCareGH?",
-        a: "Register for a carer account, then go to your dashboard and click 'Apply for Verification'. You will be asked to submit your Ghana Card, a selfie, proof of address, two character references, and a passport photo. If you offer home-based services, you will also need photos and a short video of the space. Our team reviews applications and usually responds within a few business days.",
+        q: "How do I become a care provider on DogCareGH?",
+        a: "Register for a care provider account, then go to your dashboard and click 'Apply for Verification'. You will be asked to submit your Ghana Card, a selfie, proof of address, two character references, and a passport photo. If you offer home-based services, you will also need photos and a short video of the space. Our team reviews applications and usually responds within a few business days.",
       },
       {
         q: "What documents do I need for verification?",
@@ -72,7 +72,7 @@ const CATEGORIES = [
       },
       {
         q: "What happens if I need to cancel on an owner?",
-        a: "We ask that carers avoid cancelling confirmed, paid bookings wherever possible — owners are relying on you. If you must cancel, contact support as soon as possible so the owner can find alternative care. Repeated cancellations may affect your standing on the platform.",
+        a: "We ask that care providers avoid cancelling confirmed, paid bookings wherever possible — owners are relying on you. If you must cancel, contact support as soon as possible so the owner can find alternative care. Repeated cancellations may affect your standing on the platform.",
       },
     ],
   },
@@ -82,14 +82,14 @@ const CATEGORIES = [
     items: [
       {
         q: "How do payments work?",
-        a: "All payments are processed securely through Paystack — Ghana's leading payment provider. Owners can pay by Mobile Money, debit/credit card, or bank transfer. Your payment is held safely until you confirm the service is complete, at which point it is released to the carer.",
+        a: "All payments are processed securely through Paystack — Ghana's leading payment provider. Owners can pay by Mobile Money, debit/credit card, or bank transfer. Your payment is held safely until you confirm the service is complete, at which point it is released to the care provider.",
       },
       {
         q: "How much does DogCareGH charge?",
-        a: "DogCareGH takes a 25% platform commission on every completed booking. The carer receives the remaining 75%. The total price the owner pays already includes the commission — there are no surprise fees on top.",
+        a: "DogCareGH takes a 25% platform commission on every completed booking. The care provider receives the remaining 75%. The total price the owner pays already includes the commission — there are no surprise fees on top.",
       },
       {
-        q: "How and when do carers get paid?",
+        q: "How and when do care providers get paid?",
         a: "Once the owner confirms service completion, the payout is triggered and becomes available in your earnings balance. You can request a withdrawal at any time from the Earnings section of your dashboard. Withdrawals are sent to your registered Mobile Money account. We aim to process all withdrawal requests within 2 business days.",
       },
       {
@@ -107,20 +107,20 @@ const CATEGORIES = [
     title: "Safety & Trust",
     items: [
       {
-        q: "How do I know a carer is trustworthy?",
-        a: "Every carer is identity-verified using their Ghana Card checked against the national database, reference-checked by two people, and location-verified. Carers offering home services additionally submit a home inspection (photos and video). You can also read verified reviews from other owners on each carer's profile. Look for the verified badge and, where available, the Police-Cleared badge.",
+        q: "How do I know a care provider is trustworthy?",
+        a: "Every care provider is identity-verified using their Ghana Card checked against the national database, reference-checked by two people, and location-verified. Care providers offering home services additionally submit a home inspection (photos and video). You can also read verified reviews from other owners on each care provider's profile. Look for the verified badge and, where available, the Police-Cleared badge.",
       },
       {
         q: "What if something happens to my dog?",
-        a: "Your dog's safety is the top priority. If there is an incident, contact the carer directly first, then reach out to our support team at support@dogcaregh.com or 054 866 7516 immediately. You can also raise a dispute through your dashboard. We take all safety concerns seriously and will investigate promptly.",
+        a: "Your dog's safety is the top priority. If there is an incident, contact the care provider directly first, then reach out to our support team at support@dogcaregh.com or 054 866 7516 immediately. You can also raise a dispute through your dashboard. We take all safety concerns seriously and will investigate promptly.",
       },
       {
-        q: "Can I message a carer before booking?",
-        a: "Yes. Once a booking request is made, an in-app messaging thread opens between you and the carer. You can use this to ask questions, share special instructions about your dog, or coordinate logistics before and during the service.",
+        q: "Can I message a care provider before booking?",
+        a: "Yes. Once a booking request is made, an in-app messaging thread opens between you and the care provider. You can use this to ask questions, share special instructions about your dog, or coordinate logistics before and during the service.",
       },
       {
         q: "How do reviews work?",
-        a: "After a booking is closed, owners are invited to leave a star rating and written review for their carer. Reviews are visible on the carer's public profile and help other owners make informed choices. We do not allow businesses to remove genuine reviews.",
+        a: "After a booking is closed, owners are invited to leave a star rating and written review for their care provider. Reviews are visible on the care provider's public profile and help other owners make informed choices. We do not allow businesses to remove genuine reviews.",
       },
       {
         q: "How do I report a problem or concern?",

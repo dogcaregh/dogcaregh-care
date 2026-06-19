@@ -24,12 +24,12 @@ const OWNER_STEPS = [
   {
     emoji: "🔍",
     title: "Search near you",
-    desc: "Browse verified carers in your neighbourhood. Filter by service type — walking, grooming, daycare, and more.",
+    desc: "Browse verified care providers in your neighbourhood. Filter by service type — walking, grooming, daycare, and more.",
   },
   {
     emoji: "📋",
     title: "Compare & choose",
-    desc: "Read verified reviews, check star ratings, view photos, and see exactly what each carer offers and charges.",
+    desc: "Read verified reviews, check star ratings, view photos, and see exactly what each care provider offers and charges.",
   },
   {
     emoji: "📅",
@@ -39,14 +39,14 @@ const OWNER_STEPS = [
   {
     emoji: "⭐",
     title: "Rate your experience",
-    desc: "After the service, leave a review. Your feedback helps other pet owners and rewards great carers.",
+    desc: "After the service, leave a review. Your feedback helps other pet owners and rewards great care providers.",
   },
 ];
 
 const CARER_STEPS = [
   {
     emoji: "📝",
-    title: "Create a carer account",
+    title: "Create a care provider account",
     desc: "Register as a provider with your name, location, and a short bio about your experience with dogs.",
   },
   {
@@ -74,8 +74,8 @@ const CARER_STEPS = [
 const TRUST_ITEMS = [
   {
     emoji: "🛡️",
-    title: "Verified carers only",
-    desc: "Every carer submits a Ghana Card, address proof, and personal references before going live.",
+    title: "Verified care providers only",
+    desc: "Every care provider submits a Ghana Card, address proof, and personal references before going live.",
   },
   {
     emoji: "🔒",
@@ -139,7 +139,7 @@ export default function HowItWorksPage() {
             How DogCareGH works
           </h1>
           <p className="mt-4 text-base text-white/60 md:text-lg">
-            Whether you&apos;re looking for care for your dog or want to earn as a carer, we&apos;ve made it simple.
+            Whether you&apos;re looking for care for your dog or want to earn as a care provider, we&apos;ve made it simple.
           </p>
         </div>
       </div>
@@ -181,7 +181,7 @@ export default function HowItWorksPage() {
                   : { color: "#9ca3af" }
               }
             >
-              {t === "owner" ? "Pet Owners" : "Pet Carers"}
+              {t === "owner" ? "Pet Owners" : "Care Providers"}
             </button>
           ))}
         </div>
@@ -234,7 +234,7 @@ export default function HowItWorksPage() {
               className="inline-block rounded-full px-8 py-3.5 text-sm font-semibold text-white transition hover:opacity-90"
               style={{ backgroundColor: "#00b096" }}
             >
-              Find a Carer Near You
+              Find a Care Provider Near You
             </Link>
           ) : (
             <Link
@@ -242,7 +242,7 @@ export default function HowItWorksPage() {
               className="inline-block rounded-full px-8 py-3.5 text-sm font-semibold text-white transition hover:opacity-90"
               style={{ backgroundColor: "#00b096" }}
             >
-              Become a Carer
+              Become a Care Provider
             </Link>
           )}
         </div>
@@ -299,7 +299,7 @@ export default function HowItWorksPage() {
             Ready to get started?
           </h2>
           <p className="mb-8 text-white/60">
-            Join pet owners and carers already using DogCareGH across Accra.
+            Join pet owners and care providers already using DogCareGH across Accra.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
@@ -307,13 +307,13 @@ export default function HowItWorksPage() {
               className="rounded-full px-8 py-3.5 text-sm font-semibold transition hover:opacity-90"
               style={{ backgroundColor: "#00b096", color: "#0a2e30" }}
             >
-              Find a Carer
+              Find a Care Provider
             </Link>
             <Link
               href="/register/provider"
               className="rounded-full border border-white/40 px-8 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
             >
-              Become a Carer
+              Become a Care Provider
             </Link>
           </div>
         </div>

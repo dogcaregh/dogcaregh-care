@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -191,21 +191,21 @@ export default function AboutPage() {
 
         {/* CTA */}
         <section className="text-center">
-          <p className="mb-6 text-sm text-gray-500">Ready to find trusted care, or become a carer?</p>
+          <p className="mb-6 text-sm text-gray-500">Ready to find trusted care, or become a care provider?</p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               href="/search"
               className="rounded-full px-8 py-3.5 text-sm font-semibold text-white transition hover:opacity-90"
               style={{ backgroundColor: "#00b096" }}
             >
-              Find a Carer
+              Find a care provider
             </Link>
             <Link
               href="/register/provider"
               className="rounded-full border border-gray-200 px-8 py-3.5 text-sm font-semibold transition hover:border-[#00b096] hover:text-[#00b096]"
               style={{ color: "#0a2e30" }}
             >
-              Become a Carer
+              Become a care provider
             </Link>
           </div>
         </section>

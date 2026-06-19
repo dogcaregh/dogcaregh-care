@@ -1,4 +1,4 @@
-export type ServiceSlug =
+﻿export type ServiceSlug =
   | "dog_walking"
   | "dog_sitting"
   | "dog_daycare"
@@ -19,12 +19,12 @@ export const SERVICE_META: Record<ServiceSlug, { emoji: string; name: string; de
   dog_daycare: {
     emoji: "🏡",
     name: "Dog Daycare",
-    description: "Your dog spends the day at the carer's home — supervised play, socialisation, and company while you're out.",
+    description: "Your dog spends the day at the care provider's home — supervised play, socialisation, and company while you're out.",
   },
   dog_boarding: {
     emoji: "🛏️",
     name: "Dog Overnight",
-    description: "Your dog stays with a trusted carer for as long as you need — a night, a week, or longer. Ideal for travel and extended time away.",
+    description: "Your dog stays with a trusted care provider for as long as you need — a night, a week, or longer. Ideal for travel and extended time away.",
   },
   dog_grooming: {
     emoji: "✂️",

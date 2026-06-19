@@ -180,7 +180,7 @@ function ProviderCard({ p, highlightTypeId, serviceTypes }: { p: RankedProvider;
               )}
               {p.verified && (
                 <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold" style={{ color: "#0891b2" }}>
-                  ✓ Verified Carer
+                  ✓ Verified care provider
                 </p>
               )}
             </div>

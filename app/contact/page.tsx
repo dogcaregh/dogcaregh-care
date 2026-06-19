@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -87,7 +87,7 @@ export default function ContactPage() {
               { href: "/how-it-works", label: "How It Works" },
               { href: "/terms", label: "Terms of Service" },
               { href: "/privacy", label: "Privacy Policy" },
-              { href: "/search", label: "Find a Carer" },
+              { href: "/search", label: "Find a care provider" },
               { href: "/register/provider", label: "Become a Provider" },
             ].map(link => (
               <Link

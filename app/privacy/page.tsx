@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -79,7 +79,7 @@ export default function PrivacyPage() {
       <div className="border-b border-gray-100 px-6 py-6 md:px-12">
         <div className="mx-auto max-w-4xl">
           <Callout>
-            DogCareGH connects dog owners across Ghana with trusted carers for sitting, daycare, overnight stays,
+            DogCareGH connects dog owners across Ghana with trusted care providers for sitting, daycare, overnight stays,
             mobile grooming, and walking. To do that safely, we handle personal information — yours, and in some cases
             your dog&apos;s. We take that responsibility seriously. This document tells you exactly how.
           </Callout>
@@ -135,19 +135,19 @@ export default function PrivacyPage() {
 
           <Section num="2" title="The personal data we collect">
             <p className="text-sm leading-relaxed text-gray-600">
-              We only collect what we need to run the service, keep it safe, and pay people correctly. The information differs depending on whether you are a dog owner or a carer.
+              We only collect what we need to run the service, keep it safe, and pay people correctly. The information differs depending on whether you are a dog owner or a care provider.
             </p>
 
             <SubHeading>If you are a dog owner</SubHeading>
             <ul className="space-y-2">
               <Bullet><strong>Account details</strong> — your name, email address, phone number, password, and the neighbourhood or area you are in.</Bullet>
-              <Bullet><strong>Your dog&apos;s profile</strong> — name, breed, size, and any special needs or medical information you choose to share so a carer can look after them properly.</Bullet>
-              <Bullet><strong>Booking activity</strong> — the services you request, dates, the carers you book, messages, and the reviews you leave.</Bullet>
+              <Bullet><strong>Your dog&apos;s profile</strong> — name, breed, size, and any special needs or medical information you choose to share so a care provider can look after them properly.</Bullet>
+              <Bullet><strong>Booking activity</strong> — the services you request, dates, the care providers you book, messages, and the reviews you leave.</Bullet>
             </ul>
 
-            <SubHeading>If you are a carer</SubHeading>
+            <SubHeading>If you are a care provider</SubHeading>
             <p className="mb-2 text-sm leading-relaxed text-gray-600">
-              Because owners trust carers with their dogs and sometimes their homes, carers go through verification and provide more information:
+              Because owners trust care providers with their dogs and sometimes their homes, care providers go through verification and provide more information:
             </p>
             <ul className="space-y-2">
               <Bullet><strong>Identity</strong> — your Ghana Card details, which we verify against the national database, and a selfie taken in the app to confirm the card belongs to you.</Bullet>
@@ -155,14 +155,14 @@ export default function PrivacyPage() {
               <Bullet><strong>Payout details</strong> — your Mobile Money account, in your own name, so we can pay you.</Bullet>
               <Bullet><strong>Proof of address</strong> — such as a utility bill, tenancy agreement, or a signed note from an assembly member or community elder.</Bullet>
               <Bullet><strong>References</strong> — the names and phone numbers of two people who can speak to your character, whom we may contact.</Bullet>
-              <Bullet><strong>A passport photo</strong> for your carer profile.</Bullet>
+              <Bullet><strong>A passport photo</strong> for your care provider profile.</Bullet>
               <Bullet><strong>For home services</strong> (daycare, sitting, overnight) — photos and a short video of the space where dogs would stay, and a rabies vaccination certificate for any dog of your own that shares the space.</Bullet>
               <Bullet><strong>Optional</strong> — a Police Clearance Certificate, if you choose to earn the Police-Cleared badge, and later a TIN and registered business name as you formalise your business.</Bullet>
             </ul>
 
             <SubHeading>Information about other people</SubHeading>
             <p className="text-sm leading-relaxed text-gray-600">
-              When a carer gives us the contact details of references, the carer confirms they have those people&apos;s permission to share their name and phone number with us. We use those details only to carry out reference checks.
+              When a care provider gives us the contact details of references, the care provider confirms they have those people&apos;s permission to share their name and phone number with us. We use those details only to carry out reference checks.
             </p>
 
             <SubHeading>Payment information</SubHeading>
@@ -184,9 +184,9 @@ export default function PrivacyPage() {
               Under Act 843, we must have a lawful reason to use your data. Here is what we use it for and why:
             </p>
             <ul className="space-y-2">
-              <Bullet><strong>To provide the service</strong> — creating your account, matching owners with carers, managing bookings and your dog&apos;s profile. <em className="text-gray-400">(To perform our agreement with you.)</em></Bullet>
-              <Bullet><strong>To verify carers and keep everyone safe</strong> — checking identity, references, and home spaces so owners can trust the people on the platform. <em className="text-gray-400">(Our legitimate interest in trust and safety, and your consent for sensitive information.)</em></Bullet>
-              <Bullet><strong>To process payments and payouts</strong> — taking payment securely and paying carers to their Mobile Money. <em className="text-gray-400">(To perform our agreement with you.)</em></Bullet>
+              <Bullet><strong>To provide the service</strong> — creating your account, matching owners with care providers, managing bookings and your dog&apos;s profile. <em className="text-gray-400">(To perform our agreement with you.)</em></Bullet>
+              <Bullet><strong>To verify care providers and keep everyone safe</strong> — checking identity, references, and home spaces so owners can trust the people on the platform. <em className="text-gray-400">(Our legitimate interest in trust and safety, and your consent for sensitive information.)</em></Bullet>
+              <Bullet><strong>To process payments and payouts</strong> — taking payment securely and paying care providers to their Mobile Money. <em className="text-gray-400">(To perform our agreement with you.)</em></Bullet>
               <Bullet><strong>To communicate with you</strong> — booking confirmations, reminders, receipts, and support messages by email, WhatsApp, or SMS. <em className="text-gray-400">(To perform our agreement, and our legitimate interest in running the service.)</em></Bullet>
               <Bullet><strong>To handle disputes and refunds</strong> — stepping in fairly when something goes wrong, based on our cancellation policy.</Bullet>
               <Bullet><strong>To meet legal and tax obligations</strong> — keeping records the law requires us to keep.</Bullet>
@@ -199,7 +199,7 @@ export default function PrivacyPage() {
 
           <Section num="4" title="Sensitive personal data">
             <p className="text-sm leading-relaxed text-gray-600">
-              Some of the information carers give us is sensitive — your Ghana Card, your selfie, and any Police Clearance Certificate. We collect this only for identity verification and the safety of dogs, owners, and carers.
+              Some of the information care providers give us is sensitive — your Ghana Card, your selfie, and any Police Clearance Certificate. We collect this only for identity verification and the safety of dogs, owners, and care providers.
             </p>
             <Callout>
               <strong>How we treat it:</strong> we ask for your consent before collecting it, we limit who can see it, we use it only for verification and safety, and we do not share it with other users. Your verified status (for example, a badge) is shown publicly — but your underlying ID documents are not.
@@ -213,7 +213,7 @@ export default function PrivacyPage() {
               All payments run through <strong>Paystack</strong>, a licensed payment provider, by Mobile Money, card, or bank transfer. Your full payment credentials are handled by Paystack, not stored by us.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-gray-600">
-              When you book, your payment is held securely and released to the carer after the service is completed. If a booking is cancelled, refunds are handled according to our cancellation policy.
+              When you book, your payment is held securely and released to the care provider after the service is completed. If a booking is cancelled, refunds are handled according to our cancellation policy.
             </p>
           </Section>
 
@@ -222,7 +222,7 @@ export default function PrivacyPage() {
           <Section num="6" title="How we share your data">
             <p className="mb-3 text-sm leading-relaxed text-gray-600">We do not sell your personal data. We share it only in these situations:</p>
             <ul className="space-y-2">
-              <Bullet><strong>With other users, to make a booking work</strong> — once a booking is confirmed, an owner and carer can see the details they need (for example, the owner&apos;s name and the dog&apos;s profile, and the carer&apos;s verified profile and contact). A carer&apos;s public profile shows their badges and reviews, never their ID documents.</Bullet>
+              <Bullet><strong>With other users, to make a booking work</strong> — once a booking is confirmed, an owner and care provider can see the details they need (for example, the owner&apos;s name and the dog&apos;s profile, and the care provider&apos;s verified profile and contact). A care provider&apos;s public profile shows their badges and reviews, never their ID documents.</Bullet>
               <Bullet><strong>With trusted service providers</strong> who help us run the platform, including Paystack (payments), and the providers that host our website, database, secure file storage, and send our emails. They may only use your data to provide their service to us, and must keep it confidential.</Bullet>
               <Bullet><strong>When the law requires it</strong> — for example, to comply with a lawful request from a court or authority, or to protect the safety of a person or a dog.</Bullet>
             </ul>
@@ -244,7 +244,7 @@ export default function PrivacyPage() {
               <Bullet><strong>While your account is active</strong> — we keep your account and profile data so you can use the service.</Bullet>
               <Bullet><strong>After you close your account</strong> — we delete or anonymise your account and profile data within about 12 months, unless we are required to keep it longer.</Bullet>
               <Bullet><strong>Booking, payment, and dispute records</strong> — we may keep these for up to 6 years to meet legal, tax, and accounting requirements and to resolve disputes.</Bullet>
-              <Bullet><strong>Carer verification records</strong> — we keep these while you are an active carer and for a period afterwards, for safety and to defend any legal claim.</Bullet>
+              <Bullet><strong>care provider verification records</strong> — we keep these while you are an active care provider and for a period afterwards, for safety and to defend any legal claim.</Bullet>
             </ul>
           </Section>
 
@@ -254,7 +254,7 @@ export default function PrivacyPage() {
             <ul className="space-y-2">
               <Bullet>Information is encrypted while it travels between your device and our systems.</Bullet>
               <Bullet>Access to personal data is limited to people who need it to do their work, and they are bound to keep it confidential.</Bullet>
-              <Bullet>Carer applications pass through an admin verification queue before going live.</Bullet>
+              <Bullet>care provider applications pass through an admin verification queue before going live.</Bullet>
               <Bullet>Payments are handled by Paystack, so we never hold your full payment details.</Bullet>
               <Bullet>We verify Ghana Cards against the national database rather than relying on photos alone.</Bullet>
             </ul>

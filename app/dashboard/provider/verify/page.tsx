@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -104,7 +104,7 @@ export default function ProviderVerifyPage() {
         {status === "approved" && (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center">
             <span className="mb-3 block text-4xl">✅</span>
-            <p className="text-xl font-extrabold text-emerald-800">Verified — Level {level} Carer</p>
+            <p className="text-xl font-extrabold text-emerald-800">Verified — Level {level} care provider</p>
             <p className="mt-2 text-sm text-emerald-700">
               {level === 1
                 ? "You can offer dog walking and grooming services."
@@ -152,7 +152,7 @@ export default function ProviderVerifyPage() {
                 {status === "rejected" ? "Re-apply for Verification" : "Apply for Verification"}
               </h1>
               <p className="mt-1 text-sm text-gray-500">
-                Complete this form to become a verified DogCareGH carer. We&apos;ll review your application and be in touch within a few days.
+                Complete this form to become a verified DogCareGH care provider. We&apos;ll review your application and be in touch within a few days.
               </p>
             </div>
 
@@ -226,11 +226,11 @@ export default function ProviderVerifyPage() {
               {/* Level */}
               <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm space-y-3">
                 <h2 className="text-sm font-extrabold" style={{ color: "#0a2e30" }}>Service Level</h2>
-                <p className="text-xs text-gray-500">All carers start at Level 1. If you have a safe space for dogs to stay, you can apply for Level 2 at the same time.</p>
+                <p className="text-xs text-gray-500">All care providers start at Level 1. If you have a safe space for dogs to stay, you can apply for Level 2 at the same time.</p>
                 <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-100 p-4 transition hover:bg-gray-50">
                   <input type="checkbox" checked={lvl2} onChange={e => setLvl2(e.target.checked)} className="mt-0.5 h-4 w-4 rounded accent-[#00b096]" />
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>Also apply for Level 2 — Home Carer</p>
+                    <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>Also apply for Level 2 — Home care provider</p>
                     <p className="mt-0.5 text-xs text-gray-400">Adds daycare, in-home sitting, and overnight services. Requires a space check.</p>
                   </div>
                 </label>

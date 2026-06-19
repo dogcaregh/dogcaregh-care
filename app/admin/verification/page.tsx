@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +131,7 @@ export default function AdminVerificationPage() {
 
       <div className="px-6 pb-8 pt-7 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
         <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>Admin</p>
-        <h1 className="mt-1 text-2xl font-extrabold text-white">Carer Applications</h1>
+        <h1 className="mt-1 text-2xl font-extrabold text-white">care provider Applications</h1>
         {filter === "pending" && pendingCount > 0 && (
           <p className="mt-2 text-sm font-semibold" style={{ color: "#00b096" }}>
             {pendingCount} application{pendingCount !== 1 ? "s" : ""} awaiting review

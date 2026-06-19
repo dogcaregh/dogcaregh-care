@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -93,9 +93,9 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-lg font-extrabold" style={{ color: "#0a2e30" }}>8. Carer Verification</h2>
+            <h2 className="mb-3 text-lg font-extrabold" style={{ color: "#0a2e30" }}>8. Care Provider Verification</h2>
             <p className="mb-3 text-sm leading-relaxed text-gray-600">
-              Because owners trust carers with their dogs and sometimes their homes, carers go through a verification process before becoming active on the platform. Verification requires:
+              Because owners trust care providers with their dogs and sometimes their homes, care providers go through a verification process before becoming active on the platform. Verification requires:
             </p>
             <ul className="space-y-2 text-sm text-gray-600">
               {[
@@ -103,7 +103,7 @@ export default function TermsPage() {
                 "Phone number confirmation via one-time code",
                 "Proof of address — utility bill, tenancy agreement, or a signed note from an assembly member or community elder",
                 "Two character references (names and phone numbers of people we may contact)",
-                "A passport photo for your public carer profile",
+                "A passport photo for your public care provider profile",
                 "For home services (daycare, sitting, overnight): photos and a short video of the space, and a rabies vaccination certificate for any dog sharing the space",
                 "Optional: a Police Clearance Certificate to earn the Police-Cleared badge",
               ].map(item => (
@@ -114,7 +114,7 @@ export default function TermsPage() {
               ))}
             </ul>
             <p className="mt-3 text-sm leading-relaxed text-gray-600">
-              Verification is not a guarantee of quality or safety — it indicates that a carer has submitted documents we have reviewed. Owners should exercise their own judgement when choosing a carer. Your verified badge is shown publicly; your underlying ID documents are never shared with other users.
+              Verification is not a guarantee of quality or safety — it indicates that a care provider has submitted documents we have reviewed. Owners should exercise their own judgement when choosing a care provider. Your verified badge is shown publicly; your underlying ID documents are never shared with other users.
             </p>
           </section>
 

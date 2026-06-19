@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { lookupCoords } from "@/lib/geocode";
@@ -96,7 +96,7 @@ export async function PATCH(req: NextRequest) {
     const provUserId = prov.user_id as string;
 
     const message = action === "approve"
-      ? `Congratulations! Your DogCareGH verification has been approved. You are now a Level ${level ?? 1} Carer and can start accepting bookings.`
+      ? `Congratulations! Your DogCareGH verification has been approved. You are now a Level ${level ?? 1} care provider and can start accepting bookings.`
       : `Your DogCareGH verification application was not approved.${note?.trim() ? ` Reason: ${note.trim()}` : ""} You may reapply after addressing the issues.`;
 
     await service.from("notifications").insert({

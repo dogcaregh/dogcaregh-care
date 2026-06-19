@@ -767,7 +767,7 @@ export default function ProviderDashboard() {
             <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3">
               <div className="flex items-start gap-2">
                 <span>📋</span>
-                <p className="text-sm text-amber-200">Complete your verification to unlock full access and appear as a trusted carer.</p>
+                <p className="text-sm text-amber-200">Complete your verification to unlock full access and appear as a trusted care provider.</p>
               </div>
               <Link href="/dashboard/provider/verify" className="shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-white transition hover:opacity-90" style={{ backgroundColor: "#d97706" }}>
                 Apply Now
@@ -783,7 +783,7 @@ export default function ProviderDashboard() {
           {verificationStatus === "approved" && (
             <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3">
               <span>✅</span>
-              <p className="text-sm text-emerald-200"><strong>Verified</strong> — Level {providerLevel} Carer</p>
+              <p className="text-sm text-emerald-200"><strong>Verified</strong> — Level {providerLevel} care provider</p>
             </div>
           )}
           {verificationStatus === "rejected" && (
