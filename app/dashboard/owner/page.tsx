@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase";
 import { useChat } from "@/lib/chat-context";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { useNotifications } from "@/lib/notifications-context";
+import { SERVICE_META } from "@/lib/service-meta";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -828,9 +829,16 @@ export default function OwnerDashboard() {
                       </div>
 
                       {/* Service + dates */}
-                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-                        <span>{svc?.emoji} {svc?.label}</span>
-                        <span>📅 {sameDay ? fmtDate(b.start_date) : `${fmtShort(b.start_date)} → ${fmtDate(b.end_date)}`}</span>
+                      <div className="mt-3 text-xs text-gray-500">
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                          <span>{svc?.emoji} {svc?.label}</span>
+                          <span>📅 {sameDay ? fmtDate(b.start_date) : `${fmtShort(b.start_date)} → ${fmtDate(b.end_date)}`}</span>
+                        </div>
+                        {SERVICE_META[b.service_type as keyof typeof SERVICE_META]?.description && (
+                          <p className="mt-0.5 text-[11px] leading-snug text-gray-400">
+                            {SERVICE_META[b.service_type as keyof typeof SERVICE_META].description}
+                          </p>
+                        )}
                       </div>
 
                       {/* Status desc + amount */}
