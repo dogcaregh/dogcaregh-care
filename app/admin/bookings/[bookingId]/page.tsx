@@ -93,6 +93,14 @@ function resolve<T>(v: T | T[] | null | undefined): T | null {
   return Array.isArray(v) ? (v[0] ?? null) : v;
 }
 
+function fmtAge(months: number | null): string | null {
+  if (months == null) return null;
+  if (months < 12) return `${months}mo`;
+  const yrs = Math.floor(months / 12);
+  const mo  = months % 12;
+  return mo === 0 ? `${yrs}yr${yrs > 1 ? "s" : ""}` : `${yrs}yr ${mo}mo`;
+}
+
 function fmtDate(iso: string) {
   return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
@@ -302,7 +310,7 @@ export default function AdminBookingDetailPage() {
               </div>
               {dogSnap.breed && <div><p className="text-[10px] text-gray-400">Breed</p><p className="font-semibold" style={{ color: "#0a2e30" }}>{dogSnap.breed}</p></div>}
               {dogSnap.size  && <div><p className="text-[10px] text-gray-400">Size</p><p className="font-semibold capitalize" style={{ color: "#0a2e30" }}>{dogSnap.size}</p></div>}
-              {dogSnap.age != null && <div><p className="text-[10px] text-gray-400">Age</p><p className="font-semibold" style={{ color: "#0a2e30" }}>{dogSnap.age}y</p></div>}
+              {dogSnap.age != null && <div><p className="text-[10px] text-gray-400">Age</p><p className="font-semibold" style={{ color: "#0a2e30" }}>{fmtAge(dogSnap.age)}</p></div>}
               <div>
                 <p className="text-[10px] text-gray-400">Vaccinated</p>
                 <p className="font-semibold" style={{ color: dogSnap.vaccination_status ? "#059669" : "#dc2626" }}>
