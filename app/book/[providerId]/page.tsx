@@ -549,6 +549,11 @@ function SlotPanel({
               ✂️ Itemised grooming — final cost depends on services chosen. Discuss via chat after booking.
             </p>
           )}
+          {isRange && (
+            <p className="mt-2.5 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+              🍖 Overnight care: owners are required to provide their dog's food for the full duration of the stay.
+            </p>
+          )}
         </div>
 
         {/* ── Date / time picker ── */}
