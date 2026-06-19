@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { COMMISSION_RATE } from "@/lib/constants";
+import { SERVICE_META } from "@/lib/service-meta";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -450,6 +451,11 @@ function SlotPanel({
                     <p className="text-xs text-gray-400">
                       {RATE_UNIT_LABEL[st.rate_unit] ?? st.rate_unit.replace(/_/g, " ")}
                     </p>
+                    {SERVICE_META[st.slug as keyof typeof SERVICE_META]?.description && (
+                      <p className="mt-1 text-[11px] leading-snug text-gray-400">
+                        {SERVICE_META[st.slug as keyof typeof SERVICE_META].description}
+                      </p>
+                    )}
                   </div>
                   {st.slug === "dog_sitting" ? (
                     <span className="shrink-0 text-xs text-gray-400">Half / Full day</span>

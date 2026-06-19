@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { StarRating, RatingBadge } from "@/components/star-rating";
+import { SERVICE_META } from "@/lib/service-meta";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -103,6 +104,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 function ServiceRateCard({ svc, providerId, authed }: { svc: ProviderService; providerId: string; authed: boolean }) {
   const { name, emoji, rate_unit } = svc.service_types;
+  const meta = SERVICE_META[svc.service_types.slug as keyof typeof SERVICE_META];
   const hasRates = svc.rate_small != null || svc.rate_medium != null || svc.rate_large != null;
   const activeDays = DAYS.filter(d => svc.availability?.[d.id]?.available === true);
 
@@ -121,6 +123,9 @@ function ServiceRateCard({ svc, providerId, authed }: { svc: ProviderService; pr
           <p className="text-xs text-gray-400">{rate_unit}</p>
         </div>
       </div>
+      {meta?.description && (
+        <p className="mb-3 text-xs leading-relaxed text-gray-500">{meta.description}</p>
+      )}
 
       {hasRates ? (
         <div className="space-y-1">
