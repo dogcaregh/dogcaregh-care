@@ -7,6 +7,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { RatingBadge } from "@/components/star-rating";
 import { lookupCoords, haversine, rankScore, ACCRA_AREAS } from "@/lib/geocode";
+import { SERVICE_META } from "@/lib/service-meta";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -427,6 +428,11 @@ function SearchResults() {
             ? "Searching…"
             : `${visible.length} provider${visible.length !== 1 ? "s" : ""} found${(location.trim() || userCoords) ? " · sorted by proximity & rating" : " · sorted by rating"}`}
         </p>
+        {selectedSlug && SERVICE_META[selectedSlug as keyof typeof SERVICE_META] && (
+          <p className="mt-1.5 text-sm text-white/70">
+            {SERVICE_META[selectedSlug as keyof typeof SERVICE_META].description}
+          </p>
+        )}
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
