@@ -189,6 +189,12 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
+                  <Link
+                    href={`/admin/users/${u.id}`}
+                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-semibold text-gray-500 transition hover:bg-gray-50"
+                  >
+                    View
+                  </Link>
                   <button
                     onClick={() => openNotify(u)}
                     className="rounded-lg border border-blue-200 px-3 py-1.5 text-[11px] font-semibold text-blue-600 transition hover:bg-blue-50"
