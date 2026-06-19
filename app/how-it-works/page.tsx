@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { SERVICE_META } from "@/lib/service-meta";
 
 const DOG_SVG = (
   <svg viewBox="0 0 100 100" fill="currentColor">
@@ -140,6 +141,29 @@ export default function HowItWorksPage() {
           <p className="mt-4 text-base text-white/60 md:text-lg">
             Whether you&apos;re looking for care for your dog or want to earn as a carer, we&apos;ve made it simple.
           </p>
+        </div>
+      </div>
+
+      {/* ── Services ── */}
+      <div className="bg-white px-6 py-14 md:px-12">
+        <div className="mx-auto max-w-5xl">
+          <p className="mb-3 text-center text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>
+            What we offer
+          </p>
+          <h2 className="mb-10 text-center text-2xl font-extrabold md:text-3xl" style={{ color: "#0a2e30" }}>
+            Our services
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {(Object.entries(SERVICE_META) as [keyof typeof SERVICE_META, typeof SERVICE_META[keyof typeof SERVICE_META]][]).map(([slug, svc]) => (
+              <div key={slug} className="flex gap-4 rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <span className="text-3xl">{svc.emoji}</span>
+                <div>
+                  <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>{svc.name}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-500">{svc.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
