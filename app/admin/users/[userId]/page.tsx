@@ -10,7 +10,7 @@ import { AdminNav } from "@/components/admin-nav";
 
 type UserDetail = {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
   phone: string | null;
   location: string | null;
@@ -50,8 +50,8 @@ function fmtAge(months: number | null) {
 }
 
 const PALETTE = ["#00b096","#0a7c6e","#059669","#0d9488","#0891b2","#2563eb"];
-const avatarBg = (s: string) => PALETTE[s.charCodeAt(0) % PALETTE.length];
-const ini = (name: string) => name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+const avatarBg = (s: string | null) => s ? PALETTE[s.charCodeAt(0) % PALETTE.length] : PALETTE[0];
+const ini = (name: string | null) => name ? name.trim().split(/\s+/).map(w => w[0] ?? "").slice(0, 2).join("").toUpperCase() || "?" : "?";
 
 export default function AdminUserDetailPage() {
   const ready = useAdminGuard();
@@ -93,7 +93,7 @@ export default function AdminUserDetailPage() {
         </Link>
         <div className="flex items-center gap-4">
           {user.avatar_url ? (
-            <img src={user.avatar_url} alt={user.name} className="h-14 w-14 rounded-full object-cover" />
+            <img src={user.avatar_url} alt={user.name ?? ""} className="h-14 w-14 rounded-full object-cover" />
           ) : (
             <div className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold text-white"
               style={{ backgroundColor: avatarBg(user.name) }}>
@@ -101,7 +101,7 @@ export default function AdminUserDetailPage() {
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-extrabold text-white">{user.name}</h1>
+            <h1 className="text-2xl font-extrabold text-white">{user.name ?? "—"}</h1>
             <p className="text-sm text-white/50 capitalize">{user.role} · Joined {fmtDate(user.created_at)}</p>
           </div>
         </div>
