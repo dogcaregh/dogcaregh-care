@@ -50,13 +50,11 @@ export default function OwnerRegisterPage() {
     }
 
     const trimmedPhone = phone.trim();
-    if (trimmedPhone) {
-      const stripped = trimmedPhone.replace(/[\s\-()+]/g, "");
-      if (!/^(0\d{9}|233\d{9})$/.test(stripped)) {
-        setError("Enter a valid Ghanaian phone number (e.g. 024 123 4567).");
-        setLoading(false);
-        return;
-      }
+    const strippedPhone = trimmedPhone.replace(/[\s\-()+]/g, "");
+    if (!/^(0\d{9}|233\d{9})$/.test(strippedPhone)) {
+      setError("Enter a valid Ghanaian phone number (e.g. 024 123 4567).");
+      setLoading(false);
+      return;
     }
 
     const supabase = createClient();
@@ -244,6 +242,7 @@ export default function OwnerRegisterPage() {
                     className={INPUT}
                     type="tel"
                     placeholder="024 000 0000"
+                    required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                   />
@@ -294,6 +293,7 @@ export default function OwnerRegisterPage() {
                     type="text"
                     placeholder="e.g. East Legon"
                     list="accra-areas"
+                    required
                     value={neighbourhood}
                     onChange={(e) => setNeighbourhood(e.target.value)}
                   />
