@@ -798,7 +798,7 @@ export default function BookPage() {
       if (!user) { router.replace(`/login?redirect=/book/${providerId}`); return; }
 
       const [apiRes, { data: d }] = await Promise.all([
-        fetch(`/api/providers/${providerId}`),
+        fetch(`/api/providers/${providerId}`, { cache: "no-store" }),
         sb.from("dogs").select("id, name, breed, size").eq("owner_id", user.id).order("created_at"),
       ]);
 
@@ -856,10 +856,37 @@ export default function BookPage() {
     const { data: { user } } = await sb.auth.getUser();
     if (!user) { router.replace("/login"); return; }
 
+    // Re-fetch current provider data so prices are never stale at submit time.
+    const freshRes = await fetch(`/api/providers/${providerId}`, { cache: "no-store" });
+    if (!freshRes.ok) {
+      setError("Failed to verify pricing. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+    const { services: freshServices, addons: freshAddons, discountTiers: freshTiers } =
+      (await freshRes.json()) as {
+        services: ProviderService[];
+        addons: ProviderAddon[];
+        discountTiers: DiscountTier[];
+      };
+
+    // Build a name→id map for fresh add-ons so we can remap selected IDs even
+    // after the provider's delete-and-reinsert (which regenerates UUIDs).
+    const freshAddonByName = new Map(freshAddons.map(a => [a.name, a]));
+
     const createdIds: string[] = [];
 
     for (const slot of validSlots) {
-      const svc = services.find(s => s.id === slot.svcId)!;
+      // Remap selected addon IDs: match the owner's selection to fresh records by name.
+      const selectedNames = addons
+        .filter(a => slot.addonIds.includes(a.id))
+        .map(a => a.name);
+      const freshAddonIds = selectedNames
+        .map(n => freshAddonByName.get(n)?.id)
+        .filter((id): id is string => id !== undefined);
+      const resolvedSlot = { ...slot, addonIds: freshAddonIds };
+
+      const svc = freshServices.find(s => s.id === slot.svcId)!;
       const slug     = svc.service_types?.slug ?? "";
       const isRange  = RANGE_SLUGS.has(slug);
       const isHourly = HOURLY_SLUGS.has(slug);
@@ -874,7 +901,7 @@ export default function BookPage() {
         .lte("start_date", effectiveEnd).gte("end_date", effectiveStart).limit(1);
       if (conflicts && conflicts.length > 0) setDateWarning(true);
 
-      const gross    = slotPricing(slot, services, dogs, discountTiers, addons)?.gross ?? 0;
+      const gross    = slotPricing(resolvedSlot, freshServices, dogs, freshTiers, freshAddons)?.gross ?? 0;
       const comm     = Math.round(gross * COMMISSION_RATE * 100) / 100;
       const payout   = Math.round((gross - comm) * 100) / 100;
 
@@ -899,7 +926,7 @@ export default function BookPage() {
         gross_amount:       gross,
         commission_amount:  comm,
         provider_payout:    payout,
-        addon_ids:          slot.addonIds.length > 0 ? slot.addonIds : null,
+        addon_ids:          freshAddonIds.length > 0 ? freshAddonIds : null,
       }).select("id").single();
 
       if (bookingErr || !booking) {
