@@ -35,7 +35,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const [
     { data: serviceTypes },
-    { data: svcsRaw },
+    { data: svcsRaw, error: svcsErr },
     { data: reviews },
     { data: discountTiers },
     { data: addons },
@@ -62,6 +62,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       .eq("is_active", true),
   ]);
 
+  if (svcsErr) {
+    console.error("[provider/:id] provider_services query error:", svcsErr);
+  }
+
   const activeSvcs = (svcsRaw ?? [])
     .filter((s) => s.is_active)
     .map((s) => {
@@ -78,11 +82,14 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       };
     });
 
-  return NextResponse.json({
-    provider,
-    services: activeSvcs,
-    reviews: reviews ?? [],
-    discountTiers: discountTiers ?? [],
-    addons: addons ?? [],
-  });
+  return NextResponse.json(
+    {
+      provider,
+      services: activeSvcs,
+      reviews: reviews ?? [],
+      discountTiers: discountTiers ?? [],
+      addons: addons ?? [],
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }
