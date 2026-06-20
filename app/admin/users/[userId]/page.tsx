@@ -153,14 +153,14 @@ export default function AdminUserDetailPage() {
                     {dog.diet_preference && <span><span className="text-gray-400">Diet</span> <span className="ml-1 font-semibold capitalize" style={{ color: "#0a2e30" }}>{dog.diet_preference.replace("_", " ")}</span></span>}
                   </div>
 
-                  {dog.temperament && dog.temperament.length > 0 && (
+                  {Array.isArray(dog.temperament) && dog.temperament.length > 0 && (
                     <div className="mt-2.5 flex flex-wrap gap-1.5">
                       {dog.temperament.map(t => (
                         <span key={t} className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium capitalize text-gray-600">{t}</span>
                       ))}
                     </div>
                   )}
-                  {dog.allergies && dog.allergies.length > 0 && (
+                  {Array.isArray(dog.allergies) && dog.allergies.length > 0 && (
                     <p className="mt-2 text-xs text-amber-700">⚠️ Allergies: {dog.allergies.join(", ")}</p>
                   )}
                   {dog.bio && (
