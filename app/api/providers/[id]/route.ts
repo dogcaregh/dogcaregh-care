@@ -44,7 +44,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     supabase
       .from("provider_services")
       .select("id, service_type_id, rate_small, rate_medium, rate_large, rate_half_small, rate_half_medium, rate_half_large, grooming_mode, is_active, availability")
-      .eq("provider_id", id),
+      .in("provider_id", [id]),
     supabase
       .from("reviews")
       .select("id, rating, body, created_at, users!from_user_id(name)")
