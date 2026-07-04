@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { ChatWrapper } from "@/components/chat-wrapper";
+import { ReferralFlusher } from "@/components/referral-flusher";
 import { GoogleAnalytics } from "@next/third-parties/google";
 
 const geistSans = localFont({
@@ -63,6 +64,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden`}
       >
+        <ReferralFlusher />
         <ChatWrapper>{children}</ChatWrapper>
         {process.env.NEXT_PUBLIC_GA_ID && (
           <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />

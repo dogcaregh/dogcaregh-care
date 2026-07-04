@@ -250,6 +250,7 @@ export default function OwnerDashboard() {
   const [ownerName,   setOwnerName]   = useState("");
   const [ownerAvatar, setOwnerAvatar] = useState<string | null>(null);
   const [ownerId,     setOwnerId]     = useState("");
+  const [referredBy,  setReferredBy]  = useState<{ code: string | null; providerId: string; providerName: string | null } | null>(null);
   const [dogs,       setDogs]       = useState<Dog[]>([]);
   const [bookings,   setBookings]   = useState<Booking[]>([]);
   const [notifs,     setNotifs]     = useState<Notification[]>([]);
@@ -302,10 +303,11 @@ export default function OwnerDashboard() {
       ]);
 
       if (cancelled) return;
-      const { owner: uRow, bookings: bks } = ownerRes.ok ? await ownerRes.json() : { owner: null, bookings: [] };
+      const { owner: uRow, bookings: bks, referredBy: refBy } = ownerRes.ok ? await ownerRes.json() : { owner: null, bookings: [], referredBy: null };
       setOwnerName((uRow as { name: string } | null)?.name ?? "");
       setOwnerAvatar((uRow as { avatar_url: string | null } | null)?.avatar_url ?? null);
       setOwnerId(user.id);
+      setReferredBy(refBy ?? null);
       setDogs((dgs ?? []) as Dog[]);
       setBookings((bks ?? []) as unknown as Booking[]);
       setNotifs((nf ?? []) as Notification[]);
@@ -607,6 +609,32 @@ export default function OwnerDashboard() {
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 space-y-8">
+
+        {/* ── Referred by ── */}
+        {referredBy && (
+          <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+            <span className="text-lg">🎁</span>
+            <p className="flex-1 text-sm text-gray-600">
+              You joined DogCareGH through{" "}
+              <strong style={{ color: "#0a2e30" }}>{referredBy.providerName ?? "a provider"}</strong>
+              {referredBy.code && (
+                <>
+                  {" "}·{" "}
+                  <span className="font-mono text-xs" style={{ color: "#00b096" }}>{referredBy.code}</span>
+                </>
+              )}
+            </p>
+            {referredBy.providerId && (
+              <Link
+                href={`/provider/${referredBy.providerId}`}
+                className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold transition hover:opacity-80"
+                style={{ backgroundColor: "rgba(0,176,150,.12)", color: "#00b096" }}
+              >
+                View
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* ── Notifications ── */}
         {notifs.length > 0 && (

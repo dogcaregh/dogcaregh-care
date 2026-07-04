@@ -21,7 +21,7 @@ export async function GET() {
   const [{ data: owner }, { data: bookings }] = await Promise.all([
     service
       .from("users")
-      .select("name, avatar_url")
+      .select("name, avatar_url, referred_by_code, referred_by_provider_id")
       .eq("id", user.id)
       .single(),
     service
@@ -35,8 +35,27 @@ export async function GET() {
       .order("created_at", { ascending: false }),
   ]);
 
+  // Resolve who referred this owner (if anyone), for a "referred by" badge.
+  let referredBy: { code: string | null; providerId: string; providerName: string | null } | null = null;
+  const oRow = owner as { referred_by_code?: string | null; referred_by_provider_id?: string | null } | null;
+  if (oRow?.referred_by_provider_id) {
+    const { data: prov } = await service
+      .from("providers")
+      .select("id, users!user_id(name)")
+      .eq("id", oRow.referred_by_provider_id)
+      .maybeSingle();
+    const provUsers = (prov as unknown as { users?: { name: string } | { name: string }[] | null } | null)?.users;
+    const provUser = Array.isArray(provUsers) ? (provUsers[0] ?? null) : (provUsers ?? null);
+    referredBy = {
+      code: oRow.referred_by_code ?? null,
+      providerId: oRow.referred_by_provider_id,
+      providerName: provUser?.name ?? null,
+    };
+  }
+
   return NextResponse.json({
     owner: owner ?? null,
     bookings: bookings ?? [],
+    referredBy,
   });
 }
