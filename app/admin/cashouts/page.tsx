@@ -17,6 +17,7 @@ type CashoutRow = {
   note: string | null;
   created_at: string;
   paid_at: string | null;
+  source: "earnings" | "referral";
   providers: {
     user_id: string;
     users: { name: string; email: string } | { name: string; email: string }[] | null;
@@ -162,6 +163,14 @@ export default function AdminCashoutsPage() {
                         >
                           {r.status}
                         </span>
+                        {r.source === "referral" && (
+                          <span
+                            className="rounded-full px-2.5 py-1 text-[11px] font-bold"
+                            style={{ backgroundColor: "rgba(0,176,150,.12)", color: "#00b096" }}
+                          >
+                            🎁 Referral
+                          </span>
+                        )}
                       </div>
                       <p className="mt-1 text-sm font-semibold text-gray-700">{provName}</p>
                       <p className="text-xs text-gray-400">

@@ -21,6 +21,7 @@ type CashoutRequest = {
   note: string | null;
   created_at: string;
   paid_at: string | null;
+  source: "earnings" | "referral";
 };
 
 const SLUG_EMOJI: Record<string, string> = {
@@ -229,8 +230,9 @@ function EarningsView({
         amount:       available,
         momo_network: momoNetwork!,
         momo_number:  momoNumber!,
+        source:       "earnings",
       })
-      .select("id, amount, momo_network, momo_number, status, note, created_at, paid_at")
+      .select("id, amount, momo_network, momo_number, status, note, created_at, paid_at, source")
       .single();
     if (error) {
       setRequestError(error.message);
@@ -511,11 +513,32 @@ function ReviewsView({ reviews, ratingAvg, reviewCount }: { reviews: Review[]; r
   );
 }
 
-function ReferralCard({ code, balance, referredCount }: { code: string; balance: number; referredCount: number }) {
+function ReferralCard({
+  code, balance, referredCount, providerId, momoNetwork, momoNumber, referralCashouts,
+}: {
+  code: string;
+  balance: number;
+  referredCount: number;
+  providerId: string;
+  momoNetwork: string | null;
+  momoNumber: string | null;
+  referralCashouts: CashoutRequest[];
+}) {
   const [copied, setCopied] = useState<"link" | "code" | null>(null);
+  const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [localCashouts, setLocalCashouts] = useState(referralCashouts);
+
   const link = typeof window !== "undefined"
     ? `${window.location.origin}/register/owner?ref=${code}`
     : `/register/owner?ref=${code}`;
+
+  // balance is the lifetime referral total; available derives from it,
+  // mirroring how the Earnings tab treats booking payouts.
+  const cashedOut      = localCashouts.filter(c => c.status === "paid").reduce((s, c) => s + Number(c.amount), 0);
+  const pendingCashout = localCashouts.filter(c => c.status === "pending").reduce((s, c) => s + Number(c.amount), 0);
+  const available      = Math.max(0, balance - cashedOut - pendingCashout);
+  const hasMomo        = !!(momoNetwork && momoNumber);
 
   async function copy(text: string, which: "link" | "code") {
     try {
@@ -525,11 +548,36 @@ function ReferralCard({ code, balance, referredCount }: { code: string; balance:
     } catch { /* clipboard unavailable */ }
   }
 
+  async function requestWithdrawal() {
+    if (!hasMomo || available <= 0) return;
+    setRequesting(true);
+    setRequestError(null);
+    const sb = createClient();
+    const { data, error } = await sb
+      .from("cashout_requests")
+      .insert({
+        provider_id:  providerId,
+        amount:       available,
+        momo_network: momoNetwork!,
+        momo_number:  momoNumber!,
+        source:       "referral",
+      })
+      .select("id, amount, momo_network, momo_number, status, note, created_at, paid_at, source")
+      .single();
+    if (error) {
+      setRequestError(error.message);
+    } else if (data) {
+      setLocalCashouts(prev => [data as CashoutRequest, ...prev]);
+    }
+    setRequesting(false);
+  }
+
   if (!code) return null;
 
   return (
     <div className="mb-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">
+        {/* Share */}
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className="text-lg">🎁</span>
@@ -556,15 +604,54 @@ function ReferralCard({ code, balance, referredCount }: { code: string; balance:
             </button>
           </div>
         </div>
-        <div className="flex gap-3 sm:gap-4">
-          <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-center">
-            <p className="text-[11px] font-medium text-gray-400">Referral Balance</p>
-            <p className="mt-1 text-lg font-extrabold" style={{ color: "#10b981" }}>GHS {balance.toFixed(2)}</p>
+
+        {/* Balance + withdraw */}
+        <div className="sm:w-64 sm:shrink-0">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-gray-100 bg-gray-50 px-2 py-2.5 text-center">
+              <p className="text-[10px] font-medium text-gray-400">Available</p>
+              <p className="mt-0.5 text-sm font-extrabold" style={{ color: "#00b096" }}>GHS {available.toFixed(2)}</p>
+            </div>
+            <div className="rounded-xl border border-gray-100 bg-gray-50 px-2 py-2.5 text-center">
+              <p className="text-[10px] font-medium text-gray-400">Earned</p>
+              <p className="mt-0.5 text-sm font-extrabold" style={{ color: "#10b981" }}>GHS {balance.toFixed(2)}</p>
+            </div>
+            <div className="rounded-xl border border-gray-100 bg-gray-50 px-2 py-2.5 text-center">
+              <p className="text-[10px] font-medium text-gray-400">Referred</p>
+              <p className="mt-0.5 text-sm font-extrabold" style={{ color: "#0a2e30" }}>{referredCount}</p>
+            </div>
           </div>
-          <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-center">
-            <p className="text-[11px] font-medium text-gray-400">People Referred</p>
-            <p className="mt-1 text-lg font-extrabold" style={{ color: "#0a2e30" }}>{referredCount}</p>
-          </div>
+
+          {hasMomo ? (
+            <button
+              onClick={requestWithdrawal}
+              disabled={requesting || available <= 0 || pendingCashout > 0}
+              className="mt-2 w-full rounded-xl px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+              style={{ backgroundColor: "#00b096" }}
+            >
+              {requesting ? "Requesting…" : available > 0 ? `Withdraw GHS ${available.toFixed(2)}` : "Nothing to withdraw"}
+            </button>
+          ) : (
+            <Link
+              href="/dashboard/provider/edit#payout"
+              className="mt-2 block w-full rounded-xl px-4 py-2 text-center text-xs font-semibold text-white transition hover:opacity-90"
+              style={{ backgroundColor: "#00b096" }}
+            >
+              Add MoMo Details
+            </Link>
+          )}
+
+          {requestError && <p className="mt-1.5 text-[11px] text-red-500">{requestError}</p>}
+          {pendingCashout > 0 && (
+            <p className="mt-1.5 text-[11px] text-amber-600">
+              GHS {pendingCashout.toFixed(2)} withdrawal pending.
+            </p>
+          )}
+          {hasMomo && (
+            <p className="mt-1.5 text-[10px] text-gray-400">
+              Paid to {MOMO_LABELS[momoNetwork!] ?? momoNetwork} · <span className="font-mono">{momoNumber}</span>
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -653,7 +740,7 @@ export default function ProviderDashboard() {
           .eq("provider_id", pAny.id as string),
         sb.from("service_types").select("id, slug, name"),
         sb.from("cashout_requests")
-          .select("id, amount, momo_network, momo_number, status, note, created_at, paid_at")
+          .select("id, amount, momo_network, momo_number, status, note, created_at, paid_at, source")
           .eq("provider_id", pAny.id as string)
           .order("created_at", { ascending: false }),
         sb.from("reviews")
@@ -743,6 +830,10 @@ export default function ProviderDashboard() {
     const allowed = TABS.find(t => t.key === tab)?.statuses ?? [];
     return bookings.filter(b => allowed.includes(b.status));
   }, [bookings, tab]);
+
+  // Keep the two payout pools separate: booking earnings vs referral rewards.
+  const earningsCashouts = useMemo(() => cashouts.filter(c => c.source !== "referral"), [cashouts]);
+  const referralCashouts = useMemo(() => cashouts.filter(c => c.source === "referral"), [cashouts]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
 
@@ -945,7 +1036,15 @@ export default function ProviderDashboard() {
         </div>
 
         {/* ── Refer & Earn ── */}
-        <ReferralCard code={referralCode} balance={referralBalance} referredCount={referredCount} />
+        <ReferralCard
+          code={referralCode}
+          balance={referralBalance}
+          referredCount={referredCount}
+          providerId={providerId}
+          momoNetwork={momoNetwork}
+          momoNumber={momoNumber}
+          referralCashouts={referralCashouts}
+        />
 
         {/* ── Tab bar ── */}
         <div ref={tabsRef} className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm">
@@ -1000,7 +1099,7 @@ export default function ProviderDashboard() {
 
         {/* ── Earnings view ── */}
         {tab === "earnings" && (
-          <EarningsView bookings={bookings} cashouts={cashouts} providerId={providerId} momoNetwork={momoNetwork} momoNumber={momoNumber} />
+          <EarningsView bookings={bookings} cashouts={earningsCashouts} providerId={providerId} momoNetwork={momoNetwork} momoNumber={momoNumber} />
         )}
 
         {/* ── Reviews view ── */}

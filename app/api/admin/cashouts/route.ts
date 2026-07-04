@@ -25,7 +25,7 @@ export async function GET() {
   const { data, error } = await db()
     .from("cashout_requests")
     .select(`
-      id, amount, momo_network, momo_number, status, note, created_at, paid_at, provider_id,
+      id, amount, momo_network, momo_number, status, note, created_at, paid_at, provider_id, source,
       providers!provider_id(user_id, users!user_id(name, email))
     `)
     .order("created_at", { ascending: false });
