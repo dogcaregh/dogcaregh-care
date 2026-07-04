@@ -24,6 +24,7 @@ export async function GET() {
       `id, active, bio, years_experience, neighbourhood,
        avatar_url, gallery_photos, momo_network, momo_number,
        verification_status, provider_level, verification_note, blocked_dates,
+       referral_code, referral_balance,
        users!user_id(name, phone)`
     )
     .eq("user_id", user.id)

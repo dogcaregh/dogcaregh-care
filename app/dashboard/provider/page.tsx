@@ -511,6 +511,66 @@ function ReviewsView({ reviews, ratingAvg, reviewCount }: { reviews: Review[]; r
   );
 }
 
+function ReferralCard({ code, balance, referredCount }: { code: string; balance: number; referredCount: number }) {
+  const [copied, setCopied] = useState<"link" | "code" | null>(null);
+  const link = typeof window !== "undefined"
+    ? `${window.location.origin}/register/owner?ref=${code}`
+    : `/register/owner?ref=${code}`;
+
+  async function copy(text: string, which: "link" | "code") {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(which);
+      setTimeout(() => setCopied(null), 1800);
+    } catch { /* clipboard unavailable */ }
+  }
+
+  if (!code) return null;
+
+  return (
+    <div className="mb-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🎁</span>
+            <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>Refer &amp; Earn</p>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">
+            Share your code with dog owners. Earn <strong>5%</strong> of every booking they make, for 12 months.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => copy(code, "code")}
+              className="rounded-xl border border-gray-200 px-3 py-2 font-mono text-sm font-bold tracking-wider transition hover:bg-gray-50"
+              style={{ color: "#00b096" }}
+              title="Copy code"
+            >
+              {code}
+            </button>
+            <button
+              onClick={() => copy(link, "link")}
+              className="rounded-xl px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+              style={{ backgroundColor: "#00b096" }}
+            >
+              {copied === "link" ? "Link copied!" : copied === "code" ? "Code copied!" : "Copy share link"}
+            </button>
+          </div>
+        </div>
+        <div className="flex gap-3 sm:gap-4">
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-center">
+            <p className="text-[11px] font-medium text-gray-400">Referral Balance</p>
+            <p className="mt-1 text-lg font-extrabold" style={{ color: "#10b981" }}>GHS {balance.toFixed(2)}</p>
+          </div>
+          <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-center">
+            <p className="text-[11px] font-medium text-gray-400">People Referred</p>
+            <p className="mt-1 text-lg font-extrabold" style={{ color: "#0a2e30" }}>{referredCount}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ProviderDashboard() {
@@ -527,6 +587,9 @@ export default function ProviderDashboard() {
   const [providerActive, setProviderActive] = useState(true);
   const [momoNetwork,        setMomoNetwork]        = useState<string | null>(null);
   const [momoNumber,         setMomoNumber]         = useState<string | null>(null);
+  const [referralCode,       setReferralCode]       = useState("");
+  const [referralBalance,    setReferralBalance]    = useState(0);
+  const [referredCount,      setReferredCount]      = useState(0);
   const [verificationStatus, setVerificationStatus] = useState<string>("unsubmitted");
   const [providerLevel,      setProviderLevel]      = useState<number>(1);
   const [cashouts,       setCashouts]       = useState<CashoutRequest[]>([]);
@@ -570,8 +633,10 @@ export default function ProviderDashboard() {
       setMomoNumber((pAny.momo_number as string | null) ?? null);
       setVerificationStatus((pAny.verification_status as string | null) ?? "unsubmitted");
       setProviderLevel((pAny.provider_level as number | null) ?? 1);
+      setReferralCode((pAny.referral_code as string | null) ?? "");
+      setReferralBalance(Number(pAny.referral_balance ?? 0));
 
-      const [{ data: bks }, { data: svcs }, { data: stData }, { data: cos }, { data: rvws }] = await Promise.all([
+      const [{ data: bks }, { data: svcs }, { data: stData }, { data: cos }, { data: rvws }, { data: refs }] = await Promise.all([
         sb
           .from("bookings")
           .select(`
@@ -596,9 +661,13 @@ export default function ProviderDashboard() {
           .eq("to_user_id", user.id)
           .eq("from_role", "owner")
           .order("created_at", { ascending: false }),
+        sb.from("referrals")
+          .select("id")
+          .eq("referrer_provider_id", pAny.id as string),
       ]);
 
       if (cancelled) return;
+      setReferredCount((refs ?? []).length);
       setBookings((bks ?? []) as unknown as Booking[]);
       setCashouts((cos ?? []) as unknown as CashoutRequest[]);
       setReviews((rvws ?? []) as unknown as Review[]);
@@ -874,6 +943,9 @@ export default function ProviderDashboard() {
             </div>
           )}
         </div>
+
+        {/* ── Refer & Earn ── */}
+        <ReferralCard code={referralCode} balance={referralBalance} referredCount={referredCount} />
 
         {/* ── Tab bar ── */}
         <div ref={tabsRef} className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-1.5 shadow-sm">

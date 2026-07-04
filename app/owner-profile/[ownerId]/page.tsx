@@ -92,6 +92,8 @@ export default function OwnerProfileForProvider() {
   const [dogs,         setDogs]         = useState<Dog[]>([]);
   const [bookings,     setBookings]     = useState<Booking[]>([]);
   const [ownerReviews, setOwnerReviews] = useState<OwnerReview[]>([]);
+  const [referredByCode,       setReferredByCode]       = useState<string | null>(null);
+  const [referredByViewer,     setReferredByViewer]     = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,7 +114,7 @@ export default function OwnerProfileForProvider() {
       if (!check) { if (!cancelled) setPageState("unauthorized"); return; }
 
       const [{ data: u }, { data: dgs }, { data: rv }, { data: bks }] = await Promise.all([
-        sb.from("users").select("name, location, avatar_url, created_at").eq("id", ownerId).single(),
+        sb.from("users").select("name, location, avatar_url, created_at, referred_by_code, referred_by_provider_id").eq("id", ownerId).single(),
         sb.from("dogs")
           .select("id, name, breed, size, age, temperament, vaccination_status, avatar_url")
           .eq("owner_id", ownerId).order("created_at"),
@@ -127,11 +129,16 @@ export default function OwnerProfileForProvider() {
       ]);
 
       if (cancelled) return;
-      const uRow = u as { name: string; location: string | null; avatar_url: string | null; created_at: string } | null;
+      const uRow = u as {
+        name: string; location: string | null; avatar_url: string | null; created_at: string;
+        referred_by_code: string | null; referred_by_provider_id: string | null;
+      } | null;
       setName(uRow?.name ?? "");
       setLocation(uRow?.location ?? null);
       setAvatarUrl(uRow?.avatar_url ?? null);
       setMemberDate(uRow?.created_at ?? null);
+      setReferredByCode(uRow?.referred_by_code ?? null);
+      setReferredByViewer(!!uRow?.referred_by_provider_id && uRow.referred_by_provider_id === providerRow.id);
       setDogs((dgs ?? []) as Dog[]);
       setOwnerReviews((rv ?? []) as unknown as OwnerReview[]);
       setBookings((bks ?? []) as Booking[]);
@@ -205,6 +212,17 @@ export default function OwnerProfileForProvider() {
                 )}
                 {memberDate && (
                   <p className="mt-0.5 text-xs text-gray-400">Member since {memberSince(memberDate)}</p>
+                )}
+                {referredByCode && (
+                  <span
+                    className="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                    style={referredByViewer
+                      ? { background: "rgba(0,176,150,.12)", color: "#00b096" }
+                      : { background: "#f3f4f6", color: "#6b7280" }}
+                    title={`Signed up with referral code ${referredByCode}`}
+                  >
+                    🎁 {referredByViewer ? "Referred by you" : "Referred"} · <span className="font-mono">{referredByCode}</span>
+                  </span>
                 )}
               </div>
 

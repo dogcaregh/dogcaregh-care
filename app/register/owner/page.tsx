@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { ACCRA_AREAS } from "@/lib/geocode";
@@ -30,6 +30,18 @@ export default function OwnerRegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [neighbourhood, setNeighbourhood] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [refCode, setRefCode] = useState("");
+
+  // Capture a provider's ?ref= code and keep it around (localStorage)
+  // so it survives navigation before the owner actually signs up.
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("ref");
+    const code = (fromUrl || localStorage.getItem("dcg_ref") || "").trim().toUpperCase();
+    if (code) {
+      setRefCode(code);
+      localStorage.setItem("dcg_ref", code);
+    }
+  }, []);
 
   // Dog fields
   const [dogName, setDogName] = useState("");
@@ -90,6 +102,20 @@ export default function OwnerRegisterPage() {
       setError(updateError.message);
       setLoading(false);
       return;
+    }
+
+    // Link this owner to their referring provider (non-blocking).
+    if (refCode) {
+      try {
+        await fetch("/api/referrals/attach", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: refCode }),
+        });
+      } catch {
+        /* referral attach is best-effort; never block signup */
+      }
+      localStorage.removeItem("dcg_ref");
     }
 
     setUserId(data.user!.id);
