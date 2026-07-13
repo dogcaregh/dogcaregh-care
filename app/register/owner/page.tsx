@@ -31,16 +31,21 @@ export default function OwnerRegisterPage() {
   const [neighbourhood, setNeighbourhood] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [refCode, setRefCode] = useState("");
+  // Optional post-signup return URL (e.g. from the trainer app, train.dogcaregh.com).
+  const [returnTo, setReturnTo] = useState("");
 
   // Capture a provider's ?ref= code and keep it around (localStorage)
   // so it survives navigation before the owner actually signs up.
   useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get("ref");
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("ref");
     const code = (fromUrl || localStorage.getItem("dcg_ref") || "").trim().toUpperCase();
     if (code) {
       setRefCode(code);
       localStorage.setItem("dcg_ref", code);
     }
+    const rt = params.get("return_to");
+    if (rt) setReturnTo(rt);
   }, []);
 
   // Dog fields
@@ -76,7 +81,9 @@ export default function OwnerRegisterPage() {
       password,
       options: {
         data: { name },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback${
+          returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""
+        }`,
       },
     });
 
@@ -116,6 +123,13 @@ export default function OwnerRegisterPage() {
         /* referral attach is best-effort; never block signup */
       }
       localStorage.removeItem("dcg_ref");
+    }
+
+    // If they came from the trainer app and already have a session
+    // (auto-confirm), bounce them straight back.
+    if (returnTo) {
+      window.location.href = returnTo;
+      return;
     }
 
     setUserId(data.user!.id);
