@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { lookupCoords } from "@/lib/geocode";
 import { Resend } from "resend";
 import { renderDogCareEmail } from "@/lib/dogCareEmail";
+import { sessionCookieOptions } from "@/lib/cookie-domain";
 
 const FROM = "DogCareGH <noreply@dogcaregh.com>";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://dogcaregh.com";
@@ -53,6 +54,7 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        cookieOptions: sessionCookieOptions(request.nextUrl.hostname),
         cookies: {
           getAll() { return cookieStore.getAll(); },
           setAll(cookiesToSet) {
