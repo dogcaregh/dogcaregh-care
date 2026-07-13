@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { sessionCookieOptions } from "@/lib/cookie-domain";
+import {
+  sessionCookieOptions,
+  cookieDomainForHost,
+  isSupabaseAuthCookie,
+  DOMAIN_MIGRATION_COOKIE,
+} from "@/lib/cookie-domain";
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -10,6 +15,38 @@ export async function middleware(request: NextRequest) {
 
   if (!supabaseUrl.startsWith("http") || !supabaseKey) {
     return supabaseResponse;
+  }
+
+  // One-time parent-domain cookie migration. On a dogcaregh.com host, a user
+  // who still carries a legacy *host-only* auth cookie (from before the domain
+  // widening) would otherwise end up with two same-named cookies once we write
+  // the .dogcaregh.com one — which makes @supabase/ssr fail to parse the
+  // session. Clear the legacy cookie and mark the browser migrated, so they
+  // re-login once cleanly. Runs before any .dogcaregh.com cookie is written,
+  // so the two never coexist.
+  const migrationDomain = cookieDomainForHost(request.nextUrl.hostname);
+  if (migrationDomain && !request.cookies.get(DOMAIN_MIGRATION_COOKIE)) {
+    const legacyAuthCookies = request.cookies
+      .getAll()
+      .filter((c) => isSupabaseAuthCookie(c.name));
+    if (legacyAuthCookies.length > 0) {
+      // Render this request unauthenticated (the legacy session is being retired).
+      legacyAuthCookies.forEach((c) => request.cookies.delete(c.name));
+      const res = NextResponse.next({ request });
+      // Delete the legacy host-only cookie in the browser (no domain => host-only).
+      legacyAuthCookies.forEach((c) =>
+        res.cookies.set(c.name, "", { path: "/", maxAge: 0 })
+      );
+      // Mark migrated at the parent domain so no subdomain re-triggers this.
+      res.cookies.set(DOMAIN_MIGRATION_COOKIE, "1", {
+        domain: migrationDomain,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+        secure: true,
+      });
+      return res;
+    }
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {

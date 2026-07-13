@@ -40,3 +40,18 @@ export function sessionCookieOptions(
   const domain = cookieDomainForHost(host);
   return domain ? { domain } : {};
 }
+
+/**
+ * Marker cookie set once per browser after the parent-domain migration has run,
+ * so we don't repeatedly clear a user's session. Deliberately does NOT contain
+ * "-auth-token" so isSupabaseAuthCookie() never matches it.
+ */
+export const DOMAIN_MIGRATION_COOKIE = "sb-domain-migrated";
+
+/**
+ * True for any Supabase SSR auth cookie: the session token, its numbered chunks
+ * (`…-auth-token.0`, `.1`), and the PKCE `…-auth-token-code-verifier`.
+ */
+export function isSupabaseAuthCookie(name: string): boolean {
+  return name.startsWith("sb-") && name.includes("-auth-token");
+}
