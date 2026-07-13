@@ -19,6 +19,15 @@ export async function POST(req: NextRequest) {
   }
 
   const data = event.data;
+
+  // DogTrainerGH shares this Paystack account but confirms its own payments via
+  // verify-on-callback. Ignore its transactions here (reference prefix
+  // `dogtrain_`) so they don't create failed webhook deliveries. Additive: care
+  // bookings use `dogcare_` references and are unaffected.
+  if (typeof data.reference === "string" && data.reference.startsWith("dogtrain_")) {
+    return NextResponse.json({ received: true });
+  }
+
   const bookingId = data.metadata?.booking_id as string | undefined;
 
   if (!bookingId) {
