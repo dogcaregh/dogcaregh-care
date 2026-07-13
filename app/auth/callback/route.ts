@@ -10,6 +10,25 @@ import { sessionCookieOptions } from "@/lib/cookie-domain";
 const FROM = "DogCareGH <noreply@dogcaregh.com>";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://dogcaregh.com";
 
+/**
+ * Validate an optional post-signup return URL. Only allow absolute https URLs
+ * on dogcaregh.com or its subdomains (e.g. train.dogcaregh.com) so a new owner
+ * arriving from the trainer app is bounced back there after confirming. Any
+ * other value is rejected to prevent an open redirect.
+ */
+function safeReturnTo(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:") return null;
+    const h = u.hostname.toLowerCase();
+    if (h === "dogcaregh.com" || h.endsWith(".dogcaregh.com")) return u.toString();
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function sendOwnerWelcomeEmail(email: string, firstName: string) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const intro = `Hi ${firstName},<br><br>
@@ -47,6 +66,7 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
+  const returnTo = safeReturnTo(searchParams.get("return_to"));
 
   if (code) {
     const cookieStore = cookies();
@@ -112,6 +132,9 @@ export async function GET(request: NextRequest) {
           sendOwnerWelcomeEmail(user.email, firstName).catch(() => {});
         }
       }
+
+      // A new owner who came from the trainer app is sent back there.
+      if (returnTo) return NextResponse.redirect(returnTo);
 
       return NextResponse.redirect(`${origin}${next !== "/" ? next : "/"}`);
     }
