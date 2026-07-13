@@ -5,6 +5,7 @@ import {
   cookieDomainForHost,
   isSupabaseAuthCookie,
   DOMAIN_MIGRATION_COOKIE,
+  domainMigrationCookieOptions,
 } from "@/lib/cookie-domain";
 
 export async function middleware(request: NextRequest) {
@@ -38,13 +39,11 @@ export async function middleware(request: NextRequest) {
         res.cookies.set(c.name, "", { path: "/", maxAge: 0 })
       );
       // Mark migrated at the parent domain so no subdomain re-triggers this.
-      res.cookies.set(DOMAIN_MIGRATION_COOKIE, "1", {
-        domain: migrationDomain,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 365,
-        sameSite: "lax",
-        secure: true,
-      });
+      res.cookies.set(
+        DOMAIN_MIGRATION_COOKIE,
+        "1",
+        domainMigrationCookieOptions(migrationDomain)
+      );
       return res;
     }
   }
@@ -75,6 +74,18 @@ export async function middleware(request: NextRequest) {
   });
 
   await supabase.auth.getUser();
+
+  // Stamp the migration marker for any already-clean browser on a dogcaregh.com
+  // host (new users, or anyone with no legacy cookie). This ensures the block
+  // above only ever fires for a genuine legacy host-only session — not for a
+  // fresh .dogcaregh.com login that merely lacks the marker yet.
+  if (migrationDomain && !request.cookies.get(DOMAIN_MIGRATION_COOKIE)) {
+    supabaseResponse.cookies.set(
+      DOMAIN_MIGRATION_COOKIE,
+      "1",
+      domainMigrationCookieOptions(migrationDomain)
+    );
+  }
 
   return supabaseResponse;
 }

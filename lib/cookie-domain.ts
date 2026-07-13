@@ -55,3 +55,14 @@ export const DOMAIN_MIGRATION_COOKIE = "sb-domain-migrated";
 export function isSupabaseAuthCookie(name: string): boolean {
   return name.startsWith("sb-") && name.includes("-auth-token");
 }
+
+/** Cookie options for the one-time parent-domain migration marker. */
+export function domainMigrationCookieOptions(domain: string) {
+  return {
+    domain,
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365, // 1 year
+    sameSite: "lax" as const,
+    secure: true,
+  };
+}
