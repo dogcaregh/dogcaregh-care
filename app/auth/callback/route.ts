@@ -67,11 +67,6 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
   const returnTo = safeReturnTo(searchParams.get("return_to"));
-  // TEMP DIAG (no secrets): shows whether return_to survived the email round-trip.
-  console.log(
-    `[DIAG callback] keys=${Array.from(searchParams.keys()).join(",")} ` +
-    `return_to=${searchParams.get("return_to") ?? "MISSING"} safe=${returnTo ?? "null"} hasCode=${!!code}`
-  );
 
   if (code) {
     const cookieStore = cookies();
