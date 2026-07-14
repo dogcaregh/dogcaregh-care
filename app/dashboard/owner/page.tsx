@@ -610,6 +610,24 @@ export default function OwnerDashboard() {
 
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 space-y-8">
 
+        {/* ── DogTrainerGH cross-link (feature-flagged; off unless
+             NEXT_PUBLIC_DOGTRAINER_LINK=on). Plain <a> = top-level navigation
+             so the shared .dogcaregh.com session carries over → owner lands
+             signed in on the trainer app. ── */}
+        {process.env.NEXT_PUBLIC_DOGTRAINER_LINK === "on" && (
+          <a
+            href="https://train.dogcaregh.com"
+            className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md"
+          >
+            <span className="text-lg">🎓</span>
+            <p className="flex-1 text-sm text-gray-600">
+              <strong style={{ color: "#0a2e30" }}>New — train your dog with DogTrainerGH.</strong>{" "}
+              Book vetted trainers, evaluations and programs. You&apos;re already signed in.
+            </p>
+            <span className="text-sm font-semibold" style={{ color: "#00b096" }}>Explore →</span>
+          </a>
+        )}
+
         {/* ── Referred by ── */}
         {referredBy && (
           <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
