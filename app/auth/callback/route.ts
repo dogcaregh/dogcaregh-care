@@ -90,6 +90,15 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Password recovery: the reset email routes here with next=/reset-password.
+      // Send the user straight to the set-new-password form and skip all the
+      // signup/provisioning logic below. Without this, a provider account (whose
+      // user_metadata.role is "provider") matches the provider branch and gets
+      // redirected to its dashboard, never reaching the reset form.
+      if (next === "/reset-password") {
+        return NextResponse.redirect(`${origin}/reset-password`);
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       const metaRole = user?.user_metadata?.role as string | undefined;
 
