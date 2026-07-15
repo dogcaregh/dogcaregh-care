@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type EmailOtpType } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { lookupCoords } from "@/lib/geocode";
@@ -65,10 +65,17 @@ Welcome aboard,<br>
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const tokenHash = searchParams.get("token_hash");
+  const type = searchParams.get("type");
   const next = searchParams.get("next") ?? "/";
   const returnTo = safeReturnTo(searchParams.get("return_to"));
 
-  if (code) {
+  // Supabase can bounce back here with an explicit error instead of a code —
+  // most often an expired or already-used link (recovery tokens are single-use).
+  const linkError =
+    searchParams.get("error_description") || searchParams.get("error");
+
+  if (code || (tokenHash && type)) {
     const cookieStore = cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -88,8 +95,31 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    // Two link shapes reach this route:
+    //  - PKCE `?code=…` (signup confirmation, provider onboarding) → exchange.
+    //  - `?token_hash=…&type=recovery` (password reset, when the Supabase email
+    //    template emits a token hash) → verifyOtp. This path needs no PKCE
+    //    code-verifier cookie, so it survives the email round-trip even across
+    //    devices — the recommended recovery flow for @supabase/ssr.
+    const { error } =
+      tokenHash && type
+        ? await supabase.auth.verifyOtp({
+            type: type as EmailOtpType,
+            token_hash: tokenHash,
+          })
+        : await supabase.auth.exchangeCodeForSession(code!);
+
     if (!error) {
+      // Password recovery: the reset email routes here with next=/reset-password
+      // (and/or type=recovery). Send the user straight to the set-new-password
+      // form and skip all the signup/provisioning logic below. Without this, a
+      // provider account (whose user_metadata.role is "provider") matches the
+      // provider branch and gets redirected to its dashboard, never reaching the
+      // reset form.
+      if (next === "/reset-password" || type === "recovery") {
+        return NextResponse.redirect(`${origin}/reset-password`);
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       const metaRole = user?.user_metadata?.role as string | undefined;
 
@@ -138,7 +168,19 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.redirect(`${origin}${next !== "/" ? next : "/"}`);
     }
+
+    // The code/token was present but exchange or verification failed (bad,
+    // expired, or already-used link, or a missing PKCE code-verifier). Surface
+    // the real reason so the failure is diagnosable from the URL.
+    return NextResponse.redirect(
+      `${origin}/login?error=auth&reason=${encodeURIComponent(
+        error.message
+      ).slice(0, 160)}`
+    );
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth`);
+  // No usable code/token reached us at all — usually an expired or already-used
+  // link that Supabase bounced back with an error, or a malformed redirect.
+  const reason = encodeURIComponent(linkError || "missing_code").slice(0, 160);
+  return NextResponse.redirect(`${origin}/login?error=auth&reason=${reason}`);
 }
