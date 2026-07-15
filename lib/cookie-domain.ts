@@ -56,6 +56,42 @@ export function isSupabaseAuthCookie(name: string): boolean {
   return name.startsWith("sb-") && name.includes("-auth-token");
 }
 
+/**
+ * Cookie names in a raw `Cookie` request header, preserving duplicates. Next's
+ * parsed `request.cookies` collapses same-named cookies into one entry, so the
+ * host-only-vs-parent-domain duplicate (same name, two scopes) is only visible
+ * in the raw header.
+ */
+export function rawCookieNames(rawCookie: string | null | undefined): string[] {
+  if (!rawCookie) return [];
+  return rawCookie
+    .split(";")
+    .map((pair) => pair.split("=")[0].trim())
+    .filter(Boolean);
+}
+
+/**
+ * True when a Supabase auth cookie appears more than once in the raw header —
+ * i.e. the browser holds both a host-only and a `.dogcaregh.com` copy of the
+ * same cookie. `@supabase/ssr` cannot reassemble that duplicate chunked session,
+ * which sends the client into a token-refresh loop that trips Supabase's per-IP
+ * auth rate limit. Detecting it lets the middleware self-heal by clearing both.
+ */
+export function hasDuplicateAuthCookie(rawCookie: string | null | undefined): boolean {
+  const seen = new Set<string>();
+  for (const name of rawCookieNames(rawCookie)) {
+    if (!isSupabaseAuthCookie(name)) continue;
+    if (seen.has(name)) return true;
+    seen.add(name);
+  }
+  return false;
+}
+
+/** Distinct Supabase auth cookie names present in a raw `Cookie` header. */
+export function supabaseAuthCookieNames(rawCookie: string | null | undefined): string[] {
+  return Array.from(new Set(rawCookieNames(rawCookie).filter(isSupabaseAuthCookie)));
+}
+
 /** Cookie options for the one-time parent-domain migration marker. */
 export function domainMigrationCookieOptions(domain: string) {
   return {

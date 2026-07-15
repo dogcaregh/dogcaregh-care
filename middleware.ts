@@ -4,6 +4,8 @@ import {
   sessionCookieOptions,
   cookieDomainForHost,
   isSupabaseAuthCookie,
+  hasDuplicateAuthCookie,
+  supabaseAuthCookieNames,
   DOMAIN_MIGRATION_COOKIE,
   domainMigrationCookieOptions,
 } from "@/lib/cookie-domain";
@@ -18,6 +20,42 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
+  const migrationDomain = cookieDomainForHost(request.nextUrl.hostname);
+
+  // Self-heal a corrupt DUPLICATE auth-cookie state. After the parent-domain
+  // widening, a browser that logged in beforehand can carry BOTH a host-only and
+  // a .dogcaregh.com cookie of the same name. @supabase/ssr can't reassemble the
+  // duplicate chunked session, so getUser() loops on token refresh and trips
+  // Supabase's per-IP rate limit ("request rate limit reached"), locking the user
+  // out until they manually clear cookies. Next collapses same-named cookies in
+  // its parsed map, so we read the raw Cookie header and, if a duplicate exists,
+  // clear every sb-*-auth-token in BOTH scopes the current host can see and skip
+  // the auth call entirely (no refresh, no rate-limit hit). Deliberately NOT
+  // gated on the migration marker — the corrupt state can form after the marker
+  // is set, which is precisely the case that locked mobile users out.
+  const rawCookie = request.headers.get("cookie");
+  if (migrationDomain && hasDuplicateAuthCookie(rawCookie)) {
+    const names = supabaseAuthCookieNames(rawCookie);
+    names.forEach((name) => request.cookies.delete(name));
+    const res = NextResponse.next({ request });
+    for (const name of names) {
+      // Two Set-Cookie headers per name — one host-only, one parent-domain — so
+      // both copies are removed. (ResponseCookies keys by name and can't emit
+      // two same-named cookies, hence raw header appends.)
+      res.headers.append("set-cookie", `${name}=; Path=/; Max-Age=0; SameSite=Lax; Secure`);
+      res.headers.append(
+        "set-cookie",
+        `${name}=; Path=/; Max-Age=0; SameSite=Lax; Secure; Domain=${migrationDomain}`,
+      );
+    }
+    // Keep the one-time-migration marker set so the block below doesn't refire.
+    res.headers.append(
+      "set-cookie",
+      `${DOMAIN_MIGRATION_COOKIE}=1; Path=/; Max-Age=31536000; SameSite=Lax; Secure; Domain=${migrationDomain}`,
+    );
+    return res;
+  }
+
   // One-time parent-domain cookie migration. On a dogcaregh.com host, a user
   // who still carries a legacy *host-only* auth cookie (from before the domain
   // widening) would otherwise end up with two same-named cookies once we write
@@ -25,7 +63,6 @@ export async function middleware(request: NextRequest) {
   // session. Clear the legacy cookie and mark the browser migrated, so they
   // re-login once cleanly. Runs before any .dogcaregh.com cookie is written,
   // so the two never coexist.
-  const migrationDomain = cookieDomainForHost(request.nextUrl.hostname);
   if (migrationDomain && !request.cookies.get(DOMAIN_MIGRATION_COOKIE)) {
     const legacyAuthCookies = request.cookies
       .getAll()
