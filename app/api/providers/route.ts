@@ -10,50 +10,36 @@ const serviceRole = () =>
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-export async function GET(request: Request) {
+export async function GET() {
   const db = serviceRole();
 
-  const [{ data: providers, error: pvErr }, { data: serviceTypes }] =
+  const [{ data: allRows, error: pvErr }, { data: serviceTypes }] =
     await Promise.all([
       db
         .from("providers")
         .select("*")
-        .eq("active", true)
-        .eq("verified", true)
         .order("rating_avg", { ascending: false })
         .limit(1000),
       db.from("service_types").select("id, slug, name").order("name"),
     ]);
 
-  // TEMP diagnostic (remove once resolved): /api/providers?debug=1 reveals which
-  // Supabase project/key this function actually uses and the raw row count, so we
-  // can explain why production returns fewer rows than a direct query.
-  if (new URL(request.url).searchParams.get("debug") === "1") {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-    const projectRef = url.replace(/^https?:\/\//, "").split(".")[0];
-    let keyRole = "?";
-    try {
-      keyRole = JSON.parse(
-        Buffer.from((process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").split(".")[1] ?? "", "base64").toString()
-      ).role;
-    } catch {}
-    return NextResponse.json({
-      _debug: {
-        projectRef,
-        keyRole,
-        pvErr: pvErr?.message ?? null,
-        rawCount: providers?.length ?? 0,
-        ids: (providers ?? []).map((p) => p.id),
-      },
-    }, { headers: { "Cache-Control": "no-store" } });
-  }
+  // Filter active + verified in JS rather than with chained boolean .eq()
+  // filters. On the production deployment those PostgREST filters intermittently
+  // dropped freshly-verified rows — the two most-recently-approved providers were
+  // silently excluded (no error) while the identical query returned them in every
+  // other environment, same project and same service_role key. The provider set
+  // is small, so fetching it whole and filtering here is deterministic and immune
+  // to that quirk. See commit f68dc5b for the sibling .eq()->.in() fix.
+  const providers = (allRows ?? []).filter(
+    (p) => p.active === true && p.verified === true,
+  );
 
   if (pvErr) {
     console.error("[providers API] error:", pvErr);
     return NextResponse.json({ error: pvErr.message }, { status: 500 });
   }
 
-  if (!providers || providers.length === 0) {
+  if (providers.length === 0) {
     return NextResponse.json(
       { providers: [], serviceTypes: serviceTypes ?? [] },
       { headers: { "Cache-Control": "no-store" } },
