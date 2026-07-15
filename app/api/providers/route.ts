@@ -10,7 +10,7 @@ const serviceRole = () =>
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-export async function GET() {
+export async function GET(request: Request) {
   const db = serviceRole();
 
   const [{ data: providers, error: pvErr }, { data: serviceTypes }] =
@@ -24,6 +24,29 @@ export async function GET() {
         .limit(1000),
       db.from("service_types").select("id, slug, name").order("name"),
     ]);
+
+  // TEMP diagnostic (remove once resolved): /api/providers?debug=1 reveals which
+  // Supabase project/key this function actually uses and the raw row count, so we
+  // can explain why production returns fewer rows than a direct query.
+  if (new URL(request.url).searchParams.get("debug") === "1") {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+    const projectRef = url.replace(/^https?:\/\//, "").split(".")[0];
+    let keyRole = "?";
+    try {
+      keyRole = JSON.parse(
+        Buffer.from((process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").split(".")[1] ?? "", "base64").toString()
+      ).role;
+    } catch {}
+    return NextResponse.json({
+      _debug: {
+        projectRef,
+        keyRole,
+        pvErr: pvErr?.message ?? null,
+        rawCount: providers?.length ?? 0,
+        ids: (providers ?? []).map((p) => p.id),
+      },
+    }, { headers: { "Cache-Control": "no-store" } });
+  }
 
   if (pvErr) {
     console.error("[providers API] error:", pvErr);
