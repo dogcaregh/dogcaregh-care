@@ -514,7 +514,7 @@ function SearchResults() {
         </div>
 
         {/* ── Sponsored ── */}
-        <div className="mb-6">
+        <div className="mb-6 mx-auto max-w-xl">
           <PetcitiAd image="/ads/petciti-wide.jpg" variant="wide" />
         </div>
 
