@@ -230,7 +230,7 @@ export default function HomePage() {
 
       {/* ── Sponsored ── */}
       <section className="bg-white px-6 pb-20 md:px-12">
-        <div className="mx-auto max-w-xl">
+        <div className="mx-auto max-w-xs">
           <PetcitiAd image="/ads/petciti-wide.jpg" variant="wide" />
         </div>
       </section>
