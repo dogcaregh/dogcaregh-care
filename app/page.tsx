@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase";
 import { ACCRA_AREAS } from "@/lib/geocode";
 
 import { SERVICE_META } from "@/lib/service-meta";
+import { PetcitiAd } from "@/components/petciti-ad";
 
 const services = (["dog_sitting", "dog_daycare", "dog_boarding", "dog_grooming", "dog_walking"] as const).map(id => ({
   id,
@@ -224,6 +225,13 @@ export default function HomePage() {
               </button>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Sponsored ── */}
+      <section className="bg-white px-6 pb-20 md:px-12">
+        <div className="mx-auto max-w-xs">
+          <PetcitiAd image="/ads/petciti-wide.jpg" variant="wide" />
         </div>
       </section>
 
