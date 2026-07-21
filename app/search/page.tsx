@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase";
 import { RatingBadge } from "@/components/star-rating";
 import { lookupCoords, haversine, rankScore, ACCRA_AREAS } from "@/lib/geocode";
 import { SERVICE_META } from "@/lib/service-meta";
+import { PetcitiAd } from "@/components/petciti-ad";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -510,6 +511,11 @@ function SearchResults() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* ── Sponsored ── */}
+        <div className="mb-6">
+          <PetcitiAd image="/ads/petciti-wide.jpg" variant="wide" />
         </div>
 
         {/* ── Results ── */}

@@ -9,6 +9,7 @@ import { useChat } from "@/lib/chat-context";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { useNotifications } from "@/lib/notifications-context";
 import { SERVICE_META } from "@/lib/service-meta";
+import { PetcitiAd } from "@/components/petciti-ad";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -1303,6 +1304,11 @@ export default function ProviderDashboard() {
             })}
           </div>
         )}
+
+        {/* ── Sponsored ── */}
+        <div className="mt-6">
+          <PetcitiAd image="/ads/petciti-pitbull.jpg" variant="poster" />
+        </div>
       </div>
     </div>
   );

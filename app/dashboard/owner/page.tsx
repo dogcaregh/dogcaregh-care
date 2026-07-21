@@ -8,6 +8,7 @@ import { useChat } from "@/lib/chat-context";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { useNotifications } from "@/lib/notifications-context";
 import { SERVICE_META } from "@/lib/service-meta";
+import { PetcitiAd } from "@/components/petciti-ad";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -1010,6 +1011,9 @@ export default function OwnerDashboard() {
             </div>
           )}
         </section>
+
+        {/* ── Sponsored ── */}
+        <PetcitiAd image="/ads/petciti-products.jpg" variant="poster" />
       </div>
     </div>
     </>
