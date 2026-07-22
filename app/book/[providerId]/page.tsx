@@ -53,6 +53,7 @@ type Slot = {
   svcId: string;
   dogIds: string[];
   addonIds: string[];
+  groomingSubIds: string[];
   selectedDates: string[];
   startDate: string;
   endDate: string;
@@ -121,7 +122,7 @@ function resolveUser(u: ProviderInfo["users"]): { name: string } | null {
 function uid() { return Math.random().toString(36).slice(2); }
 
 function emptySlot(): Slot {
-  return { id: uid(), svcId: "", dogIds: [], addonIds: [], selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" };
+  return { id: uid(), svcId: "", dogIds: [], addonIds: [], groomingSubIds: [], selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" };
 }
 
 function daysBetween(start: string, end: string) {
@@ -151,6 +152,32 @@ function rateHalfForDog(svc: ProviderService, dogSize: string | null): number | 
   if (s.includes("medium")) return svc.rate_half_medium;
   if (s.includes("large"))  return svc.rate_half_large;
   return svc.rate_half_small ?? svc.rate_half_medium ?? svc.rate_half_large ?? null;
+}
+
+// Price of one itemised grooming service for a given dog size. Prefers the
+// exact size, falling back to any size the provider priced so a dog whose
+// size wasn't explicitly listed is still charged the item's going rate.
+function subRateForDog(sub: GroomingSub, dogSize: string | null): number | null {
+  const s = (dogSize ?? "").toLowerCase();
+  if (s.includes("small"))  return sub.rate_small  ?? sub.rate_medium ?? sub.rate_large;
+  if (s.includes("medium")) return sub.rate_medium ?? sub.rate_small  ?? sub.rate_large;
+  if (s.includes("large"))  return sub.rate_large  ?? sub.rate_medium ?? sub.rate_small;
+  return sub.rate_small ?? sub.rate_medium ?? sub.rate_large ?? null;
+}
+
+// Sum of the selected grooming services for one session across all chosen dogs.
+function itemisedSessionRate(svc: ProviderService, subIds: string[], dogs: Dog[]): number | null {
+  const subs = (svc.grooming_subs ?? []).filter(s => subIds.includes(s.id));
+  if (subs.length === 0 || dogs.length === 0) return null;
+  let total = 0;
+  for (const dog of dogs) {
+    for (const sub of subs) {
+      const r = subRateForDog(sub, dog.size);
+      if (r === null) return null;
+      total += r;
+    }
+  }
+  return total;
 }
 
 // Compact price label for one itemised grooming service across the sizes the
@@ -209,6 +236,10 @@ function slotGross(slot: Slot, services: ProviderService[], dogs: Dog[]): number
     if (!slot.sittingTier) return null;
     const r = totalRateForDogs(svc, selDogs, slot.sittingTier === "half" ? "half" : "full");
     return r !== null ? r * days : null;
+  }
+  if (svc.grooming_mode === "itemised") {
+    const perSession = itemisedSessionRate(svc, slot.groomingSubIds, selDogs);
+    return perSession !== null ? perSession * days : null;
   }
   const r = totalRateForDogs(svc, selDogs);
   if (r === null) return null;
@@ -462,7 +493,7 @@ function SlotPanel({
                       const d = dogs.find(dd => dd.id === id);
                       return !d || nextSvc.grooming_mode === "itemised" || sizeSupported(nextSvc, d.size);
                     });
-                    onChange({ svcId: s.id, dogIds: keepDogs, selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" });
+                    onChange({ svcId: s.id, dogIds: keepDogs, groomingSubIds: [], selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" });
                   }}
                   className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
                   style={sel ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" } : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }}>
@@ -573,27 +604,55 @@ function SlotPanel({
           )}
           {isItemised && (
             <div className="mt-2.5 space-y-2.5">
-              {svc?.grooming_subs && svc.grooming_subs.length > 0 && (
-                <div className="overflow-hidden rounded-xl border border-gray-100">
-                  <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50 px-3 py-2">
+              {svc?.grooming_subs && svc.grooming_subs.length > 0 ? (
+                <div>
+                  <div className="mb-2 flex items-center gap-1.5">
                     <span className="text-sm">✂️</span>
-                    <p className="text-xs font-bold" style={{ color: "#0a2e30" }}>Grooming menu</p>
+                    <p className="text-xs font-bold" style={{ color: "#0a2e30" }}>Select grooming services</p>
                   </div>
-                  <div className="divide-y divide-gray-50">
-                    {svc.grooming_subs.map(sub => (
-                      <div key={sub.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                        <span className="text-xs font-medium text-gray-600">{sub.name}</span>
-                        <span className="shrink-0 text-right text-xs font-semibold" style={{ color: "#00b096" }}>
-                          {fmtSubRate(sub)}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="space-y-2">
+                    {svc.grooming_subs.map(sub => {
+                      const checked = slot.groomingSubIds.includes(sub.id);
+                      return (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => onChange({
+                            groomingSubIds: checked
+                              ? slot.groomingSubIds.filter(id => id !== sub.id)
+                              : [...slot.groomingSubIds, sub.id],
+                          })}
+                          className="flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition"
+                          style={checked
+                            ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" }
+                            : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }}
+                        >
+                          <span
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold text-white transition"
+                            style={checked ? { backgroundColor: "#00b096", borderColor: "#00b096" } : { borderColor: "#d1d5db" }}
+                          >
+                            {checked ? "✓" : ""}
+                          </span>
+                          <span className="min-w-0 flex-1 text-sm font-semibold" style={{ color: "#0a2e30" }}>{sub.name}</span>
+                          <span className="shrink-0 text-sm font-extrabold" style={{ color: "#00b096" }}>{fmtSubRate(sub)}</span>
+                        </button>
+                      );
+                    })}
                   </div>
+                  {selDogs.length > 1 && slot.groomingSubIds.length > 0 && (
+                    <p className="mt-2 text-xs font-semibold" style={{ color: "#00b096" }}>
+                      Priced for {selDogs.length} dogs per session.
+                    </p>
+                  )}
+                  <p className="mt-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    ✂️ Prices are per grooming session. Extra requests can be discussed via chat after booking.
+                  </p>
                 </div>
+              ) : (
+                <p className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  ✂️ Itemised grooming — this provider hasn&apos;t listed individual prices yet. Send a request and discuss the package via chat.
+                </p>
               )}
-              <p className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                ✂️ Itemised grooming — final cost depends on the services chosen. Discuss the exact package via chat after booking.
-              </p>
             </div>
           )}
           {(isRange || isTiered || slug === "dog_daycare") && (
@@ -790,6 +849,8 @@ function SlotPanel({
                   <span>{slot.sittingTier === "half" ? "Half day" : "Full day"}</span>
                 ) : isHourly && durationHours > 0 ? (
                   <span>{durationHours} hr{durationHours !== 1 ? "s" : ""}</span>
+                ) : isItemised && slot.groomingSubIds.length > 0 ? (
+                  <span>{slot.groomingSubIds.length} grooming service{slot.groomingSubIds.length !== 1 ? "s" : ""}</span>
                 ) : null}
               </div>
               <p className="text-base font-extrabold" style={{ color: "#0a2e30" }}>
@@ -925,7 +986,20 @@ export default function BookPage() {
       const freshAddonIds = selectedNames
         .map(n => freshAddonByName.get(n)?.id)
         .filter((id): id is string => id !== undefined);
-      const resolvedSlot = { ...slot, addonIds: freshAddonIds };
+
+      // Remap selected grooming services the same way — grooming_sub_services
+      // are delete-and-reinserted on provider save, so match by name.
+      const loadSvc = services.find(s => s.id === slot.svcId);
+      const selectedSubNames = (loadSvc?.grooming_subs ?? [])
+        .filter(gs => slot.groomingSubIds.includes(gs.id))
+        .map(gs => gs.name);
+      const freshSvcForSubs = freshServices.find(s => s.id === slot.svcId);
+      const freshSubByName = new Map((freshSvcForSubs?.grooming_subs ?? []).map(gs => [gs.name, gs.id]));
+      const freshGroomingSubIds = selectedSubNames
+        .map(n => freshSubByName.get(n))
+        .filter((id): id is string => id !== undefined);
+
+      const resolvedSlot = { ...slot, addonIds: freshAddonIds, groomingSubIds: freshGroomingSubIds };
 
       const svc = freshServices.find(s => s.id === slot.svcId)!;
       const slug     = svc.service_types?.slug ?? "";
@@ -976,6 +1050,16 @@ export default function BookPage() {
         return;
       }
       createdIds.push(booking.id);
+
+      // Record the itemised grooming selection in the booking chat so the
+      // provider sees exactly which services were requested.
+      if (svc.grooming_mode === "itemised" && selectedSubNames.length > 0) {
+        await sb.from("messages").insert({
+          booking_id: booking.id,
+          sender_id:  user.id,
+          content:    `Requested grooming services: ${selectedSubNames.join(", ")}.`,
+        });
+      }
 
       fetch(`/api/bookings/${booking.id}/email-trigger`, {
         method: "POST",
