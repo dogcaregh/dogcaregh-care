@@ -24,6 +24,7 @@ const SERVICE_LABELS: Record<string, string> = {
   doggy_daycare:  "Dog Daycare",
   dog_boarding:   "Dog Overnight",
   mobile_grooming:"Dog Grooming",
+  add_on:         "Add-on",
 };
 
 type NotificationType =
