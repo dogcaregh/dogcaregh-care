@@ -23,7 +23,16 @@ type ProviderService = {
   is_active: boolean;
   availability: Record<string, AvailSlot> | null;
   grooming_mode: "simple" | "itemised" | null;
+  grooming_subs: GroomingSub[] | null;
   service_types: { slug: string; name: string; emoji: string; rate_unit: string } | null;
+};
+
+type GroomingSub = {
+  id: string;
+  name: string;
+  rate_small: number | null;
+  rate_medium: number | null;
+  rate_large: number | null;
 };
 
 type ProviderInfo = {
@@ -142,6 +151,18 @@ function rateHalfForDog(svc: ProviderService, dogSize: string | null): number | 
   if (s.includes("medium")) return svc.rate_half_medium;
   if (s.includes("large"))  return svc.rate_half_large;
   return svc.rate_half_small ?? svc.rate_half_medium ?? svc.rate_half_large ?? null;
+}
+
+// Compact price label for one itemised grooming service across the sizes the
+// provider priced. Collapses to a single figure when every set size matches.
+function fmtSubRate(sub: GroomingSub): string {
+  const sizes: [string, number | null][] = [
+    ["S", sub.rate_small], ["M", sub.rate_medium], ["L", sub.rate_large],
+  ];
+  const set = sizes.filter(([, v]) => v != null) as [string, number][];
+  if (set.length === 0) return "On request";
+  if (set.every(([, v]) => v === set[0][1])) return `GHS ${set[0][1]}`;
+  return set.map(([lbl, v]) => `${lbl} GHS ${v}`).join(" · ");
 }
 
 function addHours(time: string, hrs: number): string {
@@ -551,9 +572,29 @@ function SlotPanel({
             </p>
           )}
           {isItemised && (
-            <p className="mt-2.5 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              ✂️ Itemised grooming — final cost depends on services chosen. Discuss via chat after booking.
-            </p>
+            <div className="mt-2.5 space-y-2.5">
+              {svc?.grooming_subs && svc.grooming_subs.length > 0 && (
+                <div className="overflow-hidden rounded-xl border border-gray-100">
+                  <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50 px-3 py-2">
+                    <span className="text-sm">✂️</span>
+                    <p className="text-xs font-bold" style={{ color: "#0a2e30" }}>Grooming menu</p>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {svc.grooming_subs.map(sub => (
+                      <div key={sub.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                        <span className="text-xs font-medium text-gray-600">{sub.name}</span>
+                        <span className="shrink-0 text-right text-xs font-semibold" style={{ color: "#00b096" }}>
+                          {fmtSubRate(sub)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <p className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                ✂️ Itemised grooming — final cost depends on the services chosen. Discuss the exact package via chat after booking.
+              </p>
+            </div>
           )}
           {(isRange || isTiered || slug === "dog_daycare") && (
             <p className="mt-2.5 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
