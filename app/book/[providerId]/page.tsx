@@ -35,6 +35,11 @@ type GroomingSub = {
   rate_large: number | null;
 };
 
+type GroomSize = "small" | "medium" | "large";
+
+// One itemised grooming line the owner selected: a service at a chosen size.
+type GroomingPick = { subId: string; size: GroomSize };
+
 type ProviderInfo = {
   id: string;
   user_id: string;
@@ -53,7 +58,7 @@ type Slot = {
   svcId: string;
   dogIds: string[];
   addonIds: string[];
-  groomingSubIds: string[];
+  groomingPicks: GroomingPick[];
   selectedDates: string[];
   startDate: string;
   endDate: string;
@@ -122,7 +127,7 @@ function resolveUser(u: ProviderInfo["users"]): { name: string } | null {
 function uid() { return Math.random().toString(36).slice(2); }
 
 function emptySlot(): Slot {
-  return { id: uid(), svcId: "", dogIds: [], addonIds: [], groomingSubIds: [], selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" };
+  return { id: uid(), svcId: "", dogIds: [], addonIds: [], groomingPicks: [], selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" };
 }
 
 function daysBetween(start: string, end: string) {
@@ -154,42 +159,29 @@ function rateHalfForDog(svc: ProviderService, dogSize: string | null): number | 
   return svc.rate_half_small ?? svc.rate_half_medium ?? svc.rate_half_large ?? null;
 }
 
-// Price of one itemised grooming service for a given dog size. Prefers the
-// exact size, falling back to any size the provider priced so a dog whose
-// size wasn't explicitly listed is still charged the item's going rate.
-function subRateForDog(sub: GroomingSub, dogSize: string | null): number | null {
-  const s = (dogSize ?? "").toLowerCase();
-  if (s.includes("small"))  return sub.rate_small  ?? sub.rate_medium ?? sub.rate_large;
-  if (s.includes("medium")) return sub.rate_medium ?? sub.rate_small  ?? sub.rate_large;
-  if (s.includes("large"))  return sub.rate_large  ?? sub.rate_medium ?? sub.rate_small;
-  return sub.rate_small ?? sub.rate_medium ?? sub.rate_large ?? null;
+// Itemised grooming is priced by explicit owner picks: a service + a size.
+const GROOM_SIZES: { key: GroomSize; label: string }[] = [
+  { key: "small",  label: "Small"  },
+  { key: "medium", label: "Medium" },
+  { key: "large",  label: "Large"  },
+];
+
+function subSizeRate(sub: GroomingSub, size: GroomSize): number | null {
+  return size === "small" ? sub.rate_small
+    : size === "medium" ? sub.rate_medium
+    : sub.rate_large;
 }
 
-// Sum of the selected grooming services for one session across all chosen dogs.
-function itemisedSessionRate(svc: ProviderService, subIds: string[], dogs: Dog[]): number | null {
-  const subs = (svc.grooming_subs ?? []).filter(s => subIds.includes(s.id));
-  if (subs.length === 0 || dogs.length === 0) return null;
+// Sum of the selected (service, size) grooming picks for one session.
+function itemisedPicksTotal(svc: ProviderService, picks: GroomingPick[]): number {
   let total = 0;
-  for (const dog of dogs) {
-    for (const sub of subs) {
-      const r = subRateForDog(sub, dog.size);
-      if (r === null) return null;
-      total += r;
-    }
+  for (const pick of picks) {
+    const sub = (svc.grooming_subs ?? []).find(s => s.id === pick.subId);
+    if (!sub) continue;
+    const r = subSizeRate(sub, pick.size);
+    if (r != null) total += r;
   }
   return total;
-}
-
-// Compact price label for one itemised grooming service across the sizes the
-// provider priced. Collapses to a single figure when every set size matches.
-function fmtSubRate(sub: GroomingSub): string {
-  const sizes: [string, number | null][] = [
-    ["S", sub.rate_small], ["M", sub.rate_medium], ["L", sub.rate_large],
-  ];
-  const set = sizes.filter(([, v]) => v != null) as [string, number][];
-  if (set.length === 0) return "On request";
-  if (set.every(([, v]) => v === set[0][1])) return `GHS ${set[0][1]}`;
-  return set.map(([lbl, v]) => `${lbl} GHS ${v}`).join(" · ");
 }
 
 function addHours(time: string, hrs: number): string {
@@ -238,8 +230,9 @@ function slotGross(slot: Slot, services: ProviderService[], dogs: Dog[]): number
     return r !== null ? r * days : null;
   }
   if (svc.grooming_mode === "itemised") {
-    const perSession = itemisedSessionRate(svc, slot.groomingSubIds, selDogs);
-    return perSession !== null ? perSession * days : null;
+    if (slot.groomingPicks.length === 0) return null;
+    const perSession = itemisedPicksTotal(svc, slot.groomingPicks);
+    return perSession > 0 ? perSession * days : null;
   }
   const r = totalRateForDogs(svc, selDogs);
   if (r === null) return null;
@@ -493,7 +486,7 @@ function SlotPanel({
                       const d = dogs.find(dd => dd.id === id);
                       return !d || nextSvc.grooming_mode === "itemised" || sizeSupported(nextSvc, d.size);
                     });
-                    onChange({ svcId: s.id, dogIds: keepDogs, groomingSubIds: [], selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" });
+                    onChange({ svcId: s.id, dogIds: keepDogs, groomingPicks: [], selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" });
                   }}
                   className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
                   style={sel ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" } : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }}>
@@ -608,44 +601,50 @@ function SlotPanel({
                 <div>
                   <div className="mb-2 flex items-center gap-1.5">
                     <span className="text-sm">✂️</span>
-                    <p className="text-xs font-bold" style={{ color: "#0a2e30" }}>Select grooming services</p>
+                    <p className="text-xs font-bold" style={{ color: "#0a2e30" }}>Select grooming services &amp; size</p>
                   </div>
                   <div className="space-y-2">
                     {svc.grooming_subs.map(sub => {
-                      const checked = slot.groomingSubIds.includes(sub.id);
+                      const options = GROOM_SIZES.filter(sz => subSizeRate(sub, sz.key) != null);
+                      if (options.length === 0) return null;
                       return (
-                        <button
-                          key={sub.id}
-                          type="button"
-                          onClick={() => onChange({
-                            groomingSubIds: checked
-                              ? slot.groomingSubIds.filter(id => id !== sub.id)
-                              : [...slot.groomingSubIds, sub.id],
-                          })}
-                          className="flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition"
-                          style={checked
-                            ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.06)" }
-                            : { borderColor: "#e5e7eb", backgroundColor: "#fafafa" }}
-                        >
-                          <span
-                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold text-white transition"
-                            style={checked ? { backgroundColor: "#00b096", borderColor: "#00b096" } : { borderColor: "#d1d5db" }}
-                          >
-                            {checked ? "✓" : ""}
-                          </span>
-                          <span className="min-w-0 flex-1 text-sm font-semibold" style={{ color: "#0a2e30" }}>{sub.name}</span>
-                          <span className="shrink-0 text-sm font-extrabold" style={{ color: "#00b096" }}>{fmtSubRate(sub)}</span>
-                        </button>
+                        <div key={sub.id} className="rounded-xl border border-gray-100 bg-gray-50/50 p-3">
+                          <p className="mb-2 text-sm font-semibold" style={{ color: "#0a2e30" }}>{sub.name}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {options.map(sz => {
+                              const rate   = subSizeRate(sub, sz.key)!;
+                              const picked = slot.groomingPicks.some(p => p.subId === sub.id && p.size === sz.key);
+                              return (
+                                <button
+                                  key={sz.key}
+                                  type="button"
+                                  onClick={() => onChange({
+                                    groomingPicks: picked
+                                      ? slot.groomingPicks.filter(p => !(p.subId === sub.id && p.size === sz.key))
+                                      : [...slot.groomingPicks, { subId: sub.id, size: sz.key }],
+                                  })}
+                                  className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition"
+                                  style={picked
+                                    ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.10)", color: "#00b096" }
+                                    : { borderColor: "#e5e7eb", backgroundColor: "#fff", color: "#6b7280" }}
+                                >
+                                  <span
+                                    className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold text-white transition"
+                                    style={picked ? { backgroundColor: "#00b096", borderColor: "#00b096" } : { borderColor: "#d1d5db" }}
+                                  >
+                                    {picked ? "✓" : ""}
+                                  </span>
+                                  {sz.label} · GHS {rate}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
-                  {selDogs.length > 1 && slot.groomingSubIds.length > 0 && (
-                    <p className="mt-2 text-xs font-semibold" style={{ color: "#00b096" }}>
-                      Priced for {selDogs.length} dogs per session.
-                    </p>
-                  )}
                   <p className="mt-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                    ✂️ Prices are per grooming session. Extra requests can be discussed via chat after booking.
+                    ✂️ Prices are per grooming session. Pick a size for each service you need — add several for multiple dogs.
                   </p>
                 </div>
               ) : (
@@ -849,8 +848,8 @@ function SlotPanel({
                   <span>{slot.sittingTier === "half" ? "Half day" : "Full day"}</span>
                 ) : isHourly && durationHours > 0 ? (
                   <span>{durationHours} hr{durationHours !== 1 ? "s" : ""}</span>
-                ) : isItemised && slot.groomingSubIds.length > 0 ? (
-                  <span>{slot.groomingSubIds.length} grooming service{slot.groomingSubIds.length !== 1 ? "s" : ""}</span>
+                ) : isItemised && slot.groomingPicks.length > 0 ? (
+                  <span>{slot.groomingPicks.length} grooming service{slot.groomingPicks.length !== 1 ? "s" : ""}</span>
                 ) : null}
               </div>
               <p className="text-base font-extrabold" style={{ color: "#0a2e30" }}>
@@ -987,19 +986,28 @@ export default function BookPage() {
         .map(n => freshAddonByName.get(n)?.id)
         .filter((id): id is string => id !== undefined);
 
-      // Remap selected grooming services the same way — grooming_sub_services
-      // are delete-and-reinserted on provider save, so match by name.
+      // Remap grooming picks the same way — grooming_sub_services are
+      // delete-and-reinserted on provider save, so match by name and keep the
+      // owner's chosen size. Also build human labels for the booking chat.
       const loadSvc = services.find(s => s.id === slot.svcId);
-      const selectedSubNames = (loadSvc?.grooming_subs ?? [])
-        .filter(gs => slot.groomingSubIds.includes(gs.id))
-        .map(gs => gs.name);
+      const loadSubName = new Map((loadSvc?.grooming_subs ?? []).map(gs => [gs.id, gs.name]));
       const freshSvcForSubs = freshServices.find(s => s.id === slot.svcId);
-      const freshSubByName = new Map((freshSvcForSubs?.grooming_subs ?? []).map(gs => [gs.name, gs.id]));
-      const freshGroomingSubIds = selectedSubNames
-        .map(n => freshSubByName.get(n))
-        .filter((id): id is string => id !== undefined);
+      const freshSubIdByName = new Map((freshSvcForSubs?.grooming_subs ?? []).map(gs => [gs.name, gs.id]));
+      const freshGroomingPicks = slot.groomingPicks
+        .map(p => {
+          const name    = loadSubName.get(p.subId);
+          const freshId = name ? freshSubIdByName.get(name) : undefined;
+          return freshId ? { subId: freshId, size: p.size } : null;
+        })
+        .filter((p): p is GroomingPick => p !== null);
+      const groomingLabels = slot.groomingPicks
+        .map(p => {
+          const name = loadSubName.get(p.subId);
+          return name ? `${name} (${p.size.charAt(0).toUpperCase()}${p.size.slice(1)})` : null;
+        })
+        .filter((l): l is string => l !== null);
 
-      const resolvedSlot = { ...slot, addonIds: freshAddonIds, groomingSubIds: freshGroomingSubIds };
+      const resolvedSlot = { ...slot, addonIds: freshAddonIds, groomingPicks: freshGroomingPicks };
 
       const svc = freshServices.find(s => s.id === slot.svcId)!;
       const slug     = svc.service_types?.slug ?? "";
@@ -1052,12 +1060,12 @@ export default function BookPage() {
       createdIds.push(booking.id);
 
       // Record the itemised grooming selection in the booking chat so the
-      // provider sees exactly which services were requested.
-      if (svc.grooming_mode === "itemised" && selectedSubNames.length > 0) {
+      // provider sees exactly which services and sizes were requested.
+      if (svc.grooming_mode === "itemised" && groomingLabels.length > 0) {
         await sb.from("messages").insert({
           booking_id: booking.id,
           sender_id:  user.id,
-          content:    `Requested grooming services: ${selectedSubNames.join(", ")}.`,
+          content:    `Requested grooming services: ${groomingLabels.join(", ")}.`,
         });
       }
 
