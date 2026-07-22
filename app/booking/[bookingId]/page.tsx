@@ -81,6 +81,7 @@ const SERVICES: Record<string, { label: string; emoji: string }> = {
   dog_boarding: { label: "Dog Overnight", emoji: "🛏️" },
   dog_grooming: { label: "Dog Grooming", emoji: "✂️" },
   dog_walking:  { label: "Dog Walking",  emoji: "🦮" },
+  add_on:       { label: "Add-on",       emoji: "➕" },
 };
 
 const STATUS_META: Record<BookingStatus, { label: string; color: string; bg: string; desc: string }> = {

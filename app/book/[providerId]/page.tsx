@@ -251,11 +251,21 @@ function slotPricing(
   discountTiers: DiscountTier[],
   addons: ProviderAddon[],
 ): Pricing | null {
-  const base = slotGross(slot, services, dogs);
-  if (base === null) return null;
+  const addonTotal = Math.round(
+    addons.filter(a => slot.addonIds.includes(a.id))
+      .reduce((sum, a) => sum + Number(a.price), 0) * 100
+  ) / 100;
 
   const svc = services.find(s => s.id === slot.svcId);
-  if (!svc) return null;
+
+  // Add-on-only booking: no main service selected — price is just the add-ons.
+  if (!svc) {
+    if (slot.addonIds.length === 0) return null;
+    return { base: 0, gross: addonTotal, discountPct: 0, discountAmt: 0, addonTotal };
+  }
+
+  const base = slotGross(slot, services, dogs);
+  if (base === null) return null;
 
   const slug     = svc.service_types?.slug ?? "";
   const isRange  = RANGE_SLUGS.has(slug);
@@ -286,11 +296,6 @@ function slotPricing(
   const totalPct    = Math.min(durPct + bulkPct, 50);
   const discountAmt = Math.round(base * totalPct / 100 * 100) / 100;
 
-  const addonTotal = Math.round(
-    addons.filter(a => slot.addonIds.includes(a.id))
-      .reduce((sum, a) => sum + Number(a.price), 0) * 100
-  ) / 100;
-
   return {
     base,
     gross:       Math.round((base - discountAmt + addonTotal) * 100) / 100,
@@ -301,9 +306,10 @@ function slotPricing(
 }
 
 function slotValid(slot: Slot, services: ProviderService[]): boolean {
-  if (!slot.svcId || slot.dogIds.length === 0) return false;
+  if (slot.dogIds.length === 0) return false;
   const svc = services.find(s => s.id === slot.svcId);
-  if (!svc) return false;
+  // Add-on-only booking: needs at least one add-on and a date.
+  if (!svc) return slot.addonIds.length > 0 && slot.selectedDates.length > 0;
   const slug    = svc.service_types?.slug ?? "";
   const isRange  = RANGE_SLUGS.has(slug);
   const isHourly = HOURLY_SLUGS.has(slug);
@@ -423,6 +429,8 @@ function SlotPanel({
   const isHourly = HOURLY_SLUGS.has(slug);
   const isTiered = TIERED_SLUGS.has(slug);
   const isItemised = svc?.grooming_mode === "itemised";
+  // No main service chosen but add-ons picked → book the add-on(s) on a date.
+  const isAddonOnly = !svc && slot.addonIds.length > 0;
 
   const selDogs        = dogs.filter(d => slot.dogIds.includes(d.id));
   const unsupportedDogs = (svc && !isItemised) ? dogs.filter(d => !sizeSupported(svc, d.size)) : [];
@@ -481,6 +489,11 @@ function SlotPanel({
               return (
                 <button key={s.id} type="button"
                   onClick={() => {
+                    // Toggle off a selected service to book add-ons only.
+                    if (sel) {
+                      onChange({ svcId: "", groomingPicks: [], selectedDates: [], startDate: "", endDate: "", startTime: "", endTime: "", sittingTier: "" });
+                      return;
+                    }
                     const nextSvc = services.find(sv => sv.id === s.id)!;
                     const keepDogs = slot.dogIds.filter(id => {
                       const d = dogs.find(dd => dd.id === id);
@@ -514,6 +527,15 @@ function SlotPanel({
               );
             })}
           </div>
+          {addons.length > 0 && (
+            <p className="mt-2 text-xs text-gray-400">
+              {isAddonOnly
+                ? "Booking add-on only — pick a date below."
+                : slot.svcId
+                  ? "Tip: tap the selected service again to deselect and book an add-on on its own."
+                  : "Or skip the service and just pick an add-on below to book it on a date."}
+            </p>
+          )}
         </div>
 
         {/* ── Dog selector (multi-select) ── */}
@@ -828,6 +850,20 @@ function SlotPanel({
                 );
               })}
             </div>
+
+            {/* Add-on-only booking needs its own date (no main service picked) */}
+            {isAddonOnly && (
+              <div className="mt-4">
+                <label className="mb-1.5 block text-sm font-bold" style={{ color: "#0a2e30" }}>Select Date</label>
+                <input
+                  type="date"
+                  min={today}
+                  value={slot.selectedDates[0] ?? ""}
+                  onChange={e => onChange({ selectedDates: e.target.value ? [e.target.value] : [] })}
+                  className={INPUT}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -850,6 +886,8 @@ function SlotPanel({
                   <span>{durationHours} hr{durationHours !== 1 ? "s" : ""}</span>
                 ) : isItemised && slot.groomingPicks.length > 0 ? (
                   <span>{slot.groomingPicks.length} grooming service{slot.groomingPicks.length !== 1 ? "s" : ""}</span>
+                ) : isAddonOnly ? (
+                  <span>Add-on{slot.addonIds.length !== 1 ? "s" : ""} only</span>
                 ) : null}
               </div>
               <p className="text-base font-extrabold" style={{ color: "#0a2e30" }}>
@@ -909,10 +947,15 @@ export default function BookPage() {
       const { provider: p, services: activeSvcs, discountTiers: tiers, addons: addonRows } = await apiRes.json();
       if (!p) { router.replace("/search"); return; }
 
-      // Pre-select service from ?service= param, or auto-select if only one
+      // Pre-select add-on-only from ?addon=, else a service from ?service=,
+      // else auto-select when the provider offers a single service.
+      const preAddon = searchParams.get("addon");
+      const preAddonMatch = preAddon && (addonRows as ProviderAddon[] | undefined)?.find(a => a.id === preAddon);
       const preselect = searchParams.get("service");
       const preselectMatch = preselect && (activeSvcs as ProviderService[]).find(s => s.id === preselect);
-      if (preselectMatch) {
+      if (preAddonMatch) {
+        setSlots([{ ...emptySlot(), addonIds: [(preAddonMatch as ProviderAddon).id] }]);
+      } else if (preselectMatch) {
         setSlots([{ ...emptySlot(), svcId: (preselectMatch as ProviderService).id }]);
       } else if ((activeSvcs as ProviderService[]).length === 1) {
         setSlots([{ ...emptySlot(), svcId: (activeSvcs as ProviderService[])[0].id }]);
@@ -1009,8 +1052,9 @@ export default function BookPage() {
 
       const resolvedSlot = { ...slot, addonIds: freshAddonIds, groomingPicks: freshGroomingPicks };
 
-      const svc = freshServices.find(s => s.id === slot.svcId)!;
-      const slug     = svc.service_types?.slug ?? "";
+      const svc = freshServices.find(s => s.id === slot.svcId);
+      // Add-on-only booking: no main service — stored under the "add_on" type.
+      const slug     = svc ? (svc.service_types?.slug ?? "") : "add_on";
       const isRange  = RANGE_SLUGS.has(slug);
       const isHourly = HOURLY_SLUGS.has(slug);
       const isTiered = TIERED_SLUGS.has(slug);
@@ -1061,7 +1105,7 @@ export default function BookPage() {
 
       // Record the itemised grooming selection in the booking chat so the
       // provider sees exactly which services and sizes were requested.
-      if (svc.grooming_mode === "itemised" && groomingLabels.length > 0) {
+      if (svc?.grooming_mode === "itemised" && groomingLabels.length > 0) {
         await sb.from("messages").insert({
           booking_id: booking.id,
           sender_id:  user.id,
@@ -1199,7 +1243,7 @@ export default function BookPage() {
                     const sv = services.find(sv => sv.id === s.svcId);
                     return p !== null ? (
                       <div key={s.id} className="flex justify-between text-gray-500 text-xs">
-                        <span>{sv?.service_types?.emoji} {sv?.service_types?.name}{s.dogIds.length > 1 ? ` (${s.dogIds.length} dogs)` : ""}</span>
+                        <span>{sv ? `${sv.service_types?.emoji} ${sv.service_types?.name}` : "➕ Add-on"}{s.dogIds.length > 1 ? ` (${s.dogIds.length} dogs)` : ""}</span>
                         <span>GHS {p.gross.toFixed(2)}</span>
                       </div>
                     ) : null;
