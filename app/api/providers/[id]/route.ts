@@ -79,8 +79,32 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
           emoji: SLUG_EMOJI[slug] ?? "🐾",
           rate_unit: st?.rate_unit ?? "",
         },
+        grooming_subs: [] as {
+          id: string; name: string;
+          rate_small: number | null; rate_medium: number | null; rate_large: number | null;
+        }[],
       };
     });
+
+  // Itemised grooming: attach each grooming service's sub-service menu so the
+  // booking rate card can show the provider's per-item prices.
+  const groomingIds = activeSvcs
+    .filter((s) => s.service_types.slug === "dog_grooming")
+    .map((s) => s.id);
+  if (groomingIds.length > 0) {
+    const { data: subs } = await supabase
+      .from("grooming_sub_services")
+      .select("id, provider_service_id, name, rate_small, rate_medium, rate_large")
+      .in("provider_service_id", groomingIds)
+      .eq("is_active", true);
+    for (const svc of activeSvcs) {
+      svc.grooming_subs = (subs ?? [])
+        .filter((ss) => ss.provider_service_id === svc.id)
+        .map(({ id, name, rate_small, rate_medium, rate_large }) => ({
+          id, name, rate_small, rate_medium, rate_large,
+        }));
+    }
+  }
 
   return NextResponse.json(
     {
