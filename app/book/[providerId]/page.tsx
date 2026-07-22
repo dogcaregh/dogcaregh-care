@@ -947,10 +947,15 @@ export default function BookPage() {
       const { provider: p, services: activeSvcs, discountTiers: tiers, addons: addonRows } = await apiRes.json();
       if (!p) { router.replace("/search"); return; }
 
-      // Pre-select service from ?service= param, or auto-select if only one
+      // Pre-select add-on-only from ?addon=, else a service from ?service=,
+      // else auto-select when the provider offers a single service.
+      const preAddon = searchParams.get("addon");
+      const preAddonMatch = preAddon && (addonRows as ProviderAddon[] | undefined)?.find(a => a.id === preAddon);
       const preselect = searchParams.get("service");
       const preselectMatch = preselect && (activeSvcs as ProviderService[]).find(s => s.id === preselect);
-      if (preselectMatch) {
+      if (preAddonMatch) {
+        setSlots([{ ...emptySlot(), addonIds: [(preAddonMatch as ProviderAddon).id] }]);
+      } else if (preselectMatch) {
         setSlots([{ ...emptySlot(), svcId: (preselectMatch as ProviderService).id }]);
       } else if ((activeSvcs as ProviderService[]).length === 1) {
         setSlots([{ ...emptySlot(), svcId: (activeSvcs as ProviderService[])[0].id }]);

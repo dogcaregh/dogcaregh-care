@@ -35,6 +35,13 @@ type ProviderProfile = {
   users: { name: string } | { name: string }[] | null;
 };
 
+type ProviderAddon = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+};
+
 type Review = {
   id: string;
   rating: number;
@@ -184,6 +191,37 @@ function ServiceRateCard({ svc, providerId, authed }: { svc: ProviderService; pr
   );
 }
 
+function AddonCard({ addon, providerId, authed }: { addon: ProviderAddon; providerId: string; authed: boolean }) {
+  const href = authed
+    ? `/book/${providerId}?addon=${addon.id}`
+    : `/login?redirect=/book/${providerId}?addon=${addon.id}`;
+  return (
+    <Link
+      href={href}
+      className="block rounded-xl border border-gray-100 bg-gray-50/50 p-4 transition hover:border-[#00b096] hover:shadow-sm"
+      style={{ borderLeftWidth: 3, borderLeftColor: "#00b096" }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-2xl">➕</span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{addon.name}</p>
+          <p className="text-xs text-gray-400">Add-on</p>
+        </div>
+      </div>
+      {addon.description && (
+        <p className="mb-3 text-xs leading-relaxed text-gray-500">{addon.description}</p>
+      )}
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-gray-500">Price</span>
+        <span className="font-semibold" style={{ color: "#00b096" }}>GHS {Number(addon.price).toFixed(2)}</span>
+      </div>
+      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-end">
+        <span className="text-xs font-semibold" style={{ color: "#00b096" }}>Book this add-on →</span>
+      </div>
+    </Link>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ProviderPage() {
@@ -192,6 +230,7 @@ export default function ProviderPage() {
 
   const [provider,  setProvider]  = useState<ProviderProfile | null>(null);
   const [services,  setServices]  = useState<ProviderService[]>([]);
+  const [addons,    setAddons]    = useState<ProviderAddon[]>([]);
   const [reviews,   setReviews]   = useState<Review[]>([]);
   const [authed,    setAuthed]    = useState(false);
   const [loading,   setLoading]   = useState(true);
@@ -207,11 +246,12 @@ export default function ProviderPage() {
       ]);
       if (cancelled) return;
       if (!res.ok) { setMissing(true); setLoading(false); return; }
-      const { provider: p, services: sv, reviews: rv } = await res.json();
+      const { provider: p, services: sv, reviews: rv, addons: ad } = await res.json();
       if (!p) { setMissing(true); setLoading(false); return; }
       setProvider(p as unknown as ProviderProfile);
       setAuthed(!!user);
       setServices((sv ?? []) as unknown as ProviderService[]);
+      setAddons((ad ?? []) as ProviderAddon[]);
       setReviews((rv ?? []) as unknown as Review[]);
       setLoading(false);
     }
@@ -359,6 +399,20 @@ export default function ProviderPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               {services.map(svc => (
                 <ServiceRateCard key={svc.id} svc={svc} providerId={id} authed={authed} />
+              ))}
+            </div>
+          </SectionCard>
+        )}
+
+        {/* Add-ons — bookable on their own */}
+        {addons.length > 0 && (
+          <SectionCard title="Add-ons">
+            <p className="-mt-2 mb-4 text-xs text-gray-400">
+              Book any add-on on its own — just pick a date.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {addons.map(a => (
+                <AddonCard key={a.id} addon={a} providerId={id} authed={authed} />
               ))}
             </div>
           </SectionCard>
