@@ -172,6 +172,25 @@ function subSizeRate(sub: GroomingSub, size: GroomSize): number | null {
     : sub.rate_large;
 }
 
+// Map a dog's stored size to a groom size (xlarge falls back to large).
+function groomSizeForDog(dogSize: string | null): GroomSize | null {
+  const s = (dogSize ?? "").toLowerCase();
+  if (s.includes("small"))  return "small";
+  if (s.includes("medium")) return "medium";
+  if (s.includes("large"))  return "large"; // covers "large" and "xlarge"
+  return null;
+}
+
+// The groom sizes the currently-selected dogs allow — owners can only pick a
+// grooming size that matches a dog they're booking for.
+function allowedGroomSizesFor(dogs: Dog[], dogIds: string[]): Set<GroomSize> {
+  return new Set(
+    dogs.filter(d => dogIds.includes(d.id))
+      .map(d => groomSizeForDog(d.size))
+      .filter((x): x is GroomSize => x !== null)
+  );
+}
+
 // Sum of the selected (service, size) grooming picks for one session.
 function itemisedPicksTotal(svc: ProviderService, picks: GroomingPick[]): number {
   let total = 0;
@@ -433,6 +452,7 @@ function SlotPanel({
   const isAddonOnly = !svc && slot.addonIds.length > 0;
 
   const selDogs        = dogs.filter(d => slot.dogIds.includes(d.id));
+  const allowedGroomSizes = allowedGroomSizesFor(dogs, slot.dogIds);
   const unsupportedDogs = (svc && !isItemised) ? dogs.filter(d => !sizeSupported(svc, d.size)) : [];
   const supportedDogs   = dogs.filter(d => !svc || isItemised || sizeSupported(svc, d.size));
   const availDays   = svc ? svcAvailDays(svc) : [];
@@ -546,7 +566,9 @@ function SlotPanel({
               <button type="button"
                 onClick={() => {
                   const allSelected = supportedDogs.every(d => slot.dogIds.includes(d.id));
-                  onChange({ dogIds: allSelected ? [] : supportedDogs.map(d => d.id) });
+                  const next = allSelected ? [] : supportedDogs.map(d => d.id);
+                  const allowed = allowedGroomSizesFor(dogs, next);
+                  onChange({ dogIds: next, groomingPicks: slot.groomingPicks.filter(p => allowed.has(p.size)) });
                 }}
                 className="text-xs font-semibold transition hover:opacity-70"
                 style={{ color: "#00b096" }}>
@@ -578,7 +600,9 @@ function SlotPanel({
                     onClick={() => {
                       if (!supported) return;
                       const next = checked ? slot.dogIds.filter(id => id !== dog.id) : [...slot.dogIds, dog.id];
-                      onChange({ dogIds: next });
+                      // Drop any grooming picks whose size no longer matches a selected dog.
+                      const allowed = allowedGroomSizesFor(dogs, next);
+                      onChange({ dogIds: next, groomingPicks: slot.groomingPicks.filter(p => allowed.has(p.size)) });
                     }}
                     className="flex items-center gap-3 rounded-xl border p-3.5 text-left transition"
                     style={
@@ -625,10 +649,16 @@ function SlotPanel({
                     <span className="text-sm">✂️</span>
                     <p className="text-xs font-bold" style={{ color: "#0a2e30" }}>Select grooming services &amp; size</p>
                   </div>
+                  {selDogs.length === 0 && (
+                    <p className="mb-2 flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-500">
+                      🐕 Please select the dog you wish to book first.
+                    </p>
+                  )}
                   <div className="space-y-2">
                     {svc.grooming_subs.map(sub => {
                       const options = GROOM_SIZES.filter(sz => subSizeRate(sub, sz.key) != null);
                       if (options.length === 0) return null;
+                      const hasMatch = selDogs.length > 0 && options.some(sz => allowedGroomSizes.has(sz.key));
                       return (
                         <div key={sub.id} className="rounded-xl border border-gray-100 bg-gray-50/50 p-3">
                           <p className="mb-2 text-sm font-semibold" style={{ color: "#0a2e30" }}>{sub.name}</p>
@@ -636,37 +666,50 @@ function SlotPanel({
                             {options.map(sz => {
                               const rate   = subSizeRate(sub, sz.key)!;
                               const picked = slot.groomingPicks.some(p => p.subId === sub.id && p.size === sz.key);
+                              // Only the size(s) matching a selected dog are selectable.
+                              const enabled = allowedGroomSizes.has(sz.key);
                               return (
                                 <button
                                   key={sz.key}
                                   type="button"
-                                  onClick={() => onChange({
-                                    groomingPicks: picked
-                                      ? slot.groomingPicks.filter(p => !(p.subId === sub.id && p.size === sz.key))
-                                      : [...slot.groomingPicks, { subId: sub.id, size: sz.key }],
-                                  })}
+                                  disabled={!enabled}
+                                  onClick={() => {
+                                    if (!enabled) return;
+                                    onChange({
+                                      groomingPicks: picked
+                                        ? slot.groomingPicks.filter(p => !(p.subId === sub.id && p.size === sz.key))
+                                        : [...slot.groomingPicks, { subId: sub.id, size: sz.key }],
+                                    });
+                                  }}
                                   className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition"
-                                  style={picked
-                                    ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.10)", color: "#00b096" }
-                                    : { borderColor: "#e5e7eb", backgroundColor: "#fff", color: "#6b7280" }}
+                                  style={
+                                    !enabled ? { borderColor: "#e5e7eb", backgroundColor: "#f9fafb", color: "#c0c4cc", cursor: "not-allowed" } :
+                                    picked   ? { borderColor: "#00b096", backgroundColor: "rgba(0,176,150,.10)", color: "#00b096" } :
+                                               { borderColor: "#e5e7eb", backgroundColor: "#fff", color: "#6b7280" }
+                                  }
                                 >
                                   <span
                                     className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold text-white transition"
-                                    style={picked ? { backgroundColor: "#00b096", borderColor: "#00b096" } : { borderColor: "#d1d5db" }}
+                                    style={picked && enabled ? { backgroundColor: "#00b096", borderColor: "#00b096" } : { borderColor: "#d1d5db" }}
                                   >
-                                    {picked ? "✓" : ""}
+                                    {picked && enabled ? "✓" : ""}
                                   </span>
                                   {sz.label} · GHS {rate}
                                 </button>
                               );
                             })}
                           </div>
+                          {selDogs.length > 0 && !hasMatch && (
+                            <p className="mt-2 text-[11px] text-amber-600">
+                              Not priced for your dog&apos;s size — ask the provider via chat after booking.
+                            </p>
+                          )}
                         </div>
                       );
                     })}
                   </div>
                   <p className="mt-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                    ✂️ Prices are per grooming session. Pick a size for each service you need — add several for multiple dogs.
+                    ✂️ Prices are per grooming session. The size that matches your dog is selectable — add a service for each dog you&apos;re booking.
                   </p>
                 </div>
               ) : (
