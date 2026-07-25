@@ -70,6 +70,15 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string }> 
   cancelled:         { label: "Cancelled",        color: "#dc2626", bg: "rgba(220,38,38,.08)"  },
 };
 
+// Which party has the pending action per status (null = nothing pending).
+const PENDING_TARGET: Record<string, "owner" | "provider"> = {
+  pending:           "provider",
+  confirmed:         "owner",
+  paid:              "provider",
+  in_progress:       "provider",
+  completed_pending: "owner",
+};
+
 const DISPUTE_STATUS: Record<string, string> = {
   open:               "Open",
   under_review:       "Under Review",
@@ -141,11 +150,14 @@ export default function AdminBookingDetailPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
 
   const [booking,       setBooking]      = useState<Booking | null>(null);
+  const [additionalDogs, setAdditionalDogs] = useState<DogSnap[]>([]);
   const [dispute,       setDispute]      = useState<Dispute | null>(null);
   const [messages,      setMessages]     = useState<Message[]>([]);
   const [loading,       setLoading]      = useState(true);
   const [overrideSt,    setOverrideSt]   = useState("");
   const [overrideBusy,  setOverrideBusy] = useState(false);
+  const [remindBusy,    setRemindBusy]   = useState(false);
+  const [remindMsg,     setRemindMsg]    = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready || !bookingId) return;
@@ -154,6 +166,7 @@ export default function AdminBookingDetailPage() {
       .then(data => {
         if (!data) { router.push("/admin/bookings"); return; }
         setBooking(data.booking);
+        setAdditionalDogs(data.additionalDogs ?? []);
         setOverrideSt(data.booking.status);
         setDispute(data.dispute);
         setMessages(data.messages ?? []);
@@ -183,10 +196,25 @@ export default function AdminBookingDetailPage() {
     setOverrideBusy(false);
   }
 
+  async function sendReminder() {
+    setRemindBusy(true);
+    setRemindMsg(null);
+    const res = await fetch(`/api/admin/bookings/${bookingId}/remind`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.ok) {
+      setRemindMsg(`Reminder sent to the ${data.target}.`);
+    } else {
+      setRemindMsg(data?.reason === "no_pending_action" ? "No pending action to remind about." : "Could not send reminder.");
+    }
+    setRemindBusy(false);
+  }
+
   const ownerSnap    = resolve(booking.users as UserSnap | UserSnap[] | null);
   const providerSnap = resolve(booking.providers as ProviderSnap | ProviderSnap[] | null);
   const providerUser = resolve(providerSnap?.users as UserSnap | UserSnap[] | null);
   const dogSnap      = resolve(booking.dogs as DogSnap | DogSnap[] | null);
+  const allDogs      = [dogSnap, ...additionalDogs].filter((d): d is DogSnap => d != null);
+  const pendingTarget = PENDING_TARGET[booking.status] ?? null;
   const sm           = STATUS_META[booking.status] ?? STATUS_META.pending;
   const sameDay      = booking.start_date === booking.end_date;
 
@@ -253,6 +281,29 @@ export default function AdminBookingDetailPage() {
           </div>
         </div>
 
+        {/* Reminder */}
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Admin — Reminder</p>
+          {pendingTarget ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="flex-1 text-sm text-gray-600">
+                Nudge the <span className="font-bold capitalize" style={{ color: "#0a2e30" }}>{pendingTarget}</span> about the pending action for this booking.
+              </p>
+              <button
+                onClick={sendReminder}
+                disabled={remindBusy}
+                className="rounded-xl px-4 py-2 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40"
+                style={{ backgroundColor: "#00b096" }}
+              >
+                {remindBusy ? "Sending…" : `Remind ${pendingTarget}`}
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No pending action — nothing to remind about at this status.</p>
+          )}
+          {remindMsg && <p className="mt-2 text-xs font-semibold" style={{ color: "#00b096" }}>{remindMsg}</p>}
+        </div>
+
         {/* Service + dates */}
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Service</p>
@@ -306,32 +357,40 @@ export default function AdminBookingDetailPage() {
           <ContactCard label="Provider" user={providerUser} />
         </div>
 
-        {/* Dog */}
-        {dogSnap && (
+        {/* Dogs (primary + any additional) */}
+        {allDogs.length > 0 && (
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Dog</p>
-            <div className="flex flex-wrap gap-4 text-sm">
-              <div>
-                <p className="text-[10px] text-gray-400">Name</p>
-                <p className="font-semibold" style={{ color: "#0a2e30" }}>{dogSnap.name}</p>
-              </div>
-              {dogSnap.breed && <div><p className="text-[10px] text-gray-400">Breed</p><p className="font-semibold" style={{ color: "#0a2e30" }}>{dogSnap.breed}</p></div>}
-              {dogSnap.size  && <div><p className="text-[10px] text-gray-400">Size</p><p className="font-semibold capitalize" style={{ color: "#0a2e30" }}>{dogSnap.size}</p></div>}
-              {dogSnap.age != null && <div><p className="text-[10px] text-gray-400">Age</p><p className="font-semibold" style={{ color: "#0a2e30" }}>{fmtAge(dogSnap.age)}</p></div>}
-              <div>
-                <p className="text-[10px] text-gray-400">Vaccinated</p>
-                <p className="font-semibold" style={{ color: dogSnap.vaccination_status ? "#059669" : "#dc2626" }}>
-                  {dogSnap.vaccination_status ? "Yes" : "No"}
-                </p>
-              </div>
-              {dogSnap.leash_trained != null && (
-                <div>
-                  <p className="text-[10px] text-gray-400">Leash Trained</p>
-                  <p className="font-semibold" style={{ color: dogSnap.leash_trained ? "#059669" : "#dc2626" }}>
-                    {dogSnap.leash_trained ? "Yes" : "No"}
-                  </p>
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              {allDogs.length > 1 ? `Dogs (${allDogs.length})` : "Dog"}
+            </p>
+            <div className="space-y-4">
+              {allDogs.map((dog, i) => (
+                <div key={i} className={i > 0 ? "border-t border-gray-100 pt-4" : ""}>
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <div>
+                      <p className="text-[10px] text-gray-400">Name</p>
+                      <p className="font-semibold" style={{ color: "#0a2e30" }}>{dog.name}</p>
+                    </div>
+                    {dog.breed && <div><p className="text-[10px] text-gray-400">Breed</p><p className="font-semibold" style={{ color: "#0a2e30" }}>{dog.breed}</p></div>}
+                    {dog.size  && <div><p className="text-[10px] text-gray-400">Size</p><p className="font-semibold capitalize" style={{ color: "#0a2e30" }}>{dog.size}</p></div>}
+                    {dog.age != null && <div><p className="text-[10px] text-gray-400">Age</p><p className="font-semibold" style={{ color: "#0a2e30" }}>{fmtAge(dog.age)}</p></div>}
+                    <div>
+                      <p className="text-[10px] text-gray-400">Vaccinated</p>
+                      <p className="font-semibold" style={{ color: dog.vaccination_status ? "#059669" : "#dc2626" }}>
+                        {dog.vaccination_status ? "Yes" : "No"}
+                      </p>
+                    </div>
+                    {dog.leash_trained != null && (
+                      <div>
+                        <p className="text-[10px] text-gray-400">Leash Trained</p>
+                        <p className="font-semibold" style={{ color: dog.leash_trained ? "#059669" : "#dc2626" }}>
+                          {dog.leash_trained ? "Yes" : "No"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         )}

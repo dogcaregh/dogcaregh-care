@@ -33,7 +33,7 @@ export async function GET(
       .from("bookings")
       .select(`
         id, service_type, status, start_date, end_date, selected_dates,
-        preferred_time, preferred_end_time, duration_hours,
+        preferred_time, preferred_end_time, duration_hours, additional_dog_ids,
         gross_amount, commission_amount, provider_payout, created_at,
         users!owner_id(name, email, phone),
         providers!provider_id(id, neighbourhood, users!user_id(name, email, phone)),
@@ -54,7 +54,19 @@ export async function GET(
   ]);
 
   if (error || !booking) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ booking, dispute: dispute ?? null, messages: messages ?? [] });
+
+  // Fetch any additional dogs on the booking so the admin sees all of them.
+  let additionalDogs: unknown[] = [];
+  const extraIds = (booking as { additional_dog_ids: string[] | null }).additional_dog_ids;
+  if (extraIds && extraIds.length > 0) {
+    const { data: extra } = await service
+      .from("dogs")
+      .select("name, breed, size, age, vaccination_status, leash_trained")
+      .in("id", extraIds);
+    additionalDogs = extra ?? [];
+  }
+
+  return NextResponse.json({ booking, additionalDogs, dispute: dispute ?? null, messages: messages ?? [] });
 }
 
 export async function PATCH(

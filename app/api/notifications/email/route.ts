@@ -41,7 +41,8 @@ type NotificationType =
   | "cashout_rejected"
   | "verification_approved"
   | "verification_rejected"
-  | "new_message";
+  | "new_message"
+  | "reminder";
 
 function buildContent(
   type: NotificationType,
@@ -235,6 +236,18 @@ function buildContent(
           intro: "You have a new message about your booking.",
           buttonText: "View Message",
           buttonUrl: `${bookingUrl}?tab=messages`,
+        }),
+      };
+
+    case "reminder":
+      return {
+        subject: "Reminder: action needed on your booking",
+        html: renderDogCareEmail({
+          preheader: message,
+          heading: "A quick reminder",
+          intro: message,
+          buttonText: "View Booking",
+          buttonUrl: bookingUrl,
         }),
       };
 
