@@ -37,3 +37,8 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# local diagnostics & tooling (not part of the app)
+/AUDIT.md
+/_ids.mjs
+/scripts/
