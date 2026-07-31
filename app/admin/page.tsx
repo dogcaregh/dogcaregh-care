@@ -135,9 +135,22 @@ export default function AdminOverviewPage() {
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
       <AdminNav />
 
-      <div className="px-6 pb-8 pt-7 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>Admin</p>
-        <h1 className="mt-1 text-2xl font-extrabold text-white md:text-3xl">Platform Overview</h1>
+      <div className="flex items-end justify-between gap-4 px-6 pb-8 pt-7 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>Admin</p>
+          <h1 className="mt-1 text-2xl font-extrabold text-white md:text-3xl">Platform Overview</h1>
+        </div>
+        <Link
+          href="/admin/report"
+          className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
+          style={{ backgroundColor: "#00b096" }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6M8 13h8M8 17h5" />
+          </svg>
+          Generate Report
+        </Link>
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 space-y-6">
