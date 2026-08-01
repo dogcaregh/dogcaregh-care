@@ -24,7 +24,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "There's more you can add now — including personality.",
     heading: "Finish your dog's profile",
     body: "Hi {{first_name}}, the profile you set up at signup was just the basics. Open your dashboard, tap your dog, then Edit Profile — there's a lot more you can add now, including your dog's personality, so a caregiver knows exactly who they're looking after.",
-    cta: { label: "Edit your dog's profile", path: "/dashboard" },
+    cta: { label: "Edit your dog's profile", path: "/dashboard/owner" },
   },
   {
     key: "o2", audience: "owner", title: "How Overnight care works",
@@ -88,7 +88,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "A minute of your time helps other owners.",
     heading: "How was it?",
     body: "Hi {{first_name}}, if a caregiver looked after your dog recently, a short review goes a long way — it helps them, and it helps other owners choose well. It only takes a minute.",
-    cta: { label: "Leave a review", path: "/dashboard" },
+    cta: { label: "Leave a review", path: "/dashboard/owner" },
   },
   {
     key: "o10", audience: "owner", title: "Rebook your caregiver",
@@ -96,7 +96,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "Familiar faces make for calmer dogs.",
     heading: "Book your caregiver again",
     body: "Hi {{first_name}}, found someone your dog loves? You can book them again in just a few taps. Familiar faces make for calmer, happier dogs.",
-    cta: { label: "Rebook now", path: "/dashboard" },
+    cta: { label: "Rebook now", path: "/dashboard/owner" },
   },
   {
     key: "o11", audience: "owner", title: "Set your location",
@@ -104,7 +104,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "Faster replies, shorter trips, better care.",
     heading: "Set your location",
     body: "Hi {{first_name}}, add your location and we'll match you with caregivers nearby — faster replies, shorter trips, better care. It takes a few seconds on your profile.",
-    cta: { label: "Set your location", path: "/owner-profile" },
+    cta: { label: "Set your location", path: "/dashboard/owner/edit" },
   },
   {
     key: "o12", audience: "owner", title: "Add-on services",
@@ -129,7 +129,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "Help more dogs get great care.",
     heading: "Know a dog owner?",
     body: "Hi {{first_name}}, enjoying DogCareGH? Tell a fellow dog owner. Share your referral and help more dogs get great care.",
-    cta: { label: "Refer a friend", path: "/dashboard" },
+    cta: { label: "Refer a friend", path: "/dashboard/owner" },
   },
   {
     key: "o15", audience: "owner", title: "Win-back — haven't seen you in a while",
@@ -147,7 +147,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "Unverified profiles don't receive bookings.",
     heading: "Finish your verification",
     body: "Hi {{first_name}}, you signed up — nice one. But your profile stays hidden from owners until you're verified. Submit your documents so we can confirm your identity; unverified profiles don't receive bookings. It's quick, and it's the one step between you and your first job.",
-    cta: { label: "Complete verification", path: "/provider" },
+    cta: { label: "Complete verification", path: "/dashboard/provider/verify" },
   },
   {
     key: "c2", audience: "caregiver", title: "Complete profile + photos",
@@ -155,7 +155,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "Owners choose caregivers they can picture.",
     heading: "Add photos and complete your profile",
     body: "Hi {{first_name}}, owners choose caregivers they can picture. Add a clear profile photo, a few gallery shots, and a short bio on how you care for dogs. A complete profile gets far more bookings.",
-    cta: { label: "Complete your profile", path: "/provider" },
+    cta: { label: "Complete your profile", path: "/dashboard/provider/edit" },
   },
   {
     key: "c3", audience: "caregiver", title: "Set services + prices",
@@ -163,7 +163,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "You decide what you do and what you charge.",
     heading: "Set your services and prices",
     body: "Hi {{first_name}}, tell owners what you offer — walking, sitting, daycare, Overnight or grooming — and set your own price for each. You're in control of what you do and what you charge.",
-    cta: { label: "Set your services", path: "/provider" },
+    cta: { label: "Set your services", path: "/dashboard/provider/services" },
   },
   {
     key: "c4", audience: "caregiver", title: "Keep availability current",
@@ -171,7 +171,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "Only get requests you can actually take.",
     heading: "Keep your availability current",
     body: "Hi {{first_name}}, owners book around your calendar. Keep it current and block the days you're away, so you only get requests you can actually take.",
-    cta: { label: "Update availability", path: "/provider" },
+    cta: { label: "Update availability", path: "/dashboard/provider" },
   },
   {
     key: "c5", audience: "caregiver", title: "Respond quickly",
@@ -179,7 +179,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "Owners usually go with the first to respond.",
     heading: "Quick replies win bookings",
     body: "Hi {{first_name}}, when a request comes in, a fast reply makes all the difference — owners usually go with the first caregiver who responds. Keep an eye out and reply promptly to lock in more jobs.",
-    cta: { label: "View your requests", path: "/dashboard" },
+    cta: { label: "View your requests", path: "/dashboard/provider" },
   },
   {
     key: "c6", audience: "caregiver", title: "How you get paid",
@@ -187,7 +187,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "Held in escrow, released after the service.",
     heading: "How and when you get paid",
     body: "Hi {{first_name}}, owners pay upfront and the money is held safely in escrow. Once you complete the service, your payout is released — and you can cash out to your MoMo. Simple and secure.",
-    cta: { label: "See your earnings", path: "/dashboard" },
+    cta: { label: "See your earnings", path: "/dashboard/provider" },
   },
   {
     key: "c7", audience: "caregiver", title: "Understanding tiers",
@@ -195,7 +195,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "Complete bookings, earn reviews, stand out.",
     heading: "Understanding provider tiers",
     body: "Hi {{first_name}}, your tier reflects your standing on DogCareGH — complete more bookings and earn good reviews, and you stand out more to owners. Keep delivering great care and let your tier climb.",
-    cta: { label: "View your profile", path: "/provider" },
+    cta: { label: "View your profile", path: "/dashboard/provider/profile" },
   },
   {
     key: "c8", audience: "caregiver", title: "Ask for reviews",
@@ -203,7 +203,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "The fastest way to win an owner's trust.",
     heading: "Ask happy clients for a review",
     body: "Hi {{first_name}}, reviews are the fastest way to win an owner's trust. After a job well done, ask your client to leave one — a handful of good reviews makes you the easy choice.",
-    cta: { label: "See your reviews", path: "/dashboard" },
+    cta: { label: "See your reviews", path: "/dashboard/provider" },
   },
   {
     key: "c9", audience: "caregiver", title: "Offer more than one service",
@@ -211,7 +211,7 @@ export const CAMPAIGN_TEMPLATES: CampaignTemplate[] = [
     preheader: "More services means more owners see you.",
     heading: "Offer more than one service",
     body: "Hi {{first_name}}, caregivers who offer a few services — say walking and daycare, or sitting and Overnight — get seen by more owners and stay busier. Add another service to widen your reach.",
-    cta: { label: "Add a service", path: "/provider" },
+    cta: { label: "Add a service", path: "/dashboard/provider/services" },
   },
   {
     key: "c10", audience: "caregiver", title: "For trainers (announcement)",
