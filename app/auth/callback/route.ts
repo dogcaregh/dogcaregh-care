@@ -154,6 +154,27 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${origin}/dashboard/provider/services`);
       }
 
+      // Owner (email-confirmation path): the DB trigger created the users row
+      // from name/email only, so persist the phone + neighbourhood captured at
+      // signup. Without this, owners who confirm by email have no location.
+      if (user) {
+        const meta = user.user_metadata as { name?: string; phone?: string; neighbourhood?: string };
+        if (meta.neighbourhood || meta.phone) {
+          const admin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            { auth: { autoRefreshToken: false, persistSession: false } }
+          );
+          await admin.from("users").upsert({
+            id: user.id,
+            email: user.email,
+            name: meta.name ?? user.email!.split("@")[0],
+            phone: meta.phone ?? "",
+            location: meta.neighbourhood ?? "",
+          });
+        }
+      }
+
       // Send welcome email on first email confirmation (confirmed within last 10 min)
       if (user?.email && user.email_confirmed_at) {
         const confirmedAt = new Date(user.email_confirmed_at).getTime();

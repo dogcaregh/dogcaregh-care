@@ -74,13 +74,21 @@ export default function OwnerRegisterPage() {
       return;
     }
 
+    if (!neighbourhood.trim()) {
+      setError("Please enter your neighbourhood or area so we can match you with caregivers nearby.");
+      setLoading(false);
+      return;
+    }
+
     const supabase = createClient();
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name },
+        // Carried through the email-confirmation flow so the callback can
+        // persist them even when there's no immediate session.
+        data: { name, phone: trimmedPhone, neighbourhood: neighbourhood.trim() },
         emailRedirectTo: `${window.location.origin}/auth/callback${
           returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : ""
         }`,
