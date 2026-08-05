@@ -21,7 +21,7 @@ export async function GET() {
   const [{ data: owner }, { data: bookings }] = await Promise.all([
     service
       .from("users")
-      .select("name, avatar_url, referred_by_code, referred_by_provider_id")
+      .select("name, avatar_url, location, referred_by_code, referred_by_provider_id")
       .eq("id", user.id)
       .single(),
     service

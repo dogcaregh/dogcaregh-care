@@ -156,11 +156,17 @@ language plpgsql
 security definer
 as $$
 begin
-  insert into public.users (id, name, email)
+  -- phone + location (neighbourhood) are copied straight from the signup
+  -- metadata so they are persisted the instant the account is created —
+  -- independent of the email-confirmation callback, which uses the PKCE
+  -- code flow and silently no-ops on cross-device confirmation.
+  insert into public.users (id, name, email, phone, location)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
-    new.email
+    new.email,
+    nullif(new.raw_user_meta_data->>'phone', ''),
+    nullif(new.raw_user_meta_data->>'neighbourhood', '')
   )
   on conflict (id) do nothing;
   return new;

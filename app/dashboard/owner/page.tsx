@@ -9,6 +9,8 @@ import { NotificationsBell } from "@/components/notifications-bell";
 import { useNotifications } from "@/lib/notifications-context";
 import { SERVICE_META } from "@/lib/service-meta";
 import { PetcitiAd } from "@/components/petciti-ad";
+import { LocationPicker } from "@/components/location-picker";
+import { resolveCoords } from "@/lib/geocode";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -252,6 +254,14 @@ export default function OwnerDashboard() {
   const [ownerName,   setOwnerName]   = useState("");
   const [ownerAvatar, setOwnerAvatar] = useState<string | null>(null);
   const [ownerId,     setOwnerId]     = useState("");
+
+  // Missing-location prompt: owners who signed up through a surface that never
+  // captured a neighbourhood (e.g. the trainer app) land here with no location,
+  // which breaks proximity matching. Prompt them to set it before they book.
+  const [needsLocation,   setNeedsLocation]   = useState(false);
+  const [locationInput,   setLocationInput]   = useState("");
+  const [savingLocation,  setSavingLocation]  = useState(false);
+  const [locationError,   setLocationError]   = useState<string | null>(null);
   const [referredBy,  setReferredBy]  = useState<{ code: string | null; providerId: string; providerName: string | null } | null>(null);
   const [dogs,       setDogs]       = useState<Dog[]>([]);
   const [bookings,   setBookings]   = useState<Booking[]>([]);
@@ -308,6 +318,7 @@ export default function OwnerDashboard() {
       const { owner: uRow, bookings: bks, referredBy: refBy } = ownerRes.ok ? await ownerRes.json() : { owner: null, bookings: [], referredBy: null };
       setOwnerName((uRow as { name: string } | null)?.name ?? "");
       setOwnerAvatar((uRow as { avatar_url: string | null } | null)?.avatar_url ?? null);
+      setNeedsLocation(!((uRow as { location: string | null } | null)?.location ?? "").trim());
       setOwnerId(user.id);
       setReferredBy(refBy ?? null);
       setDogs((dgs ?? []) as Dog[]);
@@ -417,6 +428,28 @@ export default function OwnerDashboard() {
     const ids = notifs.map(n => n.id);
     setNotifs([]);
     if (ids.length) await createClient().from("notifications").update({ read: true }).in("id", ids);
+  }
+
+  async function saveLocation(e: React.FormEvent) {
+    e.preventDefault();
+    const area = locationInput.trim();
+    if (!area) { setLocationError("Please enter your area so we can match you with caregivers nearby."); return; }
+    setSavingLocation(true);
+    setLocationError(null);
+    const sb = createClient();
+    // Mirror the edit page: persist the text plus geocoded coords for proximity.
+    const coords = await resolveCoords(area);
+    const { error } = await sb
+      .from("users")
+      .update({ location: area, lat: coords?.lat ?? null, lng: coords?.lng ?? null })
+      .eq("id", ownerId);
+    if (error) {
+      setLocationError(error.message);
+      setSavingLocation(false);
+      return;
+    }
+    setNeedsLocation(false);
+    setSavingLocation(false);
   }
 
   // ── Derived ──────────────────────────────────────────────────────────────
@@ -611,6 +644,42 @@ export default function OwnerDashboard() {
       </div>
 
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 space-y-8">
+
+        {/* ── Missing location prompt ── */}
+        {needsLocation && (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+            <div className="flex items-start gap-3">
+              <span className="text-xl leading-none">📍</span>
+              <div className="flex-1">
+                <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>
+                  Add your area to find caregivers near you
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  We couldn&apos;t find your neighbourhood. Add it so we can match you with the closest trusted providers.
+                </p>
+                <form onSubmit={saveLocation} className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-start">
+                  <div className="flex-1">
+                    <LocationPicker
+                      value={locationInput}
+                      onChange={setLocationInput}
+                      placeholder="e.g. East Legon"
+                      datalistId="owner-dashboard-areas"
+                    />
+                    {locationError && <p className="mt-1 text-xs text-red-500">{locationError}</p>}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={savingLocation || !locationInput.trim()}
+                    className="shrink-0 rounded-xl px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+                    style={{ backgroundColor: "#00b096" }}
+                  >
+                    {savingLocation ? "Saving…" : "Save area"}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ── DogTrainerGH cross-link (feature-flagged; off unless
              NEXT_PUBLIC_DOGTRAINER_LINK=on). Plain <a> = top-level navigation
