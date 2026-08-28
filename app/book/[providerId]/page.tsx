@@ -1095,8 +1095,6 @@ export default function BookPage() {
         })
         .filter((p): p is { subId: string; name: string; size: GroomSize; rate: number | null } => p !== null);
       const freshGroomingPicksForSlot = freshGroomingPicks.map(p => ({ subId: p.subId, size: p.size }));
-      const groomingLabels = freshGroomingPicks
-        .map(p => `${p.name} (${p.size.charAt(0).toUpperCase()}${p.size.slice(1)})`);
 
       const resolvedSlot = { ...slot, addonIds: freshAddonIds, groomingPicks: freshGroomingPicksForSlot };
 
@@ -1151,16 +1149,6 @@ export default function BookPage() {
         return;
       }
       createdIds.push(booking.id);
-
-      // Record the itemised grooming selection in the booking chat so the
-      // provider sees exactly which services and sizes were requested.
-      if (svc?.grooming_mode === "itemised" && groomingLabels.length > 0) {
-        await sb.from("messages").insert({
-          booking_id: booking.id,
-          sender_id:  user.id,
-          content:    `Requested grooming services: ${groomingLabels.join(", ")}.`,
-        });
-      }
 
       fetch(`/api/bookings/${booking.id}/email-trigger`, {
         method: "POST",
