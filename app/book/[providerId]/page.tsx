@@ -1077,26 +1077,28 @@ export default function BookPage() {
 
       // Remap grooming picks the same way — grooming_sub_services are
       // delete-and-reinserted on provider save, so match by name and keep the
-      // owner's chosen size. Also build human labels for the booking chat.
+      // owner's chosen size. Snapshot name + rate so the booking record is
+      // self-contained even if the provider later changes their service list.
       const loadSvc = services.find(s => s.id === slot.svcId);
       const loadSubName = new Map((loadSvc?.grooming_subs ?? []).map(gs => [gs.id, gs.name]));
       const freshSvcForSubs = freshServices.find(s => s.id === slot.svcId);
       const freshSubIdByName = new Map((freshSvcForSubs?.grooming_subs ?? []).map(gs => [gs.name, gs.id]));
+      const freshSubByName   = new Map((freshSvcForSubs?.grooming_subs ?? []).map(gs => [gs.name, gs]));
       const freshGroomingPicks = slot.groomingPicks
         .map(p => {
           const name    = loadSubName.get(p.subId);
           const freshId = name ? freshSubIdByName.get(name) : undefined;
-          return freshId ? { subId: freshId, size: p.size } : null;
+          if (!freshId || !name) return null;
+          const freshSub = freshSubByName.get(name);
+          const rate = freshSub ? subSizeRate(freshSub, p.size as GroomSize) : null;
+          return { subId: freshId, name, size: p.size, rate };
         })
-        .filter((p): p is GroomingPick => p !== null);
-      const groomingLabels = slot.groomingPicks
-        .map(p => {
-          const name = loadSubName.get(p.subId);
-          return name ? `${name} (${p.size.charAt(0).toUpperCase()}${p.size.slice(1)})` : null;
-        })
-        .filter((l): l is string => l !== null);
+        .filter((p): p is { subId: string; name: string; size: GroomSize; rate: number | null } => p !== null);
+      const freshGroomingPicksForSlot = freshGroomingPicks.map(p => ({ subId: p.subId, size: p.size }));
+      const groomingLabels = freshGroomingPicks
+        .map(p => `${p.name} (${p.size.charAt(0).toUpperCase()}${p.size.slice(1)})`);
 
-      const resolvedSlot = { ...slot, addonIds: freshAddonIds, groomingPicks: freshGroomingPicks };
+      const resolvedSlot = { ...slot, addonIds: freshAddonIds, groomingPicks: freshGroomingPicksForSlot };
 
       const svc = freshServices.find(s => s.id === slot.svcId);
       // Add-on-only booking: no main service — stored under the "add_on" type.
@@ -1140,6 +1142,7 @@ export default function BookPage() {
         commission_amount:  comm,
         provider_payout:    payout,
         addon_ids:          freshAddonIds.length > 0 ? freshAddonIds : null,
+        grooming_picks:     freshGroomingPicks.length > 0 ? freshGroomingPicks : null,
       }).select("id").single();
 
       if (bookingErr || !booking) {

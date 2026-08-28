@@ -301,7 +301,8 @@ export default function BookingPage() {
   const [uploading,setUploading]= useState(false);
   const [lightbox,       setLightbox]       = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [bookingAddons,  setBookingAddons]  = useState<{ id: string; name: string; description: string | null; price: number }[]>([]);
+  const [bookingAddons,   setBookingAddons]   = useState<{ id: string; name: string; description: string | null; price: number }[]>([]);
+  const [groomingPicks,   setGroomingPicks]   = useState<{ subId: string; name: string; size: string; rate: number | null }[]>([]);
 
   // Cancel modal state
   const [cancelPolicy,    setCancelPolicy]    = useState<CancelPolicy | null>(null);
@@ -343,7 +344,7 @@ export default function BookingPage() {
       ]);
 
       if (!apiRes.ok) { setLoading(false); return; }
-      const { booking: bk, review: rvData, addons: addonData, isAdmin } = await apiRes.json();
+      const { booking: bk, review: rvData, addons: addonData, groomingPicks: groomPicksData, isAdmin } = await apiRes.json();
       if (!bk) { setLoading(false); return; }
 
       const typedBk  = bk as unknown as BookingDetail;
@@ -380,6 +381,7 @@ export default function BookingPage() {
       setMessages((msgsRes.data ?? []) as Message[]);
       setExistingReview(rvData ? { rating: rvData.rating, body: rvData.body } : null);
       setBookingAddons(addonData ?? []);
+      setGroomingPicks(groomPicksData ?? []);
       setReviewLoaded(true);
       setLoading(false);
     }
@@ -950,6 +952,26 @@ export default function BookingPage() {
                           </div>
                         )}
                       </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Grooming picks */}
+              {groomingPicks.length > 0 && (
+                <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">✂️ Grooming Services</p>
+                  <div className="space-y-2">
+                    {groomingPicks.map((p, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{p.name}</p>
+                          <p className="text-xs text-gray-400">{SIZE_LABEL[p.size] ?? p.size}</p>
+                        </div>
+                        {p.rate != null && (
+                          <span className="text-sm font-bold" style={{ color: "#0a2e30" }}>GHS {Number(p.rate).toFixed(2)}</span>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>

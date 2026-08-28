@@ -27,7 +27,7 @@ export async function GET(
     .select(
       `id, service_type, start_date, end_date, selected_dates, additional_dog_ids,
        preferred_time, preferred_end_time, duration_hours,
-       gross_amount, provider_payout, status, owner_id, created_at, addon_ids,
+       gross_amount, provider_payout, status, owner_id, created_at, addon_ids, grooming_picks,
        providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
        dogs!dog_id(id, name, breed, size, age, vaccination_status, leash_trained),
        users!owner_id(name, avatar_url, location)`
@@ -65,5 +65,5 @@ export async function GET(
       : Promise.resolve({ data: [] }),
   ]);
 
-  return NextResponse.json({ booking, review: review ?? null, addons: addonDetails ?? [], isAdmin });
+  return NextResponse.json({ booking, review: review ?? null, addons: addonDetails ?? [], groomingPicks: (bk.grooming_picks as unknown[] | null) ?? [], isAdmin });
 }
