@@ -19,12 +19,12 @@ function getClients() {
 }
 
 const SERVICE_LABELS: Record<string, string> = {
-  dog_walking:    "Dog Walking",
-  pet_sitting:    "Dog Sitting",
-  doggy_daycare:  "Dog Daycare",
-  dog_boarding:   "Dog Overnight",
-  mobile_grooming:"Dog Grooming",
-  add_on:         "Add-on",
+  dog_walking:  "Dog Walking",
+  dog_sitting:  "Dog Sitting",
+  dog_daycare:  "Dog Daycare",
+  dog_boarding: "Dog Overnight",
+  dog_grooming: "Dog Grooming",
+  add_on:       "Add-on",
 };
 
 type NotificationType =
