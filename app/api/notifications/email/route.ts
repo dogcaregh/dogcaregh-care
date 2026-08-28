@@ -53,21 +53,28 @@ function buildContent(
   service: string,
   payoutAmount: string,
   grossAmount: string,
+  groomingPicks: { name: string; size: string; rate: number | null }[] = [],
 ): { subject: string; html: string } | null {
   const bookingUrl = bookingId ? `${BASE_URL}/booking/${bookingId}` : BASE_URL;
 
   switch (type) {
-    case "booking_request":
+    case "booking_request": {
+      const pickRows = groomingPicks.map(p => ({
+        label: p.name,
+        value: `${p.size.charAt(0).toUpperCase()}${p.size.slice(1)}${p.rate != null ? ` · GHS ${Number(p.rate).toFixed(2)}` : ""}`,
+      }));
       return {
         subject: `New booking request — ${service}`,
         html: renderDogCareEmail({
           preheader: `New ${service} booking request from ${ownerName}`,
           heading: "New Booking Request",
           intro: `<strong>${ownerName}</strong> has sent you a ${service} booking request. Review the details and accept or decline.`,
+          rows: pickRows,
           buttonText: "View Request",
           buttonUrl: bookingUrl,
         }),
       };
+    }
 
     case "booking_confirmed":
       return {
@@ -287,12 +294,13 @@ export async function POST(req: NextRequest) {
   let service = "service";
   let providerPayout = "0.00";
   let grossAmount = "0.00";
+  let groomingPicks: { name: string; size: string; rate: number | null }[] = [];
 
   if (booking_id) {
     const { data: booking, error: bErr } = await admin
       .from("bookings")
       .select(`
-        service_type, gross_amount, provider_payout,
+        service_type, gross_amount, provider_payout, grooming_picks,
         owner:users!bookings_owner_id_fkey(name),
         provider:providers!bookings_provider_id_fkey(
           user:users!providers_user_id_fkey(name)
@@ -309,6 +317,7 @@ export async function POST(req: NextRequest) {
       grossAmount = Number(booking.gross_amount).toFixed(2);
       ownerName = ((booking.owner as unknown) as { name: string } | null)?.name ?? ownerName;
       providerName = ((booking.provider as unknown) as { user: { name: string } | null } | null)?.user?.name ?? providerName;
+      groomingPicks = (booking.grooming_picks as { name: string; size: string; rate: number | null }[] | null) ?? [];
     }
   }
 
@@ -316,6 +325,7 @@ export async function POST(req: NextRequest) {
     type, message, booking_id,
     ownerName, providerName, service,
     providerPayout, grossAmount,
+    groomingPicks,
   );
   if (!content) {
     console.warn("[email-notification] no content for type:", type);

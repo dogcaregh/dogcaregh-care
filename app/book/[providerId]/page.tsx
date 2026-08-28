@@ -340,6 +340,7 @@ function slotValid(slot: Slot, services: ProviderService[]): boolean {
   if (!datesOk) return false;
   if (isHourly) return !!(slot.startTime && slot.endTime && slot.endTime > slot.startTime);
   if (isTiered) return !!(slot.sittingTier && slot.startTime);
+  if (svc.grooming_mode === "itemised") return slot.groomingPicks.length > 0;
   return true;
 }
 
