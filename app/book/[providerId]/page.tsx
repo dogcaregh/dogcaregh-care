@@ -192,13 +192,16 @@ function allowedGroomSizesFor(dogs: Dog[], dogIds: string[]): Set<GroomSize> {
 }
 
 // Sum of the selected (service, size) grooming picks for one session.
-function itemisedPicksTotal(svc: ProviderService, picks: GroomingPick[]): number {
+// Each pick's rate is multiplied by the number of selected dogs of that size.
+function itemisedPicksTotal(svc: ProviderService, picks: GroomingPick[], selectedDogs: Dog[] = []): number {
   let total = 0;
   for (const pick of picks) {
     const sub = (svc.grooming_subs ?? []).find(s => s.id === pick.subId);
     if (!sub) continue;
     const r = subSizeRate(sub, pick.size);
-    if (r != null) total += r;
+    if (r == null) continue;
+    const dogCount = selectedDogs.filter(d => groomSizeForDog(d.size) === pick.size).length;
+    total += r * Math.max(dogCount, 1);
   }
   return total;
 }
@@ -250,7 +253,7 @@ function slotGross(slot: Slot, services: ProviderService[], dogs: Dog[]): number
   }
   if (svc.grooming_mode === "itemised") {
     if (slot.groomingPicks.length === 0) return null;
-    const perSession = itemisedPicksTotal(svc, slot.groomingPicks);
+    const perSession = itemisedPicksTotal(svc, slot.groomingPicks, selDogs);
     return perSession > 0 ? perSession * days : null;
   }
   const r = totalRateForDogs(svc, selDogs);
@@ -709,7 +712,7 @@ function SlotPanel({
                     })}
                   </div>
                   <p className="mt-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                    ✂️ Prices are per grooming session. The size that matches your dog is selectable — add a service for each dog you&apos;re booking.
+                    ✂️ Each selected service is charged once per dog of that size. If you book 2 dogs of the same size, the rate applies twice.
                   </p>
                 </div>
               ) : (
