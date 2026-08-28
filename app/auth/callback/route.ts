@@ -154,9 +154,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${origin}/dashboard/provider/services`);
       }
 
-      // Owner (email-confirmation path): the DB trigger created the users row
-      // from name/email only, so persist the phone + neighbourhood captured at
-      // signup. Without this, owners who confirm by email have no location.
+      // Owner (email-confirmation path): the DB trigger already persisted
+      // phone + location from signup metadata. This upsert is a belt-and-
+      // suspenders fallback for cases where metadata wasn't available at
+      // trigger time.
       if (user) {
         const meta = user.user_metadata as { name?: string; phone?: string; neighbourhood?: string };
         if (meta.neighbourhood || meta.phone) {
