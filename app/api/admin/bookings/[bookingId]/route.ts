@@ -34,7 +34,7 @@ export async function GET(
       .select(`
         id, service_type, status, start_date, end_date, selected_dates,
         preferred_time, preferred_end_time, duration_hours, additional_dog_ids,
-        gross_amount, commission_amount, provider_payout, created_at,
+        gross_amount, commission_amount, provider_payout, created_at, grooming_picks,
         users!owner_id(name, email, phone),
         providers!provider_id(id, neighbourhood, users!user_id(name, email, phone)),
         dogs!dog_id(name, breed, size, age, vaccination_status, leash_trained)
@@ -66,7 +66,8 @@ export async function GET(
     additionalDogs = extra ?? [];
   }
 
-  return NextResponse.json({ booking, additionalDogs, dispute: dispute ?? null, messages: messages ?? [] });
+  const groomingPicks = (booking as { grooming_picks: unknown[] | null }).grooming_picks ?? [];
+  return NextResponse.json({ booking, additionalDogs, groomingPicks, dispute: dispute ?? null, messages: messages ?? [] });
 }
 
 export async function PATCH(

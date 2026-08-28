@@ -151,6 +151,7 @@ export default function AdminBookingDetailPage() {
 
   const [booking,       setBooking]      = useState<Booking | null>(null);
   const [additionalDogs, setAdditionalDogs] = useState<DogSnap[]>([]);
+  const [groomingPicks, setGroomingPicks] = useState<{ subId: string; name: string; size: string; rate: number | null }[]>([]);
   const [dispute,       setDispute]      = useState<Dispute | null>(null);
   const [messages,      setMessages]     = useState<Message[]>([]);
   const [loading,       setLoading]      = useState(true);
@@ -167,6 +168,7 @@ export default function AdminBookingDetailPage() {
         if (!data) { router.push("/admin/bookings"); return; }
         setBooking(data.booking);
         setAdditionalDogs(data.additionalDogs ?? []);
+        setGroomingPicks(data.groomingPicks ?? []);
         setOverrideSt(data.booking.status);
         setDispute(data.dispute);
         setMessages(data.messages ?? []);
@@ -389,6 +391,26 @@ export default function AdminBookingDetailPage() {
                       </div>
                     )}
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Grooming picks */}
+        {groomingPicks.length > 0 && (
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">✂️ Grooming Services</p>
+            <div className="space-y-2">
+              {groomingPicks.map((p, i) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <div>
+                    <p className="font-semibold" style={{ color: "#0a2e30" }}>{p.name}</p>
+                    <p className="text-xs capitalize text-gray-400">{p.size}</p>
+                  </div>
+                  {p.rate != null && (
+                    <span className="font-bold" style={{ color: "#0a2e30" }}>GHS {Number(p.rate).toFixed(2)}</span>
+                  )}
                 </div>
               ))}
             </div>
