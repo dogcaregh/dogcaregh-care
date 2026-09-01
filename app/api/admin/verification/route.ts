@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id, action, level, note } = await req.json();
-  if (!id || !["approve", "reject"].includes(action)) {
+  if (!id || !["approve", "reject", "upgrade"].includes(action)) {
     return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
   }
 
@@ -66,6 +66,11 @@ export async function PATCH(req: NextRequest) {
         active:              true,
         verified_at:         new Date().toISOString(),
         verification_note:   note?.trim() || null,
+      }
+    : action === "upgrade"
+    ? {
+        provider_level:    2,
+        verification_note: note?.trim() || null,
       }
     : {
         verification_status: "rejected",
@@ -95,14 +100,16 @@ export async function PATCH(req: NextRequest) {
   if (prov) {
     const provUserId = prov.user_id as string;
 
-    const message = action === "approve"
+    const message = action === "upgrade"
+      ? `Great news! Your DogCareGH provider account has been upgraded to Level 2. You can now offer the full range of home services — sitting, boarding, and daycare.`
+      : action === "approve"
       ? `Congratulations! Your DogCareGH verification has been approved. You are now a Level ${level ?? 1} care provider and can start accepting bookings.`
       : `Your DogCareGH verification application was not approved.${note?.trim() ? ` Reason: ${note.trim()}` : ""} You may reapply after addressing the issues.`;
 
     await service.from("notifications").insert({
       user_id:    provUserId,
       booking_id: null,
-      type:       action === "approve" ? "verification_approved" : "verification_rejected",
+      type:       action === "reject" ? "verification_rejected" : "verification_approved",
       message,
     });
 
@@ -115,7 +122,7 @@ export async function PATCH(req: NextRequest) {
         record: {
           user_id:    provUserId,
           booking_id: null,
-          type:       action === "approve" ? "verification_approved" : "verification_rejected",
+          type:       action === "reject" ? "verification_rejected" : "verification_approved",
           message,
         },
       }),

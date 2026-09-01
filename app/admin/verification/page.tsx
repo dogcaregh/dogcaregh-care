@@ -93,7 +93,7 @@ export default function AdminVerificationPage() {
     const res = await fetch("/api/admin/verification", {
       method:  "PATCH",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ id, action: "approve", level: 2, note: noteMap[id] ?? "" }),
+      body:    JSON.stringify({ id, action: "upgrade", note: noteMap[id] ?? "" }),
     });
     if (res.ok) {
       setRows(prev => prev.map(r => r.id === id ? { ...r, provider_level: 2 } : r));
@@ -169,7 +169,7 @@ export default function AdminVerificationPage() {
               const docs       = r.verification_docs;
               const sm         = STATUS_STYLE[r.verification_status] ?? STATUS_STYLE.pending;
               const isPending  = r.verification_status === "pending";
-              const canUpgrade = r.verification_status === "approved" && r.provider_level === 1 && docs?.applying_level2 === true;
+              const canUpgrade = r.verification_status === "approved" && r.provider_level === 1;
               const isBusy     = acting === r.id;
 
               return (
@@ -308,7 +308,11 @@ export default function AdminVerificationPage() {
                     {/* Level 2 upgrade */}
                     {canUpgrade && (
                       <div className="mt-4 space-y-2 rounded-xl border border-blue-100 bg-blue-50 p-4">
-                        <p className="text-xs font-semibold text-blue-700">This provider applied for Level 2 (home services). Approve when their space check clears.</p>
+                        <p className="text-xs font-semibold text-blue-700">
+                          {docs?.applying_level2
+                            ? "This provider applied for Level 2 (home services). Approve when their space check clears."
+                            : "Upgrade this provider to Level 2 to unlock sitting, boarding, and daycare."}
+                        </p>
                         <textarea
                           value={noteMap[r.id] ?? ""}
                           onChange={e => setNoteMap(prev => ({ ...prev, [r.id]: e.target.value }))}
