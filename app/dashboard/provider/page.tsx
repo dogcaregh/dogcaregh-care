@@ -10,6 +10,7 @@ import { NotificationsBell } from "@/components/notifications-bell";
 import { useNotifications } from "@/lib/notifications-context";
 import { SERVICE_META } from "@/lib/service-meta";
 import { PetcitiAd } from "@/components/petciti-ad";
+import { PendingActionsModal, type ActionItem } from "@/components/pending-actions-modal";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -837,6 +838,23 @@ export default function ProviderDashboard() {
   const earningsCashouts = useMemo(() => cashouts.filter(c => c.source !== "referral"), [cashouts]);
   const referralCashouts = useMemo(() => cashouts.filter(c => c.source === "referral"), [cashouts]);
 
+  const pendingActions = useMemo<ActionItem[]>(() =>
+    bookings
+      .filter(b => b.status === "pending")
+      .map(b => {
+        const ownerUser = resolveArr(b.users as { name: string } | { name: string }[] | null);
+        return {
+          bookingId:      b.id,
+          serviceType:    b.service_type,
+          status:         "pending" as const,
+          grossAmount:    b.gross_amount,
+          startDate:      b.start_date,
+          otherPartyName: (ownerUser as { name: string } | null)?.name ?? null,
+        };
+      }),
+    [bookings]
+  );
+
   // ── Loading ──────────────────────────────────────────────────────────────
 
   if (loading) return (
@@ -848,6 +866,11 @@ export default function ProviderDashboard() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
+      <PendingActionsModal
+        items={pendingActions}
+        userName={providerName}
+        dashboardHref="/dashboard/provider"
+      />
 
       {/* ── Nav ── */}
       <nav

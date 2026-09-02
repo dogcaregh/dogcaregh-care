@@ -11,6 +11,7 @@ import { SERVICE_META } from "@/lib/service-meta";
 import { PetcitiAd } from "@/components/petciti-ad";
 import { LocationPicker } from "@/components/location-picker";
 import { resolveCoords } from "@/lib/geocode";
+import { PendingActionsModal, type ActionItem } from "@/components/pending-actions-modal";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -475,6 +476,24 @@ export default function OwnerDashboard() {
     return bookings.filter(b => allowed.includes(b.status));
   }, [bookings, tab]);
 
+  const pendingActions = useMemo<ActionItem[]>(() =>
+    bookings
+      .filter(b => b.status === "confirmed" || b.status === "completed_pending")
+      .map(b => {
+        const prov     = resolve(b.providers);
+        const provUser = resolve(prov?.users);
+        return {
+          bookingId:      b.id,
+          serviceType:    b.service_type,
+          status:         b.status as "confirmed" | "completed_pending",
+          grossAmount:    b.gross_amount,
+          startDate:      b.start_date,
+          otherPartyName: provUser?.name ?? null,
+        };
+      }),
+    [bookings]
+  );
+
   // ── Loading ──────────────────────────────────────────────────────────────
 
   if (loading) return (
@@ -488,6 +507,11 @@ export default function OwnerDashboard() {
 
   return (
     <>
+    <PendingActionsModal
+      items={pendingActions}
+      userName={ownerName}
+      dashboardHref="/dashboard/owner"
+    />
     {/* Dispute modal */}
     {disputeModal && (
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setDisputeModal(null)}>
