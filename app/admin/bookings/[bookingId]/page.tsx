@@ -152,6 +152,7 @@ export default function AdminBookingDetailPage() {
   const [booking,       setBooking]      = useState<Booking | null>(null);
   const [additionalDogs, setAdditionalDogs] = useState<DogSnap[]>([]);
   const [groomingPicks, setGroomingPicks] = useState<{ subId: string; name: string; size: string; rate: number | null }[]>([]);
+  const [addons,        setAddons]        = useState<{ id: string; name: string; description: string | null; price: number }[]>([]);
   const [dispute,       setDispute]      = useState<Dispute | null>(null);
   const [messages,      setMessages]     = useState<Message[]>([]);
   const [loading,       setLoading]      = useState(true);
@@ -169,6 +170,7 @@ export default function AdminBookingDetailPage() {
         setBooking(data.booking);
         setAdditionalDogs(data.additionalDogs ?? []);
         setGroomingPicks(data.groomingPicks ?? []);
+        setAddons(data.addons ?? []);
         setOverrideSt(data.booking.status);
         setDispute(data.dispute);
         setMessages(data.messages ?? []);
@@ -411,6 +413,24 @@ export default function AdminBookingDetailPage() {
                   {p.rate != null && (
                     <span className="font-bold" style={{ color: "#0a2e30" }}>GHS {Number(p.rate).toFixed(2)}</span>
                   )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add-ons */}
+        {addons.length > 0 && (
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400">➕ Add-ons</p>
+            <div className="space-y-2">
+              {addons.map(a => (
+                <div key={a.id} className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{a.name}</p>
+                    {a.description && <p className="text-xs text-gray-400">{a.description}</p>}
+                  </div>
+                  <span className="shrink-0 text-sm font-bold" style={{ color: "#0a2e30" }}>GHS {Number(a.price).toFixed(2)}</span>
                 </div>
               ))}
             </div>

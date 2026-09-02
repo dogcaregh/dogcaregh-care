@@ -35,6 +35,7 @@ export async function GET(
         id, service_type, status, start_date, end_date, selected_dates,
         preferred_time, preferred_end_time, duration_hours, additional_dog_ids,
         gross_amount, commission_amount, provider_payout, created_at, grooming_picks,
+        addon_ids, addon_snapshot,
         users!owner_id(name, email, phone),
         providers!provider_id(id, neighbourhood, users!user_id(name, email, phone)),
         dogs!dog_id(name, breed, size, age, vaccination_status, leash_trained)
@@ -55,9 +56,11 @@ export async function GET(
 
   if (error || !booking) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Fetch any additional dogs on the booking so the admin sees all of them.
+  const bk = booking as Record<string, unknown>;
+
+  // Fetch additional dogs so the admin sees all of them.
   let additionalDogs: unknown[] = [];
-  const extraIds = (booking as { additional_dog_ids: string[] | null }).additional_dog_ids;
+  const extraIds = bk.additional_dog_ids as string[] | null;
   if (extraIds && extraIds.length > 0) {
     const { data: extra } = await service
       .from("dogs")
@@ -66,8 +69,23 @@ export async function GET(
     additionalDogs = extra ?? [];
   }
 
-  const groomingPicks = (booking as { grooming_picks: unknown[] | null }).grooming_picks ?? [];
-  return NextResponse.json({ booking, additionalDogs, groomingPicks, dispute: dispute ?? null, messages: messages ?? [] });
+  // Resolve add-ons: prefer snapshot (price-frozen), fall back to live lookup for legacy bookings.
+  type AddonSnap = { id: string; name: string; description: string | null; price: number };
+  const addonSnapshot = bk.addon_snapshot as AddonSnap[] | null;
+  let addons: AddonSnap[] = addonSnapshot ?? [];
+  if (!addonSnapshot) {
+    const addonIds = bk.addon_ids as string[] | null;
+    if (addonIds && addonIds.length > 0) {
+      const { data: live } = await service
+        .from("provider_addons")
+        .select("id, name, description, price")
+        .in("id", addonIds);
+      addons = (live ?? []) as AddonSnap[];
+    }
+  }
+
+  const groomingPicks = (bk.grooming_picks as unknown[] | null) ?? [];
+  return NextResponse.json({ booking, additionalDogs, groomingPicks, addons, dispute: dispute ?? null, messages: messages ?? [] });
 }
 
 export async function PATCH(

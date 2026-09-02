@@ -273,9 +273,10 @@ function slotPricing(
   discountTiers: DiscountTier[],
   addons: ProviderAddon[],
 ): Pricing | null {
+  const dogMult    = Math.max(slot.dogIds.length, 1);
   const addonTotal = Math.round(
     addons.filter(a => slot.addonIds.includes(a.id))
-      .reduce((sum, a) => sum + Number(a.price), 0) * 100
+      .reduce((sum, a) => sum + Number(a.price), 0) * dogMult * 100
   ) / 100;
 
   const svc = services.find(s => s.id === slot.svcId);
@@ -895,8 +896,11 @@ function SlotPanel({
                       <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>{addon.name}</p>
                       {addon.description && <p className="mt-0.5 text-xs text-gray-400">{addon.description}</p>}
                     </div>
-                    <span className="shrink-0 text-sm font-semibold" style={{ color: "#0a2e30" }}>
+                    <span className="shrink-0 text-right text-sm font-semibold" style={{ color: "#0a2e30" }}>
                       + GHS {Number(addon.price).toFixed(2)}
+                      {selDogs.length > 1 && (
+                        <span className="block text-[10px] font-normal text-gray-400">per dog</span>
+                      )}
                     </span>
                   </button>
                 );
@@ -949,6 +953,7 @@ function SlotPanel({
             {pricing.addonTotal > 0 && (
               <p className="mt-0.5 text-[10px] text-gray-400">
                 incl. GHS {pricing.addonTotal.toFixed(2)} add-ons
+                {selDogs.length > 1 && ` (×${selDogs.length} dogs)`}
               </p>
             )}
             <p className="mt-0.5 text-[10px] text-gray-400">
@@ -1146,6 +1151,9 @@ export default function BookPage() {
         commission_amount:  comm,
         provider_payout:    payout,
         addon_ids:          freshAddonIds.length > 0 ? freshAddonIds : null,
+        addon_snapshot:     freshAddonIds.length > 0
+          ? freshAddons.filter(a => freshAddonIds.includes(a.id)).map(a => ({ id: a.id, name: a.name, description: a.description ?? null, price: a.price }))
+          : null,
         grooming_picks:     freshGroomingPicks.length > 0 ? freshGroomingPicks : null,
       }).select("id").single();
 

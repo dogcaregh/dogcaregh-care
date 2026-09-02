@@ -27,7 +27,7 @@ export async function GET(
     .select(
       `id, service_type, start_date, end_date, selected_dates, additional_dog_ids,
        preferred_time, preferred_end_time, duration_hours,
-       gross_amount, provider_payout, status, owner_id, created_at, addon_ids, grooming_picks,
+       gross_amount, provider_payout, status, owner_id, created_at, addon_ids, addon_snapshot, grooming_picks,
        providers!provider_id(id, user_id, avatar_url, neighbourhood, users!user_id(name)),
        dogs!dog_id(id, name, breed, size, age, vaccination_status, leash_trained),
        users!owner_id(name, avatar_url, location)`
@@ -53,17 +53,23 @@ export async function GET(
     isAdmin = true;
   }
 
-  const [{ data: review }, { data: addonDetails }] = await Promise.all([
+  type AddonSnap = { id: string; name: string; description: string | null; price: number };
+  const addonSnapshot = bk.addon_snapshot as AddonSnap[] | null;
+
+  const [{ data: review }, { data: liveAddons }] = await Promise.all([
     service
       .from("reviews")
       .select("rating, body")
       .eq("booking_id", bookingId)
       .eq("from_user_id", user.id)
       .maybeSingle(),
-    (bk.addon_ids as string[] | null)?.length
+    // Only hit provider_addons if there's no snapshot (legacy bookings pre-snapshot)
+    !addonSnapshot && (bk.addon_ids as string[] | null)?.length
       ? service.from("provider_addons").select("id, name, description, price").in("id", bk.addon_ids as string[])
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: null }),
   ]);
 
-  return NextResponse.json({ booking, review: review ?? null, addons: addonDetails ?? [], groomingPicks: (bk.grooming_picks as unknown[] | null) ?? [], isAdmin });
+  const addons = addonSnapshot ?? liveAddons ?? [];
+
+  return NextResponse.json({ booking, review: review ?? null, addons, groomingPicks: (bk.grooming_picks as unknown[] | null) ?? [], isAdmin });
 }
