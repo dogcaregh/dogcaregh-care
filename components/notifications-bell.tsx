@@ -5,15 +5,17 @@ import Link from "next/link";
 import { useNotifications, type AppNotification } from "@/lib/notifications-context";
 
 const TYPE_EMOJI: Record<string, string> = {
-  booking_confirmed:    "✅",
-  booking_declined:     "❌",
-  booking_cancelled:    "🚫",
-  payment_received:     "💳",
-  service_started:      "▶️",
-  awaiting_confirmation:"⏳",
-  payout_triggered:     "💰",
-  cashout_paid:         "🏦",
-  new_message:          "💬",
+  booking_confirmed:     "✅",
+  booking_declined:      "❌",
+  booking_cancelled:     "🚫",
+  payment_received:      "💳",
+  service_started:       "▶️",
+  awaiting_confirmation: "⏳",
+  payout_triggered:      "💰",
+  cashout_paid:          "🏦",
+  new_message:           "💬",
+  verification_approved: "🎉",
+  verification_rejected: "⚠️",
 };
 
 function fmtTime(iso: string) {
@@ -44,17 +46,26 @@ function NotificationItem({
 
   const inner = (
     <div
-      className="flex items-start gap-3 rounded-xl px-3 py-2.5 transition hover:bg-gray-50"
-      style={!n.read ? { backgroundColor: "rgba(0,176,150,.06)" } : {}}
+      className="relative flex items-start gap-3 overflow-hidden rounded-xl px-3 py-2.5 transition hover:bg-gray-50"
+      style={!n.read ? { backgroundColor: "rgba(0,176,150,.07)" } : {}}
     >
+      {/* Left accent stripe for unread items */}
+      {!n.read && (
+        <span
+          className="absolute left-0 top-0 h-full w-[3px] rounded-l-xl"
+          style={{ backgroundColor: "#00b096" }}
+        />
+      )}
       <span className="mt-0.5 shrink-0 text-base">{emoji}</span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs leading-snug text-gray-700">{n.message}</p>
+        <p
+          className="text-xs leading-snug"
+          style={{ color: n.read ? "#6b7280" : "#111827", fontWeight: n.read ? 400 : 600 }}
+        >
+          {n.message}
+        </p>
         <p className="mt-0.5 text-[10px] text-gray-400">{fmtTime(n.created_at)}</p>
       </div>
-      {!n.read && (
-        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: "#00b096" }} />
-      )}
     </div>
   );
 
@@ -98,13 +109,22 @@ export function NotificationsBell() {
           <path strokeLinecap="round" strokeLinejoin="round"
             d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
+
         {unreadCount > 0 && (
-          <span
-            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white"
-            style={{ backgroundColor: "#00b096" }}
-          >
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
+          <>
+            {/* Pulsing ring — draws the eye without obscuring the count */}
+            <span
+              className="absolute -right-1 -top-1 h-4 w-4 animate-ping rounded-full opacity-60"
+              style={{ backgroundColor: "#00b096" }}
+            />
+            {/* Static count badge on top */}
+            <span
+              className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white"
+              style={{ backgroundColor: "#00b096" }}
+            >
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          </>
         )}
       </button>
 

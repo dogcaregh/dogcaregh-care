@@ -14,9 +14,33 @@ const TYPE_EMOJI: Record<string, string> = {
   awaiting_confirmation: "⏳",
   payout_triggered:      "💰",
   new_message:           "💬",
+  verification_approved: "🎉",
+  verification_rejected: "⚠️",
 };
 
-const AUTO_DISMISS_MS = 4000;
+// Accent colour + tinted background per notification type
+const TYPE_ACCENT: Record<string, { color: string; bg: string }> = {
+  booking_confirmed:     { color: "#0891b2", bg: "rgba(8,145,178,.07)"  },
+  booking_declined:      { color: "#dc2626", bg: "rgba(220,38,38,.06)"  },
+  booking_cancelled:     { color: "#dc2626", bg: "rgba(220,38,38,.06)"  },
+  payment_received:      { color: "#059669", bg: "rgba(5,150,105,.07)"  },
+  payout_triggered:      { color: "#059669", bg: "rgba(5,150,105,.07)"  },
+  service_started:       { color: "#2563eb", bg: "rgba(37,99,235,.06)"  },
+  awaiting_confirmation: { color: "#d97706", bg: "rgba(251,191,36,.08)" },
+  new_message:           { color: "#00b096", bg: "rgba(0,176,150,.07)"  },
+  verification_approved: { color: "#10b981", bg: "rgba(16,185,129,.07)" },
+  verification_rejected: { color: "#dc2626", bg: "rgba(220,38,38,.06)"  },
+};
+
+const DEFAULT_ACCENT = { color: "#00b096", bg: "rgba(0,176,150,.07)" };
+
+// High-importance notifications linger a bit longer
+const DISMISS_MS: Record<string, number> = {
+  booking_confirmed: 6000,
+  payment_received:  6000,
+  payout_triggered:  6000,
+};
+const DEFAULT_DISMISS_MS = 4000;
 
 function Toast({
   n,
@@ -31,13 +55,15 @@ function Toast({
   const [show, setShow] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const accent = TYPE_ACCENT[n.type] ?? DEFAULT_ACCENT;
+  const dismissMs = DISMISS_MS[n.type] ?? DEFAULT_DISMISS_MS;
+
   useEffect(() => {
-    // Tiny delay so the CSS transition fires
     const enter = setTimeout(() => setShow(true), 10);
     timerRef.current = setTimeout(() => {
       setShow(false);
       setTimeout(onDismiss, 300);
-    }, AUTO_DISMISS_MS);
+    }, dismissMs);
     return () => {
       clearTimeout(enter);
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -59,20 +85,32 @@ function Toast({
   return (
     <div
       onClick={handleClick}
-      className="flex cursor-pointer items-start gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-xl shadow-black/15 transition-all duration-300"
+      className="flex cursor-pointer items-start gap-3 overflow-hidden rounded-2xl bg-white shadow-xl shadow-black/20 transition-all duration-300"
       style={{
-        opacity:   show ? 1 : 0,
-        transform: show ? "translateX(0)" : "translateX(110%)",
-        minWidth:  240,
-        maxWidth:  300,
+        opacity:     show ? 1 : 0,
+        transform:   show ? "translateX(0)" : "translateX(110%)",
+        minWidth:    248,
+        maxWidth:    308,
+        borderLeft:  `4px solid ${accent.color}`,
+        backgroundColor: accent.bg,
       }}
     >
-      <span className="mt-0.5 shrink-0 text-lg">{TYPE_EMOJI[n.type] ?? "🔔"}</span>
-      <p className="flex-1 text-xs leading-snug text-gray-700">{n.message}</p>
+      {/* Emoji pill */}
+      <span
+        className="ml-3 mt-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-base"
+        style={{ backgroundColor: `${accent.color}18` }}
+      >
+        {TYPE_EMOJI[n.type] ?? "🔔"}
+      </span>
+
+      <p className="flex-1 py-3 pr-1 text-xs font-medium leading-snug text-gray-800">
+        {n.message}
+      </p>
+
       <button
         type="button"
         onClick={handleDismiss}
-        className="shrink-0 text-gray-300 transition hover:text-gray-500"
+        className="mr-3 mt-3 shrink-0 text-gray-300 transition hover:text-gray-500"
         aria-label="Dismiss"
       >
         ✕
@@ -85,7 +123,6 @@ export function NotificationToaster() {
   const { toastQueue, dismissToast } = useNotifications();
   const { openBookingId, openChatMinimized } = useChat();
 
-  // Auto-open the minimized chat bubble when a message arrives and chat is closed
   useEffect(() => {
     const latest = toastQueue[toastQueue.length - 1];
     if (
@@ -97,9 +134,7 @@ export function NotificationToaster() {
     }
   }, [toastQueue]);
 
-  // Show at most 3 toasts at a time
   const visible = toastQueue.slice(-3);
-
   if (visible.length === 0) return null;
 
   return (
