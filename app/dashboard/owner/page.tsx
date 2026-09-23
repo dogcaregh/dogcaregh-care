@@ -270,6 +270,7 @@ export default function OwnerDashboard() {
   const [loading,    setLoading]    = useState(true);
   const [tab,        setTab]        = useState<TabKey>("all");
   const tabsRef = useRef<HTMLDivElement>(null);
+  const [navOpen, setNavOpen] = useState(false);
 
   function goToTab(t: TabKey) {
     setTab(t);
@@ -610,32 +611,69 @@ export default function OwnerDashboard() {
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
 
       {/* ── Nav ── */}
-      <nav className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 px-6 py-4 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
-        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto md:h-[4.5rem]" /></Link>
-        <div className="flex items-center gap-3">
-          <Link href="/search" className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 sm:block">
-            Find Providers
-          </Link>
-          <NotificationsBell />
-          <Link href="/dashboard/owner/profile" className="flex items-center transition hover:opacity-80" title="My Profile">
-            {ownerAvatar ? (
-              <img src={ownerAvatar} alt={firstName} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/25" />
-            ) : (
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white ring-2 ring-white/25"
-                style={{ backgroundColor: ownerId ? avatarBg(ownerId) : "#00b096" }}
-              >
-                {ini(firstName)}
-              </div>
-            )}
-          </Link>
-          <button
-            onClick={async () => { await createClient().auth.signOut(); router.push("/"); }}
-            className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
-          >
-            Sign Out
-          </button>
+      <nav className="sticky top-0 z-20 border-b border-white/10" style={{ backgroundColor: "#0a2e30" }}>
+        <div className="flex items-center justify-between px-4 py-3 md:px-12 md:py-4">
+          <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-10 w-auto md:h-[4.5rem]" /></Link>
+          <div className="flex items-center gap-2 md:gap-3">
+            <Link href="/search" className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 md:block">
+              Find Providers
+            </Link>
+            <NotificationsBell />
+            <Link href="/dashboard/owner/profile" className="flex items-center transition hover:opacity-80" title="My Profile">
+              {ownerAvatar ? (
+                <img src={ownerAvatar} alt={firstName} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/25" />
+              ) : (
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white ring-2 ring-white/25"
+                  style={{ backgroundColor: ownerId ? avatarBg(ownerId) : "#00b096" }}
+                >
+                  {ini(firstName)}
+                </div>
+              )}
+            </Link>
+            <button
+              onClick={async () => { await createClient().auth.signOut(); router.push("/"); }}
+              className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 md:block"
+            >
+              Sign Out
+            </button>
+            <button
+              onClick={() => setNavOpen(o => !o)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-white/10 md:hidden"
+              aria-label={navOpen ? "Close menu" : "Open menu"}
+            >
+              {navOpen ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
+        {navOpen && (
+          <div className="border-t border-white/10 px-3 py-3 md:hidden" style={{ backgroundColor: "#061e20" }}>
+            <div className="space-y-1">
+              <Link href="/search" className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10" style={{ color: "rgba(255,255,255,.7)" }} onClick={() => setNavOpen(false)}>
+                🔍 Find Providers
+              </Link>
+              <Link href="/dashboard/owner/edit" className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10" style={{ color: "rgba(255,255,255,.7)" }} onClick={() => setNavOpen(false)}>
+                ✏️ Edit Profile
+              </Link>
+              <div className="border-t border-white/10 pt-1">
+                <button
+                  onClick={async () => { setNavOpen(false); await createClient().auth.signOut(); router.push("/"); }}
+                  className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/50 transition hover:bg-white/10"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* ── Hero / stats ── */}

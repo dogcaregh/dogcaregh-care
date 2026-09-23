@@ -329,11 +329,11 @@ function EarningsView({
               const st = CASHOUT_STATUS[c.status] ?? CASHOUT_STATUS.pending;
               return (
                 <div key={c.id} className="flex items-center justify-between px-5 py-3.5">
-                  <div>
+                  <div className="min-w-0 flex-1 pr-3">
                     <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>
                       GHS {Number(c.amount).toFixed(2)}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="truncate text-xs text-gray-400">
                       {MOMO_LABELS[c.momo_network] ?? c.momo_network} · {c.momo_number} · {fmtDate(c.created_at)}
                     </p>
                     {c.note && <p className="mt-0.5 text-xs text-gray-500 italic">{c.note}</p>}
@@ -373,18 +373,18 @@ function EarningsView({
                   className="flex items-center justify-between px-5 py-3.5 transition hover:bg-gray-50 cursor-pointer"
                   onClick={() => window.location.href = `/booking/${b.id}`}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex min-w-0 flex-1 items-center gap-4">
                     <div
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold text-white"
                       style={{ backgroundColor: avatarBg(b.owner_id) }}
                     >
                       {ini(owner?.name)}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold" style={{ color: "#0a2e30" }}>
                         {owner?.name?.split(" ")[0] ?? "Owner"}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="truncate text-xs text-gray-400">
                         {svc?.emoji} {svc?.label} · {fmtDate(b.end_date)}
                       </p>
                     </div>
@@ -690,6 +690,7 @@ export default function ProviderDashboard() {
   const [tab,          setTab]          = useState<TabKey>("requests");
   const [updating,     setUpdating]     = useState<string | null>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const [navOpen, setNavOpen] = useState(false);
 
   function goToTab(t: TabKey) {
     setTab(t);
@@ -873,38 +874,72 @@ export default function ProviderDashboard() {
       />
 
       {/* ── Nav ── */}
-      <nav
-        className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 px-6 py-4 md:px-12"
-        style={{ backgroundColor: "#0a2e30" }}
-      >
-        <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-11 w-auto md:h-[4.5rem]" /></Link>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard/provider/services"
-            className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 sm:block"
-          >
-            My Services
-          </Link>
-          <NotificationsBell />
-          <Link href="/dashboard/provider/profile" className="flex items-center transition hover:opacity-80" title="My Profile">
-            {providerAvatar ? (
-              <img src={providerAvatar} alt={providerName.split(" ")[0]} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/25" />
-            ) : (
-              <div
-                className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white ring-2 ring-white/25"
-                style={{ backgroundColor: providerId ? avatarBg(providerId) : "#00b096" }}
-              >
-                {ini(providerName)}
-              </div>
-            )}
-          </Link>
-          <button
-            onClick={async () => { await createClient().auth.signOut(); router.push("/"); }}
-            className="rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
-          >
-            Sign Out
-          </button>
+      <nav className="sticky top-0 z-20 border-b border-white/10" style={{ backgroundColor: "#0a2e30" }}>
+        <div className="flex items-center justify-between px-4 py-3 md:px-12 md:py-4">
+          <Link href="/"><img src="/weblogo.png" alt="DogCareGH" className="h-10 w-auto md:h-[4.5rem]" /></Link>
+          <div className="flex items-center gap-2 md:gap-3">
+            <Link
+              href="/dashboard/provider/services"
+              className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 md:block"
+            >
+              My Services
+            </Link>
+            <NotificationsBell />
+            <Link href="/dashboard/provider/profile" className="flex items-center transition hover:opacity-80" title="My Profile">
+              {providerAvatar ? (
+                <img src={providerAvatar} alt={providerName.split(" ")[0]} className="h-8 w-8 rounded-full object-cover ring-2 ring-white/25" />
+              ) : (
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white ring-2 ring-white/25"
+                  style={{ backgroundColor: providerId ? avatarBg(providerId) : "#00b096" }}
+                >
+                  {ini(providerName)}
+                </div>
+              )}
+            </Link>
+            <button
+              onClick={async () => { await createClient().auth.signOut(); router.push("/"); }}
+              className="hidden rounded-full border border-white/20 px-4 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 md:block"
+            >
+              Sign Out
+            </button>
+            <button
+              onClick={() => setNavOpen(o => !o)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl transition hover:bg-white/10 md:hidden"
+              aria-label={navOpen ? "Close menu" : "Open menu"}
+            >
+              {navOpen ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
+        {navOpen && (
+          <div className="border-t border-white/10 px-3 py-3 md:hidden" style={{ backgroundColor: "#061e20" }}>
+            <div className="space-y-1">
+              <Link href="/dashboard/provider/services" className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10" style={{ color: "rgba(255,255,255,.7)" }} onClick={() => setNavOpen(false)}>
+                🐾 My Services
+              </Link>
+              <Link href="/dashboard/provider/edit" className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10" style={{ color: "rgba(255,255,255,.7)" }} onClick={() => setNavOpen(false)}>
+                ✏️ Edit Profile
+              </Link>
+              <div className="border-t border-white/10 pt-1">
+                <button
+                  onClick={async () => { setNavOpen(false); await createClient().auth.signOut(); router.push("/"); }}
+                  className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/50 transition hover:bg-white/10"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* ── Hero / stats ── */}
