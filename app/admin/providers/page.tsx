@@ -189,6 +189,12 @@ export default function AdminProvidersPage() {
                     <span>Cashed <span className="font-semibold text-gray-700">{GHS(r.total_cashed_out)}</span></span>
                     <span>Balance <span className="font-extrabold" style={{ color: r.balance > 0 ? "#2563eb" : "#9ca3af" }}>{GHS(r.balance)}</span></span>
                   </div>
+                  <Link
+                    href={`/admin/users/${r.user_id}`}
+                    className="mt-2 inline-flex rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-semibold text-gray-500 transition hover:bg-gray-50 sm:hidden"
+                  >
+                    View →
+                  </Link>
                 </div>
 
                 {/* Desktop columns */}

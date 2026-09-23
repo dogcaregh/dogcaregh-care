@@ -90,7 +90,7 @@ export default function AdminReferralsPage() {
         )}
 
         {/* Leaderboard */}
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
           <div className="border-b border-gray-50 px-5 py-4">
             <p className="text-sm font-bold" style={{ color: "#0a2e30" }}>Top Referrers</p>
           </div>

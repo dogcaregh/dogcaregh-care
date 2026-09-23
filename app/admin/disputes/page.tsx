@@ -192,9 +192,13 @@ export default function AdminDisputesPage() {
 
       {contact && <ContactPopup contact={contact} onClose={() => setContact(null)} />}
 
-      <div className="mx-auto max-w-5xl px-4 py-10 md:px-8">
-        <h1 className="mb-1 text-2xl font-extrabold" style={{ color: "#0a2e30" }}>Disputes</h1>
-        <p className="mb-6 text-sm text-gray-500">Review and resolve booking disputes raised by owners.</p>
+      <div className="px-4 pb-6 pt-6 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>Admin</p>
+        <h1 className="mt-1 text-2xl font-extrabold text-white">Disputes</h1>
+        <p className="mt-1 text-sm text-white/50">Review and resolve booking disputes raised by owners.</p>
+      </div>
+
+      <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
 
         {/* Filter tabs */}
         <div className="mb-6 flex flex-wrap gap-2">

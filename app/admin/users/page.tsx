@@ -160,7 +160,7 @@ export default function AdminUsersPage() {
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
           <div className="divide-y divide-gray-50">
             {visible.map(u => (
-              <div key={u.id} className="flex items-center justify-between gap-4 px-5 py-4">
+              <div key={u.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold truncate" style={{ color: "#0a2e30" }}>{u.name}</p>
@@ -188,7 +188,7 @@ export default function AdminUsersPage() {
                   <p className="text-[10px] text-gray-300">Joined {fmtDate(u.created_at)}</p>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Link
                     href={`/admin/users/${u.id}`}
                     className="rounded-lg border border-gray-200 px-3 py-1.5 text-[11px] font-semibold text-gray-500 transition hover:bg-gray-50"

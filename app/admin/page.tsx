@@ -135,7 +135,7 @@ export default function AdminOverviewPage() {
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafb" }}>
       <AdminNav />
 
-      <div className="flex items-end justify-between gap-4 px-6 pb-8 pt-7 md:px-12" style={{ backgroundColor: "#0a2e30" }}>
+      <div className="flex flex-col gap-3 px-4 pb-6 pt-6 sm:flex-row sm:items-end sm:justify-between md:px-12 md:pb-8 md:pt-7" style={{ backgroundColor: "#0a2e30" }}>
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#00b096" }}>Admin</p>
           <h1 className="mt-1 text-2xl font-extrabold text-white md:text-3xl">Platform Overview</h1>
@@ -220,8 +220,8 @@ export default function AdminOverviewPage() {
                   onClick={() => router.push(`/booking/${b.id}`)}
                   className="flex items-center justify-between px-5 py-3.5 cursor-pointer transition hover:bg-gray-50"
                 >
-                  <div>
-                    <p className="text-sm font-semibold" style={{ color: "#0a2e30" }}>
+                  <div className="min-w-0 flex-1 pr-3">
+                    <p className="truncate text-sm font-semibold" style={{ color: "#0a2e30" }}>
                       {ownerName} → {providerName}
                     </p>
                     <p className="text-xs text-gray-400">
