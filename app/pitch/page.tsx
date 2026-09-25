@@ -24,7 +24,7 @@ export default function PitchPage() {
         </div>
         <a
           href="/pitch-deck.pdf"
-          download="DogCareGH-Pitch-Deck-Aug2026.pdf"
+          download="DogCareGH-Investor-Deck-Sept-2026.pdf"
           className="pitch-download"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
